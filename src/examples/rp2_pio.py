@@ -4,11 +4,9 @@ import time
 from machine import Pin
 import rp2
 
-try:
-    from typing_extensions import TYPE_CHECKING  # type: ignore
-except ImportError:
-    TYPE_CHECKING = False
+TYPE_CHECKING = False
 if TYPE_CHECKING:
+    # Add type hints for the PIO assembler functions.
     from rp2.asm_pio import *
 
 
