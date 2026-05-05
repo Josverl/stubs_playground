@@ -1097,11 +1097,20 @@ body.dark-theme .cm-tooltip.cm-tooltip-lint {
     border-radius: 4px;
     padding: 0;
     max-width: 700px;
+    /* Constrain total height so the box never overflows the viewport,
+       whether the tooltip is placed below (default) or above the cursor.
+       The inner .cm-lsp-hover uses max-height:100% to fill this budget. */
+    max-height: min(440px, 50vh);
+    overflow: hidden;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     font-size: 13px;
     line-height: 1.5;
     z-index: 1000;
+    /* Flex column so the fixed-height signature stays at the top and the
+       scrollable body fills the remaining space */
+    display: flex;
+    flex-direction: column;
 }
 
 body.dark-theme .cm-tooltip.cm-tooltip-hover {
@@ -1118,11 +1127,12 @@ body.dark-theme .cm-tooltip.cm-tooltip-hover {
     background-color: #eef0f3;
     color: #1e1e1e;
     padding: 4px 10px;
-    border-radius: 3px;
+    border-radius: 3px 3px 0 0;  /* top corners only — sits flush above the body */
     border-left: 3px solid #0550ae;
-    margin-bottom: 6px;
     overflow-x: auto;
     white-space: pre;
+    /* Don't shrink when body content is tall */
+    flex: 0 0 auto;
 }
 
 body.dark-theme .cm-hover-signature {
@@ -1141,13 +1151,15 @@ body.dark-theme .cm-hover-signature {
     font-family: inherit;
 }
 
-/* Resizable hover content area */
+/* Resizable hover content area — fills the height budget set on the outer
+   .cm-tooltip.cm-tooltip-hover so the box never overflows the viewport. */
 .cm-lsp-hover {
     padding: 8px 12px;
     min-width: 220px;
     max-width: 700px;
     min-height: 40px;
-    max-height: 420px;
+    /* Fill whatever height the outer tooltip allows (min/50vh cap above) */
+    flex: 1 1 auto;
     overflow: auto;
     resize: both;
     box-sizing: border-box;
