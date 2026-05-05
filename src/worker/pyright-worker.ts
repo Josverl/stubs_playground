@@ -167,8 +167,6 @@ function writePyrightConfig(options: {
         reportMissingImports: "error",
         reportUnusedImport: "warning",
         reportUnusedVariable: "warning",
-        reportConstantRedefinition : "warning",
-        reportAttributeAccessIssue : "warning", // unknown attributes
         reportUnknownArgumentType: "none",
         reportUnknownVariableType: "none",
         reportUnknownMemberType: "none",
@@ -177,7 +175,9 @@ function writePyrightConfig(options: {
         reportMissingModuleSource: false,
         reportMissingTypeStubs: false,
     };
-
+    // reportConstantRedefinition : "warning",
+    // reportAttributeAccessIssue : "warning", // unknown attributes
+    
     const configJson = JSON.stringify(config, null, 2);
     fs.writeFileSync(
         "/workspace/pyrightconfig.json",
