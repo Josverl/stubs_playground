@@ -1238,6 +1238,7 @@ async function initializeEditor() {
         () => currentTypeshedPath === TYPESHED_PATH_MICROPYTHON ? 'micropython' : 'cpython',
         () => currentPythonVersion,
         () => collectShareFiles(),
+        () => docManager?.activeFile || OPFSProject.getLastActiveFile() || 'main.py',
     );
 
     // Initialize report issue button
@@ -1249,6 +1250,7 @@ async function initializeEditor() {
         () => currentTypeshedPath === TYPESHED_PATH_MICROPYTHON ? 'micropython' : 'cpython',
         () => currentPythonVersion,
         () => collectShareFiles(),
+        () => docManager?.activeFile || OPFSProject.getLastActiveFile() || 'main.py',
     );
 
     // Wire Export / Import buttons
