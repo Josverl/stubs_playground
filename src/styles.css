@@ -1533,6 +1533,22 @@ body.dark-theme .share-option:hover {
     font-weight: 600;
 }
 
+/* Scope selector row (Current file / All files) */
+.share-scope-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.share-scope-option {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
 /* Report Issue dropdown */
 .report-issue-wrapper {
     display: inline-block;

@@ -260,8 +260,9 @@ export async function copyMarkdownWithLink(codeOrFiles, board, typeCheckMode, st
 
 /**
  * Copy markdown containing a shareable link and the code block.
- * @param {string|Object<string,string>} codeOrFiles
- * @param {string} codeBlockText
+ * The code block (from the current document) is placed before the link.
+ * @param {string|Object<string,string>} codeOrFiles  Files to encode in the URL
+ * @param {string} codeBlockText                      Current-document code for the code block
  * @param {string} board
  * @param {string} typeCheckMode
  * @param {string} [stdlib]
@@ -270,8 +271,29 @@ export async function copyMarkdownWithLink(codeOrFiles, board, typeCheckMode, st
  */
 export async function copyMarkdownWithLinkAndCode(codeOrFiles, codeBlockText, board, typeCheckMode, stdlib, pythonVersion) {
     const url = await buildShareableUrl(codeOrFiles, board, typeCheckMode, stdlib, pythonVersion);
-    const md = `[MicroPython-stubs Playground](${url})\n\n\`\`\`python\n${codeBlockText}\n\`\`\``;
+    const md = `\`\`\`python\n${codeBlockText}\n\`\`\`\n\n[MicroPython-stubs Playground](${url})`;
     return copyToClipboard(md);
+}
+
+// ---- Scope-aware file resolution ----
+
+/**
+ * Resolve the set of files to include in a share URL based on scope.
+ *
+ * @param {'current'|'all'} scope          'current' = active file only, 'all' = whole workspace
+ * @param {() => string} getCode           Returns the current editor content
+ * @param {() => string} getActiveFileName Returns the active file path (e.g. 'main.py')
+ * @param {() => Promise<Object<string,string>>} [getFiles] Returns all workspace files
+ * @returns {Promise<Object<string,string>>}
+ */
+async function resolveFilesForScope(scope, getCode, getActiveFileName, getFiles) {
+    if (scope === 'all' && typeof getFiles === 'function') {
+        return getFiles();
+    }
+    const fileName = typeof getActiveFileName === 'function'
+        ? (getActiveFileName() || 'main.py')
+        : 'main.py';
+    return { [fileName]: getCode() };
 }
 
 // ---- Report Issue helpers ----
@@ -361,18 +383,17 @@ export function buildIssueUrl(stubPackage, stubVersion, typeCheckMode, playgroun
  * @param {() => string} [getStdlib]      Returns stdlib selector: "micropython" | "cpython"
  * @param {() => string} [getPythonVersion] Returns python version
  * @param {() => Promise<Object<string,string>>} [getFiles] Returns full share file map
+ * @param {() => string} [getActiveFileName] Returns active file path
  */
-export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTypeCheckMode, getStdlib, getPythonVersion, getFiles) {
+export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTypeCheckMode, getStdlib, getPythonVersion, getFiles, getActiveFileName) {
     const btn = document.getElementById('reportIssueBtn');
     const dropdown = document.getElementById('reportIssueDropdown');
     const confirmBtn = document.getElementById('reportIssueConfirm');
     if (!btn || !dropdown) return;
 
-    const resolveShareFiles = async () => {
-        if (typeof getFiles === 'function') {
-            return getFiles();
-        }
-        return { 'main.py': getCode() };
+    const getScope = () => {
+        const checked = dropdown.querySelector('input[name="reportScope"]:checked');
+        return checked ? checked.value : 'current';
     };
 
     // Toggle dropdown
@@ -404,7 +425,7 @@ export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTyp
             : {};
         const stubPackage = stubMetadata.package || shareSettings.board || '';
         const stubVersion = stubMetadata.version || '';
-        const files = await resolveShareFiles();
+        const files = await resolveFilesForScope(getScope(), getCode, getActiveFileName, getFiles);
         const playgroundUrl = await buildShareableUrl(
             files,
             shareSettings.board,
@@ -443,19 +464,21 @@ function flashCopied(button) {
  * @param {() => string} [getStdlib]      Returns stdlib selector: "micropython" | "cpython"
  * @param {() => string} [getPythonVersion] Returns python version
  * @param {() => Promise<Object<string,string>>} [getFiles] Returns full share file map
+ * @param {() => string} [getActiveFileName] Returns active file path
  */
-export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib, getPythonVersion, getFiles) {
+export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib, getPythonVersion, getFiles, getActiveFileName) {
     const shareBtn = document.getElementById('shareBtn');
     const dropdown = document.getElementById('shareDropdown');
     const warningEl = document.getElementById('sharePayloadWarning');
     if (!shareBtn || !dropdown) return;
 
-    const resolveShareFiles = async () => {
-        if (typeof getFiles === 'function') {
-            return getFiles();
-        }
-        return { 'main.py': getCode() };
+    const getScope = () => {
+        const checked = dropdown.querySelector('input[name="shareScope"]:checked');
+        return checked ? checked.value : 'current';
     };
+
+    const resolveShareFiles = async () =>
+        resolveFilesForScope(getScope(), getCode, getActiveFileName, getFiles);
 
     const updatePayloadWarning = async () => {
         if (!warningEl) return;

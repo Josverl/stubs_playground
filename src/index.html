@@ -70,6 +70,10 @@
                 <div id="shareDropdown" class="share-dropdown" hidden>
                     <p class="share-title">Sharing a Code Sample</p>
                     <p class="share-desc">Copy a link or markdown to the clipboard.</p>
+                    <div class="share-scope-row">
+                        <label class="share-scope-option"><input type="radio" name="shareScope" value="current" checked> Current file</label>
+                        <label class="share-scope-option"><input type="radio" name="shareScope" value="all"> All files</label>
+                    </div>
                     <p id="sharePayloadWarning" class="share-warning" hidden></p>
                     <button id="copyLink" class="share-option" aria-label="Copy shareable link">
                         <span class="share-icon">📋</span> Shareable link
@@ -89,6 +93,10 @@
                     <p class="report-issue-warning">
                         Do not include passwords, API keys, or other secrets — your code sample will be visible in a public GitHub issue.
                     </p>
+                    <div class="share-scope-row">
+                        <label class="share-scope-option"><input type="radio" name="reportScope" value="current" checked> Current file</label>
+                        <label class="share-scope-option"><input type="radio" name="reportScope" value="all"> All files</label>
+                    </div>
                     <button id="reportIssueConfirm" class="share-option" aria-label="Open GitHub issue (new tab)">
                         Continue to GitHub
                     </button>
