@@ -276,3 +276,75 @@ def test_resolve_report_issue_labels_returns_empty_on_fetch_error(ri_page):
             }))
     """)
     assert result == []
+
+
+# ---------------------------------------------------------------------------
+# buildIssueUrl diagnostics table tests (in-browser via evaluate)
+# ---------------------------------------------------------------------------
+
+
+def test_build_issue_url_includes_diagnostics_table(ri_page):
+    """buildIssueUrl includes a Diagnostics section when diagnostics are provided."""
+    result = ri_page.evaluate("""() =>
+        import('./share.js').then(({ buildIssueUrl }) =>
+            buildIssueUrl(
+                'micropython-esp32-stubs', '1.28.0.post3', 'standard',
+                'https://example.com', [],
+                [{ fileName: 'main.py', line: 3, character: 5, message: 'Unknown member', severity: 'error' }]
+            ))
+    """)
+    from urllib.parse import urlparse, parse_qs, unquote_plus
+    params = parse_qs(urlparse(result).query)
+    body = unquote_plus(params['body'][0])
+    assert '## Diagnostics' in body, f"Diagnostics section missing: {body[:400]}"
+    assert '| File | Position | Level | Message |' in body
+    assert '| main.py | 3:5 | error | Unknown member |' in body
+
+
+def test_build_issue_url_no_diagnostics_section_when_empty(ri_page):
+    """buildIssueUrl omits the Diagnostics section when diagnostics list is empty."""
+    result = ri_page.evaluate("""() =>
+        import('./share.js').then(({ buildIssueUrl }) =>
+            buildIssueUrl('micropython-esp32-stubs', '1.28.0.post3', 'standard', 'https://example.com'))
+    """)
+    from urllib.parse import urlparse, parse_qs, unquote_plus
+    params = parse_qs(urlparse(result).query)
+    body = unquote_plus(params['body'][0])
+    assert '## Diagnostics' not in body
+
+
+def test_build_issue_url_diagnostics_multiple_rows(ri_page):
+    """buildIssueUrl renders all diagnostics as separate table rows."""
+    result = ri_page.evaluate("""() =>
+        import('./share.js').then(({ buildIssueUrl }) =>
+            buildIssueUrl(
+                'micropython-esp32-stubs', '1.28.0.post3', 'standard',
+                'https://example.com', [],
+                [
+                    { fileName: 'main.py', line: 1, character: 1, message: 'Err A', severity: 'error' },
+                    { fileName: 'lib/util.py', line: 7, character: 2, message: 'Warn B', severity: 'warning' },
+                    { fileName: 'main.py', line: 12, character: 4, message: 'Info C', severity: 'info' },
+                ]
+            ))
+    """)
+    from urllib.parse import urlparse, parse_qs, unquote_plus
+    params = parse_qs(urlparse(result).query)
+    body = unquote_plus(params['body'][0])
+    assert '| main.py | 1:1 | error | Err A |' in body
+    assert '| lib/util.py | 7:2 | warning | Warn B |' in body
+    assert '| main.py | 12:4 | info | Info C |' in body
+
+
+def test_build_issue_url_diagnostics_escapes_pipe_in_message(ri_page):
+    """buildIssueUrl escapes pipe characters inside diagnostic messages."""
+    result = ri_page.evaluate(r"""() =>
+        import('./share.js').then(({ buildIssueUrl }) =>
+            buildIssueUrl(
+                'pkg', '1.0', 'standard', 'https://example.com', [],
+                [{ fileName: 'main.py', line: 1, character: 1, message: 'a | b', severity: 'error' }]
+            ))
+    """)
+    from urllib.parse import urlparse, parse_qs, unquote_plus
+    params = parse_qs(urlparse(result).query)
+    body = unquote_plus(params['body'][0])
+    assert r'a \| b' in body, f"Pipe not escaped in: {body}"

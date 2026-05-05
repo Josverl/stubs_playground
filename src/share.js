@@ -296,6 +296,18 @@ async function resolveFilesForScope(scope, getCode, getActiveFileName, getFiles)
     return { [fileName]: getCode() };
 }
 
+// ---- Markdown helpers ----
+
+/**
+ * Escape text for use inside a Markdown table cell.
+ * Replaces pipe characters and collapses newlines.
+ * @param {string} text
+ * @returns {string}
+ */
+function escapeMarkdownCell(text) {
+    return String(text ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+}
+
 // ---- Report Issue helpers ----
 
 const REPORT_ISSUE_REPO = 'https://github.com/Josverl/micropython-stubs/issues/new';
@@ -343,13 +355,30 @@ export async function resolveReportIssueLabels(fetchImpl = globalThis.fetch) {
  * @param {string} typeCheckMode Current Pyright mode
  * @param {string} playgroundUrl Shareable playground link to embed in the issue
  * @param {string[]} [labels]    Optional labels to prefill on the issue
+ * @param {Array<{fileName: string, line: number, character: number, message: string, severity: string}>} [diagnostics]
+ *   Optional list of LSP diagnostics to embed as a table
  * @returns {string} GitHub new-issue URL with pre-filled title and body
  */
-export function buildIssueUrl(stubPackage, stubVersion, typeCheckMode, playgroundUrl, labels = []) {
+export function buildIssueUrl(stubPackage, stubVersion, typeCheckMode, playgroundUrl, labels = [], diagnostics = []) {
     const normalizedVersion = stubVersion
         ? (stubVersion.startsWith('v') ? stubVersion : `v${stubVersion}`)
         : 'n/a';
     const title = 'Stub issue: ';
+
+    let diagnosticsSection = '';
+    if (diagnostics.length > 0) {
+        const rows = diagnostics
+            .map(d =>
+                `| ${escapeMarkdownCell(d.fileName)} | ${d.line}:${d.character} | ${d.severity} | ${escapeMarkdownCell(d.message)} |`
+            )
+            .join('\n');
+        diagnosticsSection =
+            `\n## Diagnostics\n\n` +
+            `| File | Position | Level | Message |\n` +
+            `|------|----------|-------|---------|\n` +
+            `${rows}\n`;
+    }
+
     const body =
 `## Describe the issue
 <!-- Please describe what is incorrect or missing in the stub. -->
@@ -361,7 +390,7 @@ export function buildIssueUrl(stubPackage, stubVersion, typeCheckMode, playgroun
 
 ## Issue reproduction
 [MicroPython-stubs Playground](${playgroundUrl})
-`;
+${diagnosticsSection}`;
 
     const url = new URL(REPORT_ISSUE_REPO);
     url.searchParams.set('title', title);
@@ -384,8 +413,10 @@ export function buildIssueUrl(stubPackage, stubVersion, typeCheckMode, playgroun
  * @param {() => string} [getPythonVersion] Returns python version
  * @param {() => Promise<Object<string,string>>} [getFiles] Returns full share file map
  * @param {() => string} [getActiveFileName] Returns active file path
+ * @param {() => Array<{fileName: string, line: number, character: number, message: string, severity: string}>} [getDiagnostics]
+ *   Returns all current workspace diagnostics (from getWorkspaceDiagnostics)
  */
-export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTypeCheckMode, getStdlib, getPythonVersion, getFiles, getActiveFileName) {
+export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTypeCheckMode, getStdlib, getPythonVersion, getFiles, getActiveFileName, getDiagnostics) {
     const btn = document.getElementById('reportIssueBtn');
     const dropdown = document.getElementById('reportIssueDropdown');
     const confirmBtn = document.getElementById('reportIssueConfirm');
@@ -419,13 +450,14 @@ export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTyp
     // Open GitHub issue in a new tab
     confirmBtn?.addEventListener('click', async () => {
         dropdown.hidden = true;
+        const scope = getScope();
         const shareSettings = resolveShareSettings(getBoard, getTypeCheckMode, getStdlib, getPythonVersion);
         const stubMetadata = typeof getStubMetadata === 'function'
             ? (getStubMetadata() || {})
             : {};
         const stubPackage = stubMetadata.package || shareSettings.board || '';
         const stubVersion = stubMetadata.version || '';
-        const files = await resolveFilesForScope(getScope(), getCode, getActiveFileName, getFiles);
+        const files = await resolveFilesForScope(scope, getCode, getActiveFileName, getFiles);
         const playgroundUrl = await buildShareableUrl(
             files,
             shareSettings.board,
@@ -434,7 +466,15 @@ export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTyp
             shareSettings.pythonVersion,
         );
         const labels = await resolveReportIssueLabels();
-        const issueUrl = buildIssueUrl(stubPackage, stubVersion, shareSettings.typeCheckMode, playgroundUrl, labels);
+
+        // Collect and scope-filter diagnostics
+        const allDiagnostics = typeof getDiagnostics === 'function' ? getDiagnostics() : [];
+        const activeFileName = typeof getActiveFileName === 'function' ? (getActiveFileName() || 'main.py') : 'main.py';
+        const scopedDiagnostics = scope === 'current'
+            ? allDiagnostics.filter(d => d.fileName === activeFileName)
+            : allDiagnostics;
+
+        const issueUrl = buildIssueUrl(stubPackage, stubVersion, shareSettings.typeCheckMode, playgroundUrl, labels, scopedDiagnostics);
         window.open(issueUrl, '_blank', 'noopener,noreferrer');
     });
 }
