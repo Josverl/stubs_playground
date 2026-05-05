@@ -1556,17 +1556,34 @@ body.dark-theme .share-option:hover {
     position: relative;
 }
 
+.report-issue-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+}
+
+.report-issue-backdrop[hidden] {
+    display: none;
+}
+
+body.dark-theme .report-issue-backdrop {
+    background: rgba(0, 0, 0, 0.6);
+}
+
 .report-issue-dropdown {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    z-index: 100;
-    width: min(94%, 320px);
-    border-radius: 6px;
-    padding: 14px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    width: min(90vw, 460px);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
     flex-direction: column;
-    gap: 6px;
+    gap: 10px;
 }
 
 .report-issue-dropdown[hidden] {

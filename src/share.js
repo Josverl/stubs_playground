@@ -422,8 +422,14 @@ ${diagnosticsSection}`;
 export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTypeCheckMode, getStdlib, getPythonVersion, getFiles, getActiveFileName, getDiagnostics) {
     const btn = document.getElementById('reportIssueBtn');
     const dropdown = document.getElementById('reportIssueDropdown');
+    const backdrop = document.getElementById('reportIssueBackdrop');
     const confirmBtn = document.getElementById('reportIssueConfirm');
     if (!btn || !dropdown) return;
+
+    const setOpen = (open) => {
+        dropdown.hidden = !open;
+        if (backdrop) backdrop.hidden = !open;
+    };
 
     const getScope = () => {
         const checked = dropdown.querySelector('input[name="reportScope"]:checked');
@@ -433,26 +439,29 @@ export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTyp
     // Toggle dropdown
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        dropdown.hidden = !dropdown.hidden;
+        setOpen(dropdown.hidden);
     });
+
+    // Close on backdrop click
+    // (backdrop is pointer-events:none; document click handler closes the dialog)
 
     // Close on outside click
     document.addEventListener('click', (e) => {
         if (!dropdown.contains(e.target) && e.target !== btn) {
-            dropdown.hidden = true;
+            setOpen(false);
         }
     });
 
     // Close on Escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            dropdown.hidden = true;
+            setOpen(false);
         }
     });
 
     // Open GitHub issue in a new tab
     confirmBtn?.addEventListener('click', async () => {
-        dropdown.hidden = true;
+        setOpen(false);
         const scope = getScope();
         const shareSettings = resolveShareSettings(getBoard, getTypeCheckMode, getStdlib, getPythonVersion);
         const stubMetadata = typeof getStubMetadata === 'function'
