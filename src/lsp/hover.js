@@ -30,7 +30,8 @@ function processInline(text) {
     // Groups: 1=rst-dbl-bt content, 2=rst-role content,
     //         3=bold content, 4=italic content, 5=code content,
     //         6=md-link text, 7=md-link url, 8=bare url
-    const pattern = /``([^`]+)``|:(?:func|class|meth|attr|mod|const|data|exc|obj|ref|doc)`([^`]+)`|\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|`([^`\n]+)`|\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s<>")\]]+)/g;
+    // RST role syntax: :rolename:`content`  (colon after role name is required)
+    const pattern = /``([^`]+)``|:(?:func|class|meth|attr|mod|const|data|exc|obj|ref|doc):`([^`]+)`|\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|`([^`\n]+)`|\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s<>")\]]+)/g;
 
     let lastIndex = 0;
     let match;
@@ -318,7 +319,7 @@ function renderBlocks(text, container) {
  * @param {string} text - Raw markdown / RST text
  * @returns {HTMLElement}
  */
-function renderMarkdown(text) {
+export function renderMarkdown(text) {
     const container = document.createElement('div');
     container.className = 'cm-hover-markdown';
     if (!text || !text.trim()) return container;
