@@ -138,6 +138,32 @@ function escapeHtml(value) {
         .replaceAll("'", '&#39;');
 }
 
+// ---- Workspace-wide diagnostic store ----
+
+/**
+ * Maps fileUri → array of report-ready diagnostic objects.
+ * Updated by createLSPDiagnostics whenever publishDiagnostics arrives.
+ * @type {Map<string, Array<{uri: string, fileName: string, line: number, character: number, message: string, severity: string}>>}
+ */
+const _workspaceDiagnostics = new Map();
+
+/**
+ * Return a flat snapshot of all currently-known workspace diagnostics,
+ * suitable for embedding in a GitHub issue report.
+ *
+ * Each entry: `{ uri, fileName, line, character, message, severity }`
+ * Line and character are 1-based.
+ *
+ * @returns {Array<{uri: string, fileName: string, line: number, character: number, message: string, severity: string}>}
+ */
+export function getWorkspaceDiagnostics() {
+    const result = [];
+    for (const diags of _workspaceDiagnostics.values()) {
+        result.push(...diags);
+    }
+    return result;
+}
+
 /**
  * Create a diagnostic linter that receives diagnostics from LSP
  * @param {Object} client - LSP client
@@ -163,6 +189,17 @@ export function createLSPDiagnostics(client, fileUri, view, pyrightVersion = "",
                 });
 
                 console.log('Converted diagnostics:', cmDiagnostics);
+
+                // Store report-ready snapshot in workspace map (1-based positions)
+                const fileName = fileUri.replace('file:///workspace/', '');
+                _workspaceDiagnostics.set(fileUri, lspDiagnostics.map(d => ({
+                    uri: fileUri,
+                    fileName,
+                    line: (d.range?.start?.line ?? 0) + 1,
+                    character: (d.range?.start?.character ?? 0) + 1,
+                    message: d.message || '',
+                    severity: lspSeverityToString(d.severity),
+                })));
 
                 // Use setDiagnostics to update the editor
                 view.dispatch(setDiagnostics(view.state, cmDiagnostics));

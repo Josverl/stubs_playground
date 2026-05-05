@@ -1251,6 +1251,7 @@ async function initializeEditor() {
         () => currentPythonVersion,
         () => collectShareFiles(),
         () => docManager?.activeFile || OPFSProject.getLastActiveFile() || 'main.py',
+        () => getWorkspaceDiagnostics(),
     );
 
     // Wire Export / Import buttons
