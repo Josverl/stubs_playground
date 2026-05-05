@@ -373,7 +373,7 @@ def test_status_bar_shows_workspace_totals_on_document_switch(page, live_server)
 
     # Verify main.py shows errors
     status_before = page.locator("#diagnostics-status").inner_text()
-    assert not ("Errors: 0" in status_before and "Warnings: 0" in status_before), (
+    assert "Errors: 0" not in status_before or "Warnings: 0" not in status_before, (
         f"main.py should have at least one error/warning before switch, got: {status_before!r}"
     )
 
@@ -397,7 +397,7 @@ def test_status_bar_shows_workspace_totals_on_document_switch(page, live_server)
 
     # The status bar must still show the workspace error count from main.py
     status_after = page.locator("#diagnostics-status").inner_text()
-    assert not ("Errors: 0" in status_after and "Warnings: 0" in status_after), (
+    assert "Errors: 0" not in status_after or "Warnings: 0" not in status_after, (
         f"Status bar should still show main.py errors after switching to clean.py, "
         f"but got: {status_after!r}"
     )
