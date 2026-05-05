@@ -421,10 +421,89 @@ def test_signature_method(render_page):
 
 
 def test_signature_class(render_page):
-    """'class Pin(id: Any, ...)' bare class line → signature block."""
+    """Multi-line class signature (Pyright indented params format) → single signature block."""
+    # This is the exact format Pyright returns for class Pin
+    text = (
+        "class Pin(\n"
+        "    id: Any,\n"
+        "    /,\n"
+        "    mode: int = -1,\n"
+        "    pull: int = -1,\n"
+        "    *,\n"
+        "    value: Any = None,\n"
+        "    drive: int | None = None,\n"
+        "    alt: int | None = None\n"
+        ")\n"
+        "\n"
+        "Access the pin peripheral.\n"
+    )
+    sigs = _query(render_page, text, ".cm-hover-signature code")
+    assert len(sigs) == 1, f"Expected exactly one signature block; got {sigs}"
+    assert "class Pin(" in sigs[0]
+    assert "id: Any" in sigs[0]
+    assert "alt: int | None = None" in sigs[0]
+    assert sigs[0].strip().endswith(")")
+    # Body text must still appear as a paragraph (not swallowed into signature)
+    paras = _query(render_page, text, "p")
+    assert any("Access the pin" in p for p in paras)
+
+
+def test_signature_class_compact(render_page):
+    """Single-line class signature still works."""
     text = "class Pin(id: Any, /, mode: int = -1)\n\nCreate a new Pin object.\n"
     sigs = _query(render_page, text, ".cm-hover-signature code")
     assert any("Pin" in s for s in sigs)
+
+
+def test_pin_class_full_lsp_payload(render_page):
+    """Exact LSP plaintext payload for Pin class — multi-line signature + long body."""
+    text = (
+        "class Pin(\n"
+        "    id: Any,\n"
+        "    /,\n"
+        "    mode: int = -1,\n"
+        "    pull: int = -1,\n"
+        "    *,\n"
+        "    value: Any = None,\n"
+        "    drive: int | None = None,\n"
+        "    alt: int | None = None\n"
+        ")\n"
+        "\n"
+        "Access the pin peripheral (GPIO pin) associated with the given ``id``.  If\n"
+        "additional arguments are given in the constructor then they are used to initialise\n"
+        "the pin.\n"
+        "\n"
+        "  - ``id`` is mandatory and can be an arbitrary object.\n"
+        "  - ``mode`` specifies the pin mode, which can be one of:\n"
+        "\n"
+        "    - ``Pin.IN`` - Pin is configured for input.\n"
+        "    - ``Pin.OUT`` - Pin is configured for (normal) output.\n"
+        "\n"
+        "  - ``pull`` specifies if the pin has a (weak) pull resistor.\n"
+        "\n"
+        "Not all ports implement this mode, or some might only on certain pins.\n"
+        "by calling the constructor or :meth:`Pin.init` method.\n"
+    )
+    # Signature block captures full multi-line declaration
+    sigs = _query(render_page, text, ".cm-hover-signature code")
+    assert len(sigs) == 1
+    sig = sigs[0]
+    assert "class Pin(" in sig
+    assert "drive: int | None = None" in sig
+    assert sig.strip().endswith(")")
+
+    # Body: double-backtick ``id`` renders as inline code
+    codes = _query(render_page, text, ".cm-hover-markdown code")
+    assert "id" in codes
+
+    # Body: :meth:`Pin.init` renders as RST ref
+    refs = _query(render_page, text, "code.cm-hover-rst-ref")
+    assert "Pin.init" in refs
+
+    # Signature block and body are separate — body is NOT inside signature
+    html = _render(render_page, text)
+    sig_section = html[html.find("cm-hover-signature"):html.find("cm-hover-markdown")]
+    assert "Access the pin" not in sig_section
 
 
 def test_signature_function(render_page):

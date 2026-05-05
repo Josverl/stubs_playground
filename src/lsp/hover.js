@@ -331,17 +331,43 @@ export function renderMarkdown(text) {
 
     // If the first non-empty line looks like a Pyright type/signature declaration,
     // render it as a monospace signature block and continue with the rest.
+    // Pyright emits multi-line signatures with indented params when there are
+    // many arguments, e.g.:
+    //   class Pin(
+    //       id: Any,
+    //       /,
+    //       mode: int = -1,
+    //   )
+    // Consume lines until parentheses/brackets are balanced (depth → 0).
     let body = text;
-    const firstLineEnd = text.indexOf('\n');
-    const firstLine = (firstLineEnd >= 0 ? text.slice(0, firstLineEnd) : text).trim();
+    const lines = text.split('\n');
+    const firstLine = lines[0].trim();
     if (firstLine && PYRIGHT_SIG_RE.test(firstLine)) {
+        let depth = 0;
+        let sigEndLine = 0;
+
+        for (let i = 0; i < Math.min(lines.length, 40); i++) {
+            for (const ch of lines[i]) {
+                if (ch === '(' || ch === '[') depth++;
+                else if (ch === ')' || ch === ']') depth--;
+            }
+            sigEndLine = i + 1;
+            // Stop once parens balance out (or first line had none at all)
+            if (depth <= 0) break;
+        }
+
+        const sigText = lines.slice(0, sigEndLine).join('\n');
         const sig = document.createElement('div');
         sig.className = 'cm-hover-signature';
         const code = document.createElement('code');
-        code.textContent = firstLine;
+        code.textContent = sigText;
         sig.appendChild(code);
         container.appendChild(sig);
-        body = firstLineEnd >= 0 ? text.slice(firstLineEnd + 1) : '';
+
+        // Skip the blank separator line(s) between signature and docstring body
+        let bodyStart = sigEndLine;
+        while (bodyStart < lines.length && !lines[bodyStart].trim()) bodyStart++;
+        body = lines.slice(bodyStart).join('\n');
     }
 
     // Split on fenced code blocks (``` … ```)
