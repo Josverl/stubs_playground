@@ -254,7 +254,7 @@ export async function copyShareableLink(codeOrFiles, board, typeCheckMode, stdli
  */
 export async function copyMarkdownWithLink(codeOrFiles, board, typeCheckMode, stdlib, pythonVersion) {
     const url = await buildShareableUrl(codeOrFiles, board, typeCheckMode, stdlib, pythonVersion);
-    const md = `[MicroPython-stubs Playground](${url})`;
+    const md = `[MicroPython-Stubs Playground](${url})`;
     return copyToClipboard(md);
 }
 
@@ -271,7 +271,7 @@ export async function copyMarkdownWithLink(codeOrFiles, board, typeCheckMode, st
  */
 export async function copyMarkdownWithLinkAndCode(codeOrFiles, codeBlockText, board, typeCheckMode, stdlib, pythonVersion) {
     const url = await buildShareableUrl(codeOrFiles, board, typeCheckMode, stdlib, pythonVersion);
-    const md = `\`\`\`python\n${codeBlockText}\n\`\`\`\n\n[MicroPython-stubs Playground](${url})`;
+    const md = `[MicroPython-Stubs Playground](${url})\n\n\`\`\`python\n${codeBlockText}\n\`\`\``;
     return copyToClipboard(md);
 }
 
@@ -392,8 +392,8 @@ export function buildIssueUrl(stubPackage, stubVersion, typeCheckMode, playgroun
 **Type check mode:** ${typeCheckMode || 'standard'}
 
 ## Issue reproduction
-[MicroPython-stubs Playground](${playgroundUrl})
-${diagnosticsSection}`;
+[MicroPython-Stubs Playground](${playgroundUrl})
+`;
 
     const url = new URL(REPORT_ISSUE_REPO);
     url.searchParams.set('title', title);

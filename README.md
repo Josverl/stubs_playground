@@ -13,7 +13,7 @@ The goal of this repo are to provide a simple tool that:
 - This App uses [*Codemirror 6* editor](https://codemirror.net/) with basic Python sypport
 - That has been extended using the [Language Server Protocol (LSP)](https://microsoft.github.io/language-server-protocol/overviews/lsp/overview/)
 - that connects to [Pyright](https://github.com/microsoft/pyright) running in a Web Worker. 
-- Pyright in turn uses [**MicroPython-stubs**](https://github.com/Josverl/micropython-stubs) (ESP32, RP2040, STM32) with live switching between different MCU families.
+- Pyright in turn uses [**MicroPython-Stubs**](https://github.com/Josverl/micropython-stubs) (ESP32, RP2040, STM32) with live switching between different MCU families.
 
 **How it works:**
 1. Type MicroPython code in the editor
@@ -31,7 +31,7 @@ I have used Pyright as an LSP, but in principle that is replacable by any other 
 Yes you can. 
 There are extensions/add-ins for the most used IDEs, and as this is all standards based - you can just configure it yourself, using any combination of tooling that you prefer.
 To a degree this works even if you prefer to using Nano and rshell - you'll just need to run pyright from the prompt.
-There are setup instuctions in the MicroPython-stubs repo, but I would like to offer a simple setup-script to cover the common cases. That still needs to be written and tested though.
+There are setup instuctions in the MicroPython-Stubs repo, but I would like to offer a simple setup-script to cover the common cases. That still needs to be written and tested though.
 
 **Non goals:**
 This app does not aim to provide a live connection to an physical or emulated board.There are several great apps that do this today. I hope and would support that some of them will look at this repo and integrate the code or concepts.
