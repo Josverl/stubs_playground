@@ -475,6 +475,70 @@ def test_network_module_signature_and_body(render_page):
     assert any("import network" in p for p in pres)
 
 
+# ---------------------------------------------------------------------------
+# Viewport containment: tooltip must not overflow when placed above cursor
+# ---------------------------------------------------------------------------
+
+
+def test_hover_tooltip_stays_within_viewport(render_page, live_server):
+    """A hover tooltip injected near the top of the editor must not overflow
+    the viewport top edge.  This tests the min(440px, 50vh) CSS constraint.
+    """
+    result = render_page.evaluate("""async () => {
+        // Inject a tall synthetic tooltip into the page as CodeMirror would
+        const tooltip = document.createElement('div');
+        tooltip.className = 'cm-tooltip cm-tooltip-hover cm-tooltip-above';
+        tooltip.style.position = 'fixed';
+        tooltip.style.left = '100px';
+
+        const inner = document.createElement('div');
+        inner.className = 'cm-lsp-hover';
+
+        // Fill with enough content to exceed 440px if unconstrained
+        for (let i = 0; i < 30; i++) {
+            const p = document.createElement('p');
+            p.textContent = `Line ${i + 1}: some documentation text here.`;
+            inner.appendChild(p);
+        }
+        tooltip.appendChild(inner);
+
+        // Position near the top so "above" placement is stressed
+        tooltip.style.top = '40px';
+        document.body.appendChild(tooltip);
+
+        const rect = tooltip.getBoundingClientRect();
+        document.body.removeChild(tooltip);
+        return { top: rect.top, bottom: rect.bottom, height: rect.height, vh: window.innerHeight };
+    }""")
+
+    vh = result["vh"]
+    assert result["top"] >= 0, f"Tooltip top overflows viewport (top={result['top']})"
+    assert result["height"] <= vh * 0.5 + 5, (  # +5px tolerance for rounding
+        f"Tooltip height {result['height']}px exceeds 50vh ({vh * 0.5}px)"
+    )
+
+
+def test_hover_tooltip_css_overflow_hidden(render_page):
+    """The outer .cm-tooltip-hover must have overflow:hidden so content cannot
+    bleed outside the rounded border."""
+    overflow = render_page.evaluate("""() => {
+        const el = document.createElement('div');
+        el.className = 'cm-tooltip cm-tooltip-hover';
+        document.body.appendChild(el);
+        const style = window.getComputedStyle(el);
+        const result = { overflowX: style.overflowX, overflowY: style.overflowY };
+        document.body.removeChild(el);
+        return result;
+    }""")
+    # Both axes must clip (hidden or auto — not visible)
+    assert overflow["overflowX"] in ("hidden", "auto", "clip"), (
+        f"cm-tooltip-hover overflowX should not be visible; got: {overflow['overflowX']}"
+    )
+    assert overflow["overflowY"] in ("hidden", "auto", "clip"), (
+        f"cm-tooltip-hover overflowY should not be visible; got: {overflow['overflowY']}"
+    )
+
+
 def test_empty_input_returns_empty_div(render_page):
     html = _render(render_page, "")
     assert "cm-hover-markdown" in html
