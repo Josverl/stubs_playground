@@ -189,7 +189,7 @@ def test_build_issue_url_contains_playground_link(ri_page):
     params = parse_qs(urlparse(result).query)
     body = unquote_plus(params['body'][0])
     assert '## Issue reproduction' in body, f"Issue reproduction heading missing in body: {body[:300]}"
-    assert '[MicroPython-stubs Playground](' in body, f"Markdown link label missing in body: {body[:300]}"
+    assert '[MicroPython-Stubs Playground](' in body, f"Markdown link label missing in body: {body[:300]}"
     assert '](https://example.com/playground?board=esp32)' in body, (
         f"Markdown link URL missing in body: {body[:300]}"
     )

@@ -1,5 +1,5 @@
 /**
- * MicroPython-stubs Playground
+ * MicroPython-Stubs Playground
  * A simple MicroPython code editor with syntax highlighting and static type checking 
  * based on CodeMirror 6 and Pyright running in a Web Worker.
  */
