@@ -7,6 +7,14 @@ strategy, and lists the refactoring work needed inside this repository to suppor
 The decision to actually publish is deferred until there is concrete external demand (see the issue), so
 this document covers the *what* and *how*, not a timeline.
 
+> **Revision history:**
+> - *Initial version* — created after commit `7505f65`.
+> - *May 2025 update* — reviewed against `HEAD` (post `9a35f9cc`). Updated tier
+>   classifications (`hover.js` / `markdown-renderer.js` split, `diagnostics.js` scope increase,
+>   `share.js` growth), revised API signatures (`createLSPPlugin` options, new diagnostic exports,
+>   `isDunderLabel`, `renderMarkdown`), added tasks 4.8 (share.js decomposition) and 4.9
+>   (extract markdown renderer from hover.js), and added status column to the summary checklist.
+
 ---
 
 ## 1. Which components are most likely to be re-used?
@@ -15,7 +23,8 @@ The project can be split into three tiers:
 
 ### Tier 1 — Highly portable (language-agnostic LSP bridge)
 
-These modules work with **any** LSP server (not just Pyright) and have **no DOM dependencies**.
+These modules work with **any** LSP server (not just Pyright) and have **no DOM dependencies**
+(or render-only DOM usage that does not query external elements).
 They are the most attractive pieces for other editors.
 
 | Module | What it does | DOM deps | LSP-server-specific |
@@ -23,16 +32,23 @@ They are the most attractive pieces for other editors.
 | `src/lsp/simple-client.js` | JSON-RPC 2.0 LSP client, transport-agnostic | None | No |
 | `src/lsp/worker-transport.js` | Bridges a Web Worker behind a simple subscribe/send interface | None | Yes (Pyright handshake) |
 | `src/lsp/transport-factory.js` | One-liner factory for `WorkerTransport` | None | Yes |
-| `src/lsp/completion-core.mjs` | Pure LSP→CodeMirror completion conversion helpers | None | No |
+| `src/lsp/completion-core.mjs` | Pure LSP→CodeMirror completion conversion helpers (incl. `isDunderLabel`) | None | No |
 | `src/lsp/completion.js` | CodeMirror autocompletion source driven by LSP | None | No |
-| `src/lsp/hover.js` | CodeMirror hover-tooltip source driven by LSP | None | No |
+| `src/lsp/hover.js` | CodeMirror hover-tooltip source driven by LSP | Render-only | No |
+| `src/lsp/markdown-renderer.js` | Markdown/RST→DOM renderer (`renderMarkdown`, `processInline`, `renderBlocks`) | Render-only | No |
+
+> **`hover.js` / `markdown-renderer.js` split:** `hover.js` grew to ~530 lines because it
+> contains both the CodeMirror tooltip integration *and* a full Markdown/RST renderer. These
+> are independent concerns — the renderer is reusable anywhere that needs to display
+> Markdown/RST content as DOM, while the tooltip source is CodeMirror-specific.
+> Task 4.9 tracks extracting the renderer into `src/lsp/markdown-renderer.js`.
 
 ### Tier 2 — Useful but have DOM coupling that needs refactoring
 
 | Module | DOM coupling | Path to re-use |
 |--------|-------------|----------------|
-| `src/lsp/diagnostics.js` | `updateDiagnosticsStatus` reads `#diagnostics-status` and `#boardSelect` DOM elements; `getSelectedStubsLabelFromDom` reads a specific `<select>` | Split into a pure LSP→CM bridge and a separate application-specific status-bar helper |
-| `src/lsp/client.js` (`createLSPPlugin`) | Writes to `window.lspClients` global map | Remove the global; return state from the factory instead |
+| `src/lsp/diagnostics.js` | `updateDiagnosticsStatus` reads `#diagnostics-status` and `#boardSelect` DOM elements; `getSelectedStubsLabelFromDom` reads a specific `<select>`. Now also manages a module-level `workspaceDiagnosticsMap` cache with workspace-wide aggregation via `refreshWorkspaceDiagnosticsStatus`. | Split into (a) a **pure diagnostics data layer** (workspace cache, conversion, document lifecycle) and (b) an **app-specific status-bar writer**. The split is harder than originally scoped because workspace-level state and DOM writing are interleaved — see §4.1 for updated guidance. |
+| `src/lsp/client.js` (`createLSPPlugin`) | Writes to `window.lspClients` global map. Signature now includes a `stubsStatusSource` parameter. | Remove the global; return state from the factory instead |
 | `src/events.js` | Dispatches `CustomEvent` on `document` | Thin and easily reimplemented; low re-use value on its own |
 
 ### Tier 3 — Application-specific (low re-use value outside this app)
@@ -42,8 +58,8 @@ They are the most attractive pieces for other editors.
 | `src/ui/file-tree.js` | Tightly coupled to `OPFSProject`; very specific UI decisions |
 | `src/ui/tab-bar.js` | App-level tab management; small and easy to copy |
 | `src/storage/opfs-project.js` | OPFS wrapper useful as a standalone library but not CodeMirror-specific |
-| `src/editor/document-manager.js` | Multi-doc state manager; re-usable in pattern but coupled to `OPFSProject` and `Events` |
-| `src/share.js` | URL-encoding helpers reusable in isolation, but the UI-wiring (`initShareDropdown`, `initReportIssueButton`) is very application-specific |
+| `src/editor/document-manager.js` | Multi-doc state manager; re-usable in pattern but coupled to `OPFSProject` and `Events`. Positive note: `onActiveChange()` already returns an unsubscribe function, matching the CodeMirror convention. |
+| `src/share.js` | ~670 lines. Pure URL/compression helpers (`compressCode`, `decompressCode`, `buildShareableUrl`, `parseUrlParams`, `buildIssueUrl`, `resolveReportIssueLabels`, `resolveShareSettings`) are reusable in isolation, but the UI wiring (`initShareDropdown`, `initReportIssueButton`) and the report-issue modal are application-specific. Consider splitting into a pure `share-core.js` and an app-level `share-ui.js` if external consumers want the URL/compression logic. |
 | `src/app.js` | Application entry point; not re-usable |
 | `src/worker/pyright-worker.ts` | Pyright-specific; only changes with Pyright upstream |
 
@@ -144,6 +160,7 @@ interface LSPPluginOptions {
   languageId?: string;       // default: 'python'
   initialContent?: string;   // default: ''
   pyrightVersion?: string;   // shown in status; optional
+  stubsStatusSource?: string; // stub label source for diagnostics; optional
   // Called when diagnostics change; replaces the current DOM coupling.
   onDiagnosticsChange?: (diagnostics: CmDiagnostic[]) => void;
 }
@@ -158,6 +175,11 @@ interface LSPPluginOptions {
 function notifyDocumentOpen(client, uri, languageId, content, version?): void;
 function notifyDocumentChange(client, uri, content, version?): void;
 function notifyDocumentClose(client, uri): void;
+
+// Workspace-level diagnostic cache (pure data, no DOM).
+function removeWorkspaceDiagnosticsFor(fileUri: string): void;
+function getWorkspaceDiagnostics(): Diagnostic[];
+function requestDiagnostics(client, fileUri, documentText): Promise<Diagnostic[]>;
 ```
 
 #### Completion utilities (pure, already exported)
@@ -165,6 +187,7 @@ function notifyDocumentClose(client, uri): void;
 ```ts
 // Conversion helpers — no DOM, no LSP client dependency.
 function kindToType(kind: number): string;
+function isDunderLabel(label: string): boolean;
 function convertCompletionItem(item: LSPCompletionItem): Completion;
 function dedupeAndSortCompletionOptions(options: Completion[]): Completion[];
 function computeCompletionFrom(word: { text: string; from: number }): number;
@@ -177,7 +200,20 @@ function createCompletionSource(
 ): CompletionSource;
 ```
 
-#### Hover (pure, already clean)
+#### Markdown/RST renderer (render-only DOM)
+
+Extracted into `src/lsp/markdown-renderer.js` (see task 4.9):
+
+```ts
+// Renders Markdown/RST text (with Pyright signature detection) to a DOM element.
+function renderMarkdown(text: string): HTMLElement;
+
+// Lower-level helpers, also exported for direct use:
+function processInline(text: string): DocumentFragment;
+function renderBlocks(text: string, container: HTMLElement): void;
+```
+
+#### Hover tooltip (CodeMirror integration)
 
 ```ts
 function createHoverTooltip(
@@ -185,6 +221,9 @@ function createHoverTooltip(
   documentUri: string,
 ): Extension;
 ```
+
+`hover.js` imports `renderMarkdown` from `markdown-renderer.js` and focuses solely on the
+CodeMirror tooltip lifecycle (LSP request, range mapping, tooltip creation).
 
 ---
 
@@ -283,11 +322,23 @@ rearchitected.
 
 ### 4.1 Decouple `diagnostics.js` from the DOM
 
-`updateDiagnosticsStatus` and `getSelectedStubsLabelFromDom` use hard-coded `getElementById` calls.
+`updateDiagnosticsStatus`, `refreshWorkspaceDiagnosticsStatus`, and `getSelectedStubsLabelFromDom`
+use hard-coded `getElementById` calls. Since the plan was written, the file grew from ~150 to ~330
+lines and gained a module-level `workspaceDiagnosticsMap` cache with workspace-wide aggregation.
 
-**Required change:** Remove `updateDiagnosticsStatus` from `diagnostics.js` and move it to `app.js`
-(it is application-specific). Pass an `onDiagnosticsChange` callback through `LSPPluginOptions`
-instead. The library calls the callback; the application decides how to update its own status bar.
+**Required change (updated scope):**
+
+1. Extract a **pure diagnostics data layer** that owns `workspaceDiagnosticsMap`,
+   `removeWorkspaceDiagnosticsFor`, `getWorkspaceDiagnostics`, and the LSP→CodeMirror diagnostic
+   conversion logic. This layer has zero DOM deps and is fully reusable.
+2. Move `updateDiagnosticsStatus`, `refreshWorkspaceDiagnosticsStatus`, and
+   `getSelectedStubsLabelFromDom` into `app.js` (or a new `diagnostics-status-bar.js` in the
+   app layer). These are application-specific DOM writers.
+3. Pass an `onDiagnosticsChange` callback through `LSPPluginOptions` so the library notifies the
+   app without touching the DOM itself.
+
+This is now a **medium** effort task (was small) because the workspace cache and DOM writing are
+interleaved and must be untangled.
 
 ### 4.2 Remove `window.lspClients` global from `client.js`
 
@@ -295,8 +346,12 @@ instead. The library calls the callback; the application decides how to update i
 global that makes the library impossible to use in environments without `window` and prevents running
 two editors on the same page.
 
+Additionally, `createLSPPlugin`'s signature has grown to include a `stubsStatusSource` parameter
+that is app-specific. The proposed `LSPPluginOptions` interface (§2.2) should absorb this.
+
 **Required change:** Return the per-URI tracking state from `createLSPPlugin` (or drop it entirely —
-the only current consumer is `app.js` and it already has the reference via closure).
+the only current consumer is `app.js` and it already has the reference via closure). Refactor the
+signature to use an options object instead of positional parameters.
 
 ### 4.3 Add an unsubscribe return value to `onNotification`
 
@@ -327,11 +382,15 @@ export { SimpleLSPClient } from './simple-client.js';
 export { WorkerTransport } from './worker-transport.js';
 export { createTransport as createWorkerTransport } from './transport-factory.js';
 export { createLSPClient, createLSPPlugin, switchBoard, isLSPReady } from './client.js';
-export { createLSPDiagnostics, notifyDocumentOpen, notifyDocumentChange } from './diagnostics.js';
+export { createLSPDiagnostics, notifyDocumentOpen, notifyDocumentChange,
+         removeWorkspaceDiagnosticsFor, getWorkspaceDiagnostics,
+         requestDiagnostics } from './diagnostics.js';
 export { createCompletionSource } from './completion.js';
 export { createHoverTooltip } from './hover.js';
+export { renderMarkdown, processInline, renderBlocks } from './markdown-renderer.js';
 export {
-    kindToType, convertCompletionItem, dedupeAndSortCompletionOptions, computeCompletionFrom,
+    kindToType, isDunderLabel, convertCompletionItem,
+    dedupeAndSortCompletionOptions, computeCompletionFrom,
     CompletionItemKind,
 } from './completion-core.mjs';
 ```
@@ -372,20 +431,50 @@ step in *their* project.
 This lets a consumer write a custom worker (e.g., for a different language server) that is
 drop-in compatible with `WorkerTransport`.
 
+### 4.8 Consider decomposing `share.js` (new)
+
+`share.js` grew from ~200 to ~670 lines with the addition of report-issue functionality, scope
+selectors, and share-settings resolution. The pure utility functions (`compressCode`,
+`decompressCode`, `buildShareableUrl`, `parseUrlParams`, `buildIssueUrl`, `resolveShareSettings`,
+`resolveReportIssueLabels`) have no DOM dependencies and are independently useful. The UI wiring
+(`initShareDropdown`, `initReportIssueButton`) is application-specific.
+
+**Optional change:** Split into `share-core.js` (pure URL/compression/issue-URL helpers) and
+`share-ui.js` (event wiring, modal management). This is only worthwhile if an external consumer
+wants the share/issue-URL logic — otherwise leave as-is.
+
+### 4.9 Extract Markdown/RST renderer from `hover.js` (new)
+
+`hover.js` is ~530 lines, roughly half of which is the Markdown/RST→DOM renderer
+(`renderMarkdown`, `processInline`, `renderBlocks`, and the `PYRIGHT_SIG_RE` constant). The
+tooltip integration (`createHoverTooltip`, `createHoverContent`) is a separate concern.
+
+**Required change:** Create `src/lsp/markdown-renderer.js` containing:
+- `processInline(text)` — inline formatting (bold, italic, code, RST roles, links)
+- `renderBlocks(text, container)` — block-level rendering (headers, lists, code blocks, field lists)
+- `PYRIGHT_SIG_RE` — signature detection regex
+- `renderMarkdown(text)` — top-level entry point (signature extraction + fenced code + block rendering)
+
+`hover.js` then imports `renderMarkdown` from the new file and shrinks to ~130 lines
+(tooltip lifecycle only). This makes both modules easier to understand, test, and reuse
+independently.
+
 ---
 
 ## 5. Summary checklist
 
-| # | Task | Effort | Breaking? |
-|---|------|--------|-----------|
-| 4.1 | Decouple `updateDiagnosticsStatus` from `diagnostics.js` | Small | No |
-| 4.2 | Remove `window.lspClients` global | Trivial | No |
-| 4.3 | Add unsubscribe return to `onNotification` | Trivial | No |
-| 4.4 | Create `src/lsp/index.js` entry point | Trivial | No |
-| 4.5 | Separate `package.json` files | Small | No |
-| 4.6 | Complete JSDoc annotations | Medium | No |
-| 4.7 | Document worker protocol in README | Small | No |
-| — | Publish to npm (when ready) | One-off CI setup | n/a |
+| # | Task | Effort | Breaking? | Status |
+|---|------|--------|-----------|--------|
+| 4.1 | Decouple `diagnostics.js` from DOM (extract pure data layer) | Medium | No | Not started — scope increased |
+| 4.2 | Remove `window.lspClients` global; refactor to options object | Small | No | Not started |
+| 4.3 | Add unsubscribe return to `onNotification` | Trivial | No | Not started |
+| 4.4 | Create `src/lsp/index.js` entry point | Trivial | No | Not started |
+| 4.5 | Separate `package.json` files | Small | No | Not started |
+| 4.6 | Complete JSDoc annotations | Medium | No | Not started |
+| 4.7 | Document worker protocol in README | Small | No | Not started |
+| 4.8 | Decompose `share.js` (optional) | Small | No | Not started |
+| 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | Not started |
+| — | Publish to npm (when ready) | One-off CI setup | n/a | Deferred |
 
 None of the required changes alter existing behaviour; they are purely additive or internal
 cleanups. The app can be refactored incrementally — each item above can be merged independently.
