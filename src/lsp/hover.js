@@ -319,10 +319,30 @@ function renderBlocks(text, container) {
  * @param {string} text - Raw markdown / RST text
  * @returns {HTMLElement}
  */
+
+// Pyright prefixes type signatures with a tag like "(module)", "(method)", etc.
+// A bare "class Foo(...)" or "def foo(...)" line is also a signature.
+const PYRIGHT_SIG_RE = /^\((?:module|class|function|method|variable|parameter|property|constant|overload|type alias|type)\)\s+|^(?:class|def)\s+\w/;
+
 export function renderMarkdown(text) {
     const container = document.createElement('div');
     container.className = 'cm-hover-markdown';
     if (!text || !text.trim()) return container;
+
+    // If the first non-empty line looks like a Pyright type/signature declaration,
+    // render it as a monospace signature block and continue with the rest.
+    let body = text;
+    const firstLineEnd = text.indexOf('\n');
+    const firstLine = (firstLineEnd >= 0 ? text.slice(0, firstLineEnd) : text).trim();
+    if (firstLine && PYRIGHT_SIG_RE.test(firstLine)) {
+        const sig = document.createElement('div');
+        sig.className = 'cm-hover-signature';
+        const code = document.createElement('code');
+        code.textContent = firstLine;
+        sig.appendChild(code);
+        container.appendChild(sig);
+        body = firstLineEnd >= 0 ? text.slice(firstLineEnd + 1) : '';
+    }
 
     // Split on fenced code blocks (``` … ```)
     const fenceRe = /^```(\w*)\n([\s\S]*?)^```/gm;
@@ -330,15 +350,15 @@ export function renderMarkdown(text) {
     let lastIndex = 0;
     let match;
 
-    while ((match = fenceRe.exec(text)) !== null) {
+    while ((match = fenceRe.exec(body)) !== null) {
         if (match.index > lastIndex) {
-            segments.push({ type: 'text', content: text.slice(lastIndex, match.index) });
+            segments.push({ type: 'text', content: body.slice(lastIndex, match.index) });
         }
         segments.push({ type: 'code', lang: match[1], content: match[2] });
         lastIndex = fenceRe.lastIndex;
     }
-    if (lastIndex < text.length) {
-        segments.push({ type: 'text', content: text.slice(lastIndex) });
+    if (lastIndex < body.length) {
+        segments.push({ type: 'text', content: body.slice(lastIndex) });
     }
 
     for (const seg of segments) {

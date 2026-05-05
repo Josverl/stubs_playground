@@ -1111,6 +1111,36 @@ body.dark-theme .cm-tooltip.cm-tooltip-hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
 }
 
+/* Python signature / declaration line (first line of Pyright hover) */
+.cm-hover-signature {
+    font-family: 'Cascadia Code', 'Fira Code', 'Courier New', Courier, monospace;
+    font-size: 12px;
+    background-color: #eef0f3;
+    color: #1e1e1e;
+    padding: 4px 10px;
+    border-radius: 3px;
+    border-left: 3px solid #0550ae;
+    margin-bottom: 6px;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+body.dark-theme .cm-hover-signature {
+    background-color: #11111b;
+    color: #cdd6f4;
+    border-left-color: #89b4fa;
+}
+
+/* code inside signature inherits — no pill styling */
+.cm-hover-signature code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    border: none;
+    font-size: inherit;
+    font-family: inherit;
+}
+
 /* Resizable hover content area */
 .cm-lsp-hover {
     padding: 8px 12px;

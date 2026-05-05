@@ -397,6 +397,84 @@ def test_select_register_docstring(render_page):
     assert len(items) == 2
 
 
+# ---------------------------------------------------------------------------
+# Signature line rendering
+# ---------------------------------------------------------------------------
+
+
+def test_signature_module(render_page):
+    """'(module) network' → rendered as cm-hover-signature, not a plain paragraph."""
+    html = _render(render_page, "(module) network\n\nNetwork configuration.\n")
+    assert "cm-hover-signature" in html
+    sigs = _query(render_page, "(module) network\n\nNetwork configuration.\n", ".cm-hover-signature code")
+    assert sigs == ["(module) network"]
+
+
+def test_signature_method(render_page):
+    """'(method) def value(x: Any, /) -> None' → signature block."""
+    text = "(method) def value(x: Any, /) -> None\n\nSet or get the value of the pin.\n"
+    sigs = _query(render_page, text, ".cm-hover-signature code")
+    assert sigs == ["(method) def value(x: Any, /) -> None"]
+    # Body text still rendered as paragraph
+    paras = _query(render_page, text, "p")
+    assert any("Set or get" in p for p in paras)
+
+
+def test_signature_class(render_page):
+    """'class Pin(id: Any, ...)' bare class line → signature block."""
+    text = "class Pin(id: Any, /, mode: int = -1)\n\nCreate a new Pin object.\n"
+    sigs = _query(render_page, text, ".cm-hover-signature code")
+    assert any("Pin" in s for s in sigs)
+
+
+def test_signature_function(render_page):
+    """'(function) def idle() -> None' → signature block."""
+    text = "(function) def idle() -> None\n\nGates the clock to the CPU.\n"
+    sigs = _query(render_page, text, ".cm-hover-signature code")
+    assert sigs == ["(function) def idle() -> None"]
+
+
+def test_signature_variable(render_page):
+    """'(variable) HARD_RESET: int' → signature block."""
+    text = "(variable) HARD_RESET: int\n\nReset causes.\n"
+    sigs = _query(render_page, text, ".cm-hover-signature code")
+    assert sigs == ["(variable) HARD_RESET: int"]
+
+
+def test_signature_not_applied_to_plain_paragraph(render_page):
+    """A plain prose paragraph must NOT get the signature treatment."""
+    text = "This module provides network drivers.\n\nMore details here.\n"
+    sigs = _query(render_page, text, ".cm-hover-signature")
+    assert sigs == [], f"No signature expected for plain prose; got: {sigs}"
+
+
+def test_network_module_signature_and_body(render_page):
+    """Full network module docstring: signature line + URL + :mod: ref + code block."""
+    docstring = (
+        "(module) network\n\n"
+        "Network configuration.\n\n"
+        "MicroPython module: https://docs.micropython.org/en/v1.28.0/library/network.html\n\n"
+        "Available via the :mod:`socket` module.\n\n"
+        "For example::\n\n"
+        "    import network\n"
+        "    nic = network.Driver(...)\n\n"
+        "---\n"
+        "Module: 'network' on micropython-v1.28.0-rp2-RPI_PICO_W\n"
+    )
+    # Signature line
+    sigs = _query(render_page, docstring, ".cm-hover-signature code")
+    assert sigs == ["(module) network"]
+    # URL is clickable
+    hrefs = _attr(render_page, docstring, "a", "href")
+    assert any("docs.micropython.org" in (h or "") for h in hrefs)
+    # :mod: rendered as RST ref
+    refs = _query(render_page, docstring, "code.cm-hover-rst-ref")
+    assert "socket" in refs
+    # Code block from RST ::
+    pres = _query(render_page, docstring, "pre code")
+    assert any("import network" in p for p in pres)
+
+
 def test_empty_input_returns_empty_div(render_page):
     html = _render(render_page, "")
     assert "cm-hover-markdown" in html
