@@ -138,14 +138,6 @@ function escapeHtml(value) {
         .replaceAll("'", '&#39;');
 }
 
-// ---- Workspace-wide diagnostic store ----
-
-/**
- * Maps fileUri → array of report-ready diagnostic objects.
- * Updated by createLSPDiagnostics whenever publishDiagnostics arrives.
- * @type {Map<string, Array<{uri: string, fileName: string, line: number, character: number, message: string, severity: string}>>}
- */
-const _workspaceDiagnostics = new Map();
 
 /**
  * Return a flat snapshot of all currently-known workspace diagnostics,
