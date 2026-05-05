@@ -92,7 +92,7 @@ def test_report_issue_dropdown_shows_warning(ri_page):
 
 
 def test_report_issue_dropdown_has_confirm_button(ri_page):
-    """Dropdown has a 'Continue to GitHub' confirm button."""
+    """Dropdown has a 'Create Issue' confirm button."""
     ri_page.locator("#reportIssueBtn").click()
     expect(ri_page.locator("#reportIssueConfirm")).to_be_visible()
     ri_page.keyboard.press("Escape")
@@ -110,7 +110,8 @@ def test_report_issue_dropdown_closes_on_outside_click(ri_page):
     """Clicking outside the dropdown closes it."""
     ri_page.locator("#reportIssueBtn").click()
     expect(ri_page.locator("#reportIssueDropdown")).to_be_visible()
-    ri_page.locator("main").click()
+    # Click the header — always visible above the centered modal
+    ri_page.locator("header").click()
     expect(ri_page.locator("#reportIssueDropdown")).to_be_hidden()
 
 
