@@ -3,6 +3,5 @@
     "temperature_sensor.py",
     "espnow.py",
     "rp2_pio.py",
-    "cp_essentials.py",
-    "cp_digital.py"
+    "cp_essentials.py"
 ]
