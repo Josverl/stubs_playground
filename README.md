@@ -8,6 +8,7 @@ The goal of this repo are to provide a simple tool that:
 - Allows you to share code-snippets with a single or multiple files
 - Shows the usefulness of static typing for MicroPython, even in a browser.
 - Serve as a Proof of Concept for other web based MicroPython or Python editors IDEs to implement something similar.
+- Allows for simple reporting of bugs to the the MicroPython stubs repo.
 
 **Built on:**
 - This App uses [*Codemirror 6* editor](https://codemirror.net/) with basic Python sypport
