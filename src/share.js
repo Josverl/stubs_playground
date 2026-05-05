@@ -300,12 +300,15 @@ async function resolveFilesForScope(scope, getCode, getActiveFileName, getFiles)
 
 /**
  * Escape text for use inside a Markdown table cell.
- * Replaces pipe characters and collapses newlines.
+ * Escapes backslashes and pipe characters, then collapses newlines.
  * @param {string} text
  * @returns {string}
  */
 function escapeMarkdownCell(text) {
-    return String(text ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+    return String(text ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/\|/g, '\\|')
+        .replace(/\r?\n/g, ' ');
 }
 
 // ---- Report Issue helpers ----
