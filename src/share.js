@@ -393,7 +393,7 @@ export function buildIssueUrl(stubPackage, stubVersion, typeCheckMode, playgroun
 
 ## Issue reproduction
 [MicroPython-Stubs Playground](${playgroundUrl})
-`;
+${diagnosticsSection}`;
 
     const url = new URL(REPORT_ISSUE_REPO);
     url.searchParams.set('title', title);
