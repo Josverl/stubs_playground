@@ -40,5 +40,5 @@ export {
 // Hover tooltip
 export { createHoverTooltip } from './hover.js';
 
-// Markdown/RST renderer (extracted in task 4.9)
-// export { renderMarkdown, processInline, renderBlocks } from './markdown-renderer.js';
+// Markdown/RST renderer (pure rendering utilities)
+export { renderMarkdown, processInline, renderBlocks, PYRIGHT_SIG_RE } from './markdown-renderer.js';

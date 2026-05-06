@@ -485,12 +485,12 @@ independently.
 | 4.1 | Decouple `diagnostics.js` from DOM (extract pure data layer) | Medium | No | ✅ Done |
 | 4.2 | Remove `window.lspClients` global; refactor to options object | Small | No | ✅ Done |
 | 4.3 | Add unsubscribe return to `onNotification` | Trivial | No | ✅ Done |
-| 4.4 | Create `src/lsp/index.js` entry point | Trivial | No | In progress |
+| 4.4 | Create `src/lsp/index.js` entry point | Trivial | No | ✅ Done |
 | 4.5 | Separate `package.json` files | Small | No | Not started |
 | 4.6 | Complete JSDoc annotations | Medium | No | Not started |
 | 4.7 | Document worker protocol in README | Small | No | Not started |
 | 4.8 | Decompose `share.js` (optional) | Small | No | Not started |
-| 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | Not started |
+| 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | ✅ Done |
 | — | Publish to npm (when ready) | One-off CI setup | n/a | Deferred |
 
 None of the required changes alter existing behaviour; they are purely additive or internal
