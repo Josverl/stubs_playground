@@ -973,14 +973,12 @@ function bindLSPToView(v) {
     const uri = `file:///workspace/${meta.path}`;
     const content = v.state.doc.toString();
     resetDocumentVersion(uri);
-    const ext = createLSPPlugin(
-        lspClient,
-        v,
-        uri,
-        'python',
-        content,
-        () => refreshWorkspaceDiagnosticsStatus(pyrightVersion, getSelectedStubsStatusLabel())
-    );
+    const ext = createLSPPlugin(lspClient, v, {
+        fileUri: uri,
+        languageId: 'python',
+        initialContent: content,
+        onDiagnosticsChange: () => refreshWorkspaceDiagnosticsStatus(pyrightVersion, getSelectedStubsStatusLabel())
+    });
     v.dispatch({ effects: meta.lspC.reconfigure(ext) });
     meta.lspBound = true;
 }
