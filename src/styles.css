@@ -17,6 +17,7 @@
     --options-panel-handle-width: 18px;
     --mobile-sidebar-width: min(74vw, 280px);
     --mobile-sidebar-handle-width: 18px;
+    --code-font-family: 'Monaspace Argon', 'SFMono-Regular', 'Consolas', 'Monaco', 'Courier New', monospace;
 }
 
 body {
@@ -908,11 +909,17 @@ body.light-theme .file-tree__footer .import-label.file-tree__footer-btn {
 /* CodeMirror specific overrides */
 .cm-editor {
     height: 100%;
+    font-family: var(--code-font-family);
+    font-weight: 200;
+    font-variation-settings: "TXTH" 1;
 }
 
-.cm-scroller {
+.cm-scroller,
+.cm-gutters {
     overflow: auto;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: var(--code-font-family);
+    font-weight: 400;
+    font-variation-settings: "TXTH" 1;
 }
 
 .cm-line {
@@ -923,7 +930,9 @@ body.light-theme .file-tree__footer .import-label.file-tree__footer-btn {
 #diagnostics-status {
     padding: 4px 12px;
     font-size: 12px;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: var(--code-font-family);
+    font-weight: 400;
+    font-variation-settings: "TXTH" 1;
     flex-shrink: 0;
     opacity: 0.8;
 }
@@ -1015,7 +1024,7 @@ footer a:hover {
 #keyboard-help kbd {
     display: inline-block;
     padding: 1px 5px;
-    font-family: monospace;
+    font-family: var(--code-font-family);
     font-size: 11px;
     border-radius: 3px;
     border: 1px solid #999;
@@ -1122,15 +1131,16 @@ body.dark-theme .cm-tooltip.cm-tooltip-hover {
 
 /* Python signature / declaration line (first line of Pyright hover) */
 .cm-hover-signature {
-    font-family: 'Cascadia Code', 'Fira Code', 'Courier New', Courier, monospace;
-    font-size: 12px;
+    font-family: var(--code-font-family);
+    font-weight: 400;
+    font-variation-settings: "TXTH" 1;
+    font-size: 11px;
     background-color: #eef0f3;
     color: #1e1e1e;
     padding: 4px 10px;
     border-radius: 3px 3px 0 0;  /* top corners only — sits flush above the body */
     border-left: 3px solid #0550ae;
     overflow-x: auto;
-    white-space: pre;
     /* Don't shrink when body content is tall */
     flex: 0 0 auto;
 }
@@ -1143,12 +1153,17 @@ body.dark-theme .cm-hover-signature {
 
 /* code inside signature inherits — no pill styling */
 .cm-hover-signature code {
+    display: block;
     background: none;
     color: inherit;
     padding: 0;
     border: none;
     font-size: inherit;
     font-family: inherit;
+    line-height: 1.45;
+    white-space: pre;
+    text-decoration: none;
+    box-shadow: none;
 }
 
 /* Resizable hover content area — fills the height budget set on the outer
@@ -1221,8 +1236,10 @@ body.dark-theme .cm-lsp-hover hr {
     border-radius: 4px;
     overflow-x: auto;
     margin: 6px 0;
-    font-family: 'Cascadia Code', 'Fira Code', 'Courier New', Courier, monospace;
-    font-size: 12px;
+    font-family: var(--code-font-family);
+    font-weight: 400;
+    font-variation-settings: "TXTH" 1;
+    font-size: 11px;
     border: 1px solid #d0d0d0;
     white-space: pre;
 }
@@ -1234,8 +1251,10 @@ body.dark-theme .cm-lsp-hover pre {
 }
 
 .cm-lsp-hover code {
-    font-family: 'Cascadia Code', 'Fira Code', 'Courier New', Courier, monospace;
-    font-size: 12px;
+    font-family: var(--code-font-family);
+    font-weight: 400;
+    font-variation-settings: "TXTH" 1;
+    font-size: 11px;
     background-color: #eef0f3;
     color: #0550ae;
     padding: 1px 4px;
@@ -1295,8 +1314,10 @@ body.dark-theme .cm-lsp-hover .cm-hover-rst-ref {
 }
 
 .cm-hover-field-name {
-    font-family: 'Cascadia Code', 'Fira Code', 'Courier New', Courier, monospace;
-    font-size: 11px;
+    font-family: var(--code-font-family);
+    font-weight: 400;
+    font-variation-settings: "TXTH" 1;
+    font-size: 10px;
     background-color: #e8f0fe;
     color: #0550ae;
     padding: 1px 5px;
