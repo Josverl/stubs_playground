@@ -1,5 +1,5 @@
 // Patch os module constants (injected by webpack DefinePlugin)
-const os = require("os");
+import os from "os";
 declare const __os_constants: any;
 
 if (typeof __os_constants !== "undefined") {

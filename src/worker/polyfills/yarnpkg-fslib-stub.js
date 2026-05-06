@@ -3,8 +3,8 @@
 // Pyright's realFileSystem.ts creates YarnFS (PosixFS → VirtualFS → EggZipOpenFS)
 // and uses it for ALL filesystem access. These stubs must actually work.
 
-const fs = require('fs');
-const pathModule = require('path');
+import * as fs from 'fs';
+import pathModule from 'path';
 
 class FakeFS {
     existsSync(p) { return fs.existsSync(p); }
@@ -125,8 +125,14 @@ const ppath = {
     isAbsolute: (p) => pathModule.posix.isAbsolute(p),
 };
 const npath = ppath;
+const PortablePath = '';
+const Filename = '';
+const NativePath = '';
+const constants = {};
+const errors = {};
+const statUtils = {};
 
-module.exports = {
+export {
     FakeFS,
     BasePortableFakeFS,
     ZipOpenFS,
@@ -143,10 +149,10 @@ module.exports = {
     MountFS,
     ppath,
     npath,
-    PortablePath: '',
-    Filename: '',
-    NativePath: '',
-    constants: {},
-    errors: {},
-    statUtils: {},
+    PortablePath,
+    Filename,
+    NativePath,
+    constants,
+    errors,
+    statUtils,
 };
