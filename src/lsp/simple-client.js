@@ -299,9 +299,15 @@ export class SimpleLSPClient {
 
     /**
      * Register a message handler
+     * @param {Function} handler - Notification handler function
+     * @returns {Function} Unsubscribe function that removes this handler
      */
     onNotification(handler) {
         this.messageHandlers.push(handler);
+        return () => {
+            const idx = this.messageHandlers.indexOf(handler);
+            if (idx > -1) this.messageHandlers.splice(idx, 1);
+        };
     }
 
     /**
