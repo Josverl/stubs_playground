@@ -38,6 +38,7 @@ import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { lintKeymap, setDiagnostics } from '@codemirror/lint';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import { createLSPClient, createLSPPlugin, switchBoard } from './lsp/client.js';
+import { getWorkerUrlCached } from './lsp/worker-config.js';
 import { restoreFromUrl } from './share-core.js';
 import { initShareDropdown, initReportIssueButton } from './share-ui.js';
 //import { notifyDocumentChange, notifyDocumentOpen, updateDiagnosticsStatus, lintKeymapExtension, getWorkspaceDiagnostics } from './lsp/diagnostics.js';
@@ -153,12 +154,6 @@ let currentTypeshedPath = sanitizeTypeshedPath(localStorage.getItem('mp_typeshed
 let currentPythonVersion = sanitizePythonVersion(localStorage.getItem('mp_pythonVersion') || '3.10');
 let currentVerboseOutput = parseStoredBoolean('mp_verboseOutput', true);
 
-function getWorkerUrl() {
-    return window.location.pathname.includes('/src/')
-        ? '../dist/pyright_worker.js'
-        : './pyright_worker.js';
-}
-
 function updateVerboseOutputLabel() {
     const label = document.getElementById('verboseOutputLabel');
     if (!label) return;
@@ -204,7 +199,7 @@ async function restartLSPWithCurrentSettings(boardId) {
     const result = await switchBoard(
         { client: lspClient, transport: lspTransport },
         {
-            workerUrl: getWorkerUrl(),
+            workerUrl: getWorkerUrlCached(),
             timeout: 15000,
             boardStubs: stubs,
             workspaceFiles,
@@ -1014,6 +1009,9 @@ function rebindLSPAllViews() {
 
 // Initialize editor after loading sample
 async function initializeEditor() {
+    // Start LSP initialization early, in parallel with UI setup
+    startEarlyLSPInit();
+
     // Check URL parameters first (shareable link)
     const urlState = await restoreFromUrl();
     const sharedFiles = urlState.files;
@@ -1090,44 +1088,21 @@ async function initializeEditor() {
 
     const initialWorkspaceFiles = await collectWorkspaceFiles(initialFile, initialContent);
 
-    // Initialize LSP client — Pyright runs in a Web Worker
-    try {
-        // In dev, pyright_worker.js lives at /dist/pyright_worker.js;
-        // in production (deploy) it's alongside index.html.
-        const workerUrl = window.location.pathname.includes('/src/')
-            ? '../dist/pyright_worker.js'
-            : './pyright_worker.js';
-        let initialBoardStubs;
-        if (currentBoardId && boardManifest) {
-            try {
-                initialBoardStubs = await fetchBoardStubs(currentBoardId);
-            } catch (error) {
-                console.warn('Could not preload stubs for board:', currentBoardId, error);
-            }
-        }
-
-        window.__lspReady = false;
-        window.__lspFailed = false;
-        console.log('Initializing LSP client...');
-        const lspResult = await createLSPClient({
-            workerUrl: getWorkerUrl(),
-            timeout: 15000,
-            boardStubs: initialBoardStubs,
-            workspaceFiles: initialWorkspaceFiles,
-            typeCheckingMode: currentTypeCheckMode,
-            typeshedPath: currentTypeshedPath,
-            pythonVersion: currentPythonVersion,
-            verboseOutput: currentVerboseOutput,
-        });
-        lspClient = lspResult.client;
-        lspTransport = lspResult.transport;
-        pyrightVersion = lspResult.pyrightVersion || "";
-        console.log('LSP client ready.');
-        window.__lspReady = true;
-    } catch (error) {
-        console.error('Failed to initialize LSP client:', error);
+    // Wait for early LSP initialization to complete (started right after page load)
+    // If it hasn't started yet, start it now.
+    const lspInitResult = await (lspInitPromise || startEarlyLSPInit());
+    if (!lspInitResult.success) {
         console.log('Editor will continue without LSP features');
-        window.__lspFailed = true;
+    } else {
+        try {
+            // Early init prioritizes fast worker startup with bundled defaults.
+            // Re-apply selected board/workspace settings once UI/OPFS is ready.
+            if (currentBoardId) {
+                await restartLSPWithCurrentSettings(currentBoardId);
+            }
+        } catch (error) {
+            console.warn('Could not apply final board/workspace settings after early init:', error);
+        }
     }
 
     // Per-view update listeners are wired inside buildExtensions(); no
@@ -1333,8 +1308,68 @@ async function initializeEditor() {
     console.log('CodeMirror Python Editor initialized successfully!');
 }
 
+// Early LSP Initialization (starts in parallel with UI setup)
+// ============================================================
+// This promise tracks whether the LSP client has been initialized early.
+// We start loading the worker bundle as soon as possible, before waiting
+// for UI setup, examples, board selector, etc.
+
+let lspInitPromise = null;
+
+/**
+ * Start LSP initialization early, in parallel with UI setup.
+ * Called right after document load to begin worker download/initialization.
+ * Uses currently available settings; will be reinitialized with updated
+ * board/type-check settings once full UI init completes.
+ */
+function startEarlyLSPInit() {
+    if (lspInitPromise) return lspInitPromise;
+
+    lspInitPromise = (async () => {
+        try {
+            console.log('Starting early LSP initialization...');
+
+            // Start LSP client in the background with default/current settings
+            // It will be restarted with proper board stubs once board selector is initialized
+            window.__lspReady = false;
+            window.__lspFailed = false;
+            console.log('Creating LSP client in background...');
+
+            const lspResult = await createLSPClient({
+                workerUrl: getWorkerUrlCached(),
+                timeout: 15000,
+                boardStubs: undefined, // Use bundled stubs initially
+                // Start with an empty workspace so worker creation is not
+                // blocked by OPFS/project hydration.
+                workspaceFiles: {},
+                typeCheckingMode: currentTypeCheckMode,
+                typeshedPath: currentTypeshedPath,
+                pythonVersion: currentPythonVersion,
+                verboseOutput: currentVerboseOutput,
+            });
+
+            lspClient = lspResult.client;
+            lspTransport = lspResult.transport;
+            pyrightVersion = lspResult.pyrightVersion || "";
+            console.log('LSP client ready (early init).');
+            window.__lspReady = true;
+
+            return { success: true };
+        } catch (error) {
+            console.error('Early LSP initialization failed:', error);
+            window.__lspFailed = true;
+            return { success: false, error };
+        }
+    })();
+
+    return lspInitPromise;
+}
+
 // Start initialization
-initializeEditor();
+initializeEditor().catch(err => {
+    console.error('Editor initialization failed:', err);
+    window.__lspFailed = true;
+});
 
 // Sidebar resize handle
 function initSidebarResize() {
