@@ -8,6 +8,9 @@
 import { hoverTooltip } from '@codemirror/view';
 import { renderMarkdown } from './markdown-renderer.js';
 
+// Backward compatibility for existing hover rendering tests/imports.
+export { renderMarkdown } from './markdown-renderer.js';
+
 /**
  * Convert LSP Hover result to CodeMirror tooltip content.
  *
