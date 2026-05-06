@@ -18,9 +18,25 @@ def _goto_editor(page, live_server):
     page.wait_for_selector(".cm-editor", timeout=CDN_TIMEOUT)
 
 
+def _disable_lsp_notification_updates(page):
+    """Prevent background LSP notifications from overwriting injected diagnostics."""
+    page.evaluate("""() => {
+        if (!window.lspClients) return;
+        for (const entry of window.lspClients.values()) {
+            const client = entry?.client;
+            if (!client) continue;
+            // Diagnostics tests inject synthetic lint entries and should not race
+            // with async publishDiagnostics notifications from the worker.
+            client.messageHandlers = [];
+            try { client.disconnect?.(); } catch (_) {}
+        }
+    }""")
+
+
 @pytest.fixture(scope="module")
 def editor_page(shared_page, live_server):
     _goto_editor(shared_page, live_server)
+    _disable_lsp_notification_updates(shared_page)
     return shared_page
 
 
@@ -77,8 +93,7 @@ def test_lint_panel_shows_diagnostic_message(editor_page):
 
     panel = editor_page.locator(".cm-panel.cm-panel-lint")
     expect(panel).to_be_visible(timeout=UI_TIMEOUT)
-
-    expect(panel).to_contain_text("Test error: undefined variable")
+    expect(panel).to_contain_text("Test error: undefined variable", timeout=UI_TIMEOUT)
 
 
 def test_f8_without_diagnostics_does_not_crash(editor_page):
