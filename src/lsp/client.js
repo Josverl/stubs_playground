@@ -54,14 +54,22 @@ export async function createLSPClient(config = {}) {
 
 /**
  * Create an LSP plugin extension for an editor
- * @param {(diagnostics: Array) => void} [onDiagnosticsChange] - Optional callback for app-level diagnostics UI updates
+ * @param {SimpleLSPClient} client - LSP client instance
+ * @param {EditorView} view - CodeMirror editor view
+ * @param {Object} [options={}] - Configuration options
+ * @param {string} [options.fileUri='file:///workspace/document.py'] - Document URI
+ * @param {string} [options.languageId='python'] - Document language ID
+ * @param {string} [options.initialContent=''] - Initial document content
+ * @param {(diagnostics: Array) => void} [options.onDiagnosticsChange] - Callback for diagnostics updates
+ * @returns {Extension[]} CodeMirror extension array
  */
-export function createLSPPlugin(client, view, fileUri = 'file:///workspace/document.py', languageId = 'python', initialContent = '', onDiagnosticsChange = null) {
-    // Store client reference for later use
-    if (!window.lspClients) {
-        window.lspClients = new Map();
-    }
-    window.lspClients.set(fileUri, { client, languageId });
+export function createLSPPlugin(client, view, options = {}) {
+    const {
+        fileUri = 'file:///workspace/document.py',
+        languageId = 'python',
+        initialContent = '',
+        onDiagnosticsChange = null
+    } = options;
 
     // Notify server that document is open
     notifyDocumentOpen(client, fileUri, languageId, initialContent, 1);

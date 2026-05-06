@@ -363,6 +363,13 @@ that is app-specific. The proposed `LSPPluginOptions` interface (§2.2) should a
 the only current consumer is `app.js` and it already has the reference via closure). Refactor the
 signature to use an options object instead of positional parameters.
 
+**Implementation progress (current branch):**
+- Done: `window.lspClients` global removed; callers now hold their own client references.
+- Done: `createLSPPlugin` signature refactored to accept a single `options` parameter:
+  `createLSPPlugin(client, view, options)` where options include `fileUri`, `languageId`,
+  `initialContent`, and `onDiagnosticsChange`.
+- Done: Call site in `app.js` updated to use the new options-based signature.
+
 ### 4.3 Add an unsubscribe return value to `onNotification`
 
 ```js
@@ -476,7 +483,7 @@ independently.
 | # | Task | Effort | Breaking? | Status |
 |---|------|--------|-----------|--------|
 | 4.1 | Decouple `diagnostics.js` from DOM (extract pure data layer) | Medium | No | In progress — core split implemented |
-| 4.2 | Remove `window.lspClients` global; refactor to options object | Small | No | Not started |
+| 4.2 | Remove `window.lspClients` global; refactor to options object | Small | No | In progress — options object refactored |
 | 4.3 | Add unsubscribe return to `onNotification` | Trivial | No | Not started |
 | 4.4 | Create `src/lsp/index.js` entry point | Trivial | No | Not started |
 | 4.5 | Separate `package.json` files | Small | No | Not started |
