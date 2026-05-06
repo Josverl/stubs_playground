@@ -40,7 +40,8 @@ import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import { createLSPClient, createLSPPlugin, switchBoard } from './lsp/client.js';
 import { restoreFromUrl, initShareDropdown, initReportIssueButton } from './share.js';
 //import { notifyDocumentChange, notifyDocumentOpen, updateDiagnosticsStatus, lintKeymapExtension, getWorkspaceDiagnostics } from './lsp/diagnostics.js';
-import { notifyDocumentChange, notifyDocumentOpen, updateDiagnosticsStatus, lintKeymapExtension, removeWorkspaceDiagnosticsFor, refreshWorkspaceDiagnosticsStatus, getWorkspaceDiagnostics } from './lsp/diagnostics.js';
+import { notifyDocumentChange, notifyDocumentOpen, lintKeymapExtension, removeWorkspaceDiagnosticsFor, getWorkspaceDiagnostics } from './lsp/diagnostics.js';
+import { updateDiagnosticsStatus, refreshWorkspaceDiagnosticsStatus } from './diagnostics-status.js';
 import { OPFSProject } from './storage/opfs-project.js';
 import { DocumentManager } from './editor/document-manager.js';
 import { TabBar } from './ui/tab-bar.js';
@@ -972,7 +973,14 @@ function bindLSPToView(v) {
     const uri = `file:///workspace/${meta.path}`;
     const content = v.state.doc.toString();
     resetDocumentVersion(uri);
-    const ext = createLSPPlugin(lspClient, v, uri, 'python', content, pyrightVersion, getSelectedStubsStatusLabel);
+    const ext = createLSPPlugin(
+        lspClient,
+        v,
+        uri,
+        'python',
+        content,
+        () => refreshWorkspaceDiagnosticsStatus(pyrightVersion, getSelectedStubsStatusLabel())
+    );
     v.dispatch({ effects: meta.lspC.reconfigure(ext) });
     meta.lspBound = true;
 }
