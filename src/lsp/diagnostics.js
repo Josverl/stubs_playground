@@ -44,44 +44,6 @@ export const lintKeymapExtension = Prec.high(keymap.of([
 ]));
 
 /**
- * Update the diagnostics status bar below the editor.
- * @param {Array} diagnostics - CodeMirror diagnostics array
- * @param {string} [pyrightVersion] - Optional pyright version to display
- * @param {string} [stubsLabel] - Optional stubs label, e.g. "micropython-rp2-stubs v1.28.0.post3"
- */
-export function updateDiagnosticsStatus(diagnostics = [], pyrightVersion = "", stubsLabel = "") {
-    const el = document.getElementById('diagnostics-status');
-    if (!el) return;
-
-    let errors = 0, warnings = 0, info = 0;
-    for (const d of diagnostics) {
-        if (d.severity === 'error') errors++;
-        else if (d.severity === 'warning') warnings++;
-        else info++;
-    }
-
-    const resolvedStubsLabel = (stubsLabel || '').trim() || getSelectedStubsLabelFromDom();
-    const statusMain =
-        `Errors: <span class="count-error">${errors}</span>` +
-        ` | Warnings: <span class="count-warning">${warnings}</span>` +
-        ` | Info: <span class="count-info">${info}</span>`;
-
-    const statusMetaParts = [];
-    if (resolvedStubsLabel) {
-        statusMetaParts.push(`<span class="stubs-version">${escapeHtml(resolvedStubsLabel)}</span>`);
-    }
-    if (pyrightVersion) {
-        statusMetaParts.push(`<span class="pyright-version">Pyright ${pyrightVersion}</span>`);
-    }
-
-    const statusMeta = statusMetaParts.length
-        ? `<span class="status-meta-sep"> | </span><span class="status-meta">${statusMetaParts.join(' | ')}</span>`
-        : '';
-
-    el.innerHTML = `<span class="status-main">${statusMain}</span>${statusMeta}`;
-}
-
-/**
  * Remove diagnostics for a URI from the workspace cache and optionally refresh
  * the status bar. Call this when a file is closed.
  * @param {string} fileUri
@@ -98,47 +60,6 @@ export function removeWorkspaceDiagnosticsFor(fileUri) {
  * @param {string} [pyrightVersion]
  * @param {string} [stubsLabel]
  */
-export function refreshWorkspaceDiagnosticsStatus(pyrightVersion = "", stubsLabel = "") {
-    const all = [];
-    for (const diags of _workspaceDiagnostics.values()) {
-        all.push(...diags);
-    }
-    updateDiagnosticsStatus(all, pyrightVersion, stubsLabel);
-}
-
-/**
- * Read and normalize board text from the board selector.
- * Input option format is typically: "package — version".
- */
-function getSelectedStubsLabelFromDom() {
-    const select = document.getElementById('boardSelect');
-    if (!select || select.selectedIndex < 0) return '';
-
-    const selected = select.options[select.selectedIndex];
-    if (!selected) return '';
-
-    const text = (selected.textContent || '').trim();
-    if (!text) return '';
-    if (/^loading\.{0,3}$/i.test(text)) return '';
-
-    const parts = text.split(' — ').map((p) => p.trim()).filter(Boolean);
-    if (parts.length >= 2) {
-        return `${parts[0]} v${parts[1]}`;
-    }
-
-    return text;
-}
-
-function escapeHtml(value) {
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
-
-
 /**
  * Return a flat snapshot of all currently-known workspace diagnostics,
  * suitable for embedding in a GitHub issue report.
@@ -161,10 +82,9 @@ export function getWorkspaceDiagnostics() {
  * @param {Object} client - LSP client
  * @param {string} fileUri - Document URI
  * @param {Object} view - CodeMirror view
- * @param {string} [pyrightVersion] - Pyright version string to display in the status bar
- * @param {(() => string)|string} [stubsStatusSource] - Current stubs label or label provider
+ * @param {(diagnostics: Array) => void} [onDiagnosticsChange] - Optional callback for app-level UI updates
  */
-export function createLSPDiagnostics(client, fileUri, view, pyrightVersion = "", stubsStatusSource = "") {
+export function createLSPDiagnostics(client, fileUri, view, onDiagnosticsChange = null) {
     // Listen for diagnostic notifications from the server
     client.onNotification((method, params) => {
         if (method === 'textDocument/publishDiagnostics') {
@@ -184,31 +104,26 @@ export function createLSPDiagnostics(client, fileUri, view, pyrightVersion = "",
 
                 // Store report-ready snapshot in workspace map (1-based positions)
                 const fileName = fileUri.replace('file:///workspace/', '');
-                _workspaceDiagnostics.set(fileUri, lspDiagnostics.map(d => ({
-                    uri: fileUri,
-                    fileName,
-                    line: (d.range?.start?.line ?? 0) + 1,
-                    character: (d.range?.start?.character ?? 0) + 1,
-                    message: d.message || '',
-                    severity: lspSeverityToString(d.severity),
-                })));
+                if (lspDiagnostics.length === 0) {
+                    _workspaceDiagnostics.delete(fileUri);
+                } else {
+                    _workspaceDiagnostics.set(fileUri, lspDiagnostics.map(d => ({
+                        uri: fileUri,
+                        fileName,
+                        line: (d.range?.start?.line ?? 0) + 1,
+                        character: (d.range?.start?.character ?? 0) + 1,
+                        message: d.message || '',
+                        severity: lspSeverityToString(d.severity),
+                    })));
+                }
 
                 // Use setDiagnostics to update the editor
                 view.dispatch(setDiagnostics(view.state, cmDiagnostics));
                 console.log('Dispatched setDiagnostics');
 
-                // Update the workspace cache for this file
-                if (cmDiagnostics.length === 0) {
-                    _workspaceDiagnostics.delete(fileUri);
-                } else {
-                    _workspaceDiagnostics.set(fileUri, cmDiagnostics);
+                if (typeof onDiagnosticsChange === 'function') {
+                    onDiagnosticsChange(getWorkspaceDiagnostics());
                 }
-
-                // Show workspace-level totals so the count reflects all open files
-                const stubsLabel = typeof stubsStatusSource === 'function'
-                    ? (stubsStatusSource() || '')
-                    : (stubsStatusSource || '');
-                refreshWorkspaceDiagnosticsStatus(pyrightVersion, stubsLabel);
             }
         }
     });

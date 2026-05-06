@@ -340,6 +340,16 @@ lines and gained a module-level `workspaceDiagnosticsMap` cache with workspace-w
 This is now a **medium** effort task (was small) because the workspace cache and DOM writing are
 interleaved and must be untangled.
 
+**Implementation progress (current branch):**
+- Done: DOM-coupled status rendering moved out of `src/lsp/diagnostics.js` into
+  `src/diagnostics-status.js` (`updateDiagnosticsStatus`, `refreshWorkspaceDiagnosticsStatus`).
+- Done: `createLSPDiagnostics` now emits app-level updates through an
+  `onDiagnosticsChange` callback instead of touching DOM directly.
+- Done: workspace-cache shape bug fixed (report-ready snapshots are no longer overwritten by
+  CodeMirror diagnostic objects).
+- Remaining: `createLSPPlugin` still uses positional params; fold diagnostics callback into
+  the planned `LSPPluginOptions` object when task 4.2 is implemented.
+
 ### 4.2 Remove `window.lspClients` global from `client.js`
 
 `createLSPPlugin` stores per-URI client references on `window.lspClients`. This is an accidental
@@ -465,7 +475,7 @@ independently.
 
 | # | Task | Effort | Breaking? | Status |
 |---|------|--------|-----------|--------|
-| 4.1 | Decouple `diagnostics.js` from DOM (extract pure data layer) | Medium | No | Not started — scope increased |
+| 4.1 | Decouple `diagnostics.js` from DOM (extract pure data layer) | Medium | No | In progress — core split implemented |
 | 4.2 | Remove `window.lspClients` global; refactor to options object | Small | No | Not started |
 | 4.3 | Add unsubscribe return to `onNotification` | Trivial | No | Not started |
 | 4.4 | Create `src/lsp/index.js` entry point | Trivial | No | Not started |

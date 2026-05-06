@@ -54,10 +54,9 @@ export async function createLSPClient(config = {}) {
 
 /**
  * Create an LSP plugin extension for an editor
- * @param {string} [pyrightVersion] - Pyright version to show in the diagnostics status bar
- * @param {(() => string)|string} [stubsStatusSource] - Current stubs label or label provider
+ * @param {(diagnostics: Array) => void} [onDiagnosticsChange] - Optional callback for app-level diagnostics UI updates
  */
-export function createLSPPlugin(client, view, fileUri = 'file:///workspace/document.py', languageId = 'python', initialContent = '', pyrightVersion = '', stubsStatusSource = '') {
+export function createLSPPlugin(client, view, fileUri = 'file:///workspace/document.py', languageId = 'python', initialContent = '', onDiagnosticsChange = null) {
     // Store client reference for later use
     if (!window.lspClients) {
         window.lspClients = new Map();
@@ -68,7 +67,7 @@ export function createLSPPlugin(client, view, fileUri = 'file:///workspace/docum
     notifyDocumentOpen(client, fileUri, languageId, initialContent, 1);
 
     // Create diagnostics extension with the view
-    const diagnosticsExtensions = createLSPDiagnostics(client, fileUri, view, pyrightVersion, stubsStatusSource);
+    const diagnosticsExtensions = createLSPDiagnostics(client, fileUri, view, onDiagnosticsChange);
 
     // Create completion source
     const completionSource = createCompletionSource(client, fileUri);
