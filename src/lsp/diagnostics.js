@@ -143,12 +143,16 @@ function convertLSPDiagnostic(lspDiag, doc) {
     // Map LSP severity to CodeMirror severity
     const severity = lspSeverityToString(lspDiag.severity);
 
+    const source = lspDiag.code
+        ? `${lspDiag.source || 'lsp'}: ${lspDiag.code}`
+        : (lspDiag.source || 'lsp');
+
     return {
         from,
         to,
         severity,
         message: lspDiag.message,
-        source: lspDiag.source || 'lsp'
+        source
     };
 }
 
