@@ -482,10 +482,10 @@ independently.
 
 | # | Task | Effort | Breaking? | Status |
 |---|------|--------|-----------|--------|
-| 4.1 | Decouple `diagnostics.js` from DOM (extract pure data layer) | Medium | No | In progress — core split implemented |
-| 4.2 | Remove `window.lspClients` global; refactor to options object | Small | No | In progress — options object refactored |
-| 4.3 | Add unsubscribe return to `onNotification` | Trivial | No | Not started |
-| 4.4 | Create `src/lsp/index.js` entry point | Trivial | No | Not started |
+| 4.1 | Decouple `diagnostics.js` from DOM (extract pure data layer) | Medium | No | ✅ Done |
+| 4.2 | Remove `window.lspClients` global; refactor to options object | Small | No | ✅ Done |
+| 4.3 | Add unsubscribe return to `onNotification` | Trivial | No | ✅ Done |
+| 4.4 | Create `src/lsp/index.js` entry point | Trivial | No | In progress |
 | 4.5 | Separate `package.json` files | Small | No | Not started |
 | 4.6 | Complete JSDoc annotations | Medium | No | Not started |
 | 4.7 | Document worker protocol in README | Small | No | Not started |
