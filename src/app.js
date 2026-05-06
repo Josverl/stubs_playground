@@ -721,9 +721,11 @@ const darkTheme = EditorView.theme({
     },
     ".cm-content": {
         caretColor: "#528bff",
-        fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace",
-        fontSize: "14px",
-        lineHeight: "1.5"
+        fontFamily: "var(--code-font-family)",
+        fontSize: "13px",
+        lineHeight: "1.5",
+        fontWeight: "400",
+        fontVariationSettings: '"TXTH" 1'
     },
     ".cm-cursor, .cm-dropCursor": {
         borderLeftColor: "#528bff"
@@ -767,9 +769,11 @@ const lightTheme = EditorView.theme({
     },
     ".cm-content": {
         caretColor: "#0000ff",
-        fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace",
-        fontSize: "14px",
-        lineHeight: "1.5"
+        fontFamily: "var(--code-font-family)",
+        fontSize: "13px",
+        lineHeight: "1.5",
+        fontWeight: "400",
+        fontVariationSettings: '"TXTH" 1'
     },
     ".cm-cursor, .cm-dropCursor": {
         borderLeftColor: "#0000ff"
