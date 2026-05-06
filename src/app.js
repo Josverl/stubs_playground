@@ -5,12 +5,38 @@
  */
 
 import { python } from '@codemirror/lang-python';
-import { startCompletion } from '@codemirror/autocomplete';
-import { indentUnit } from '@codemirror/language';
-import { Compartment, Prec } from '@codemirror/state';
-import { EditorView, basicSetup } from 'codemirror';
-import { keymap } from '@codemirror/view';
-import { setDiagnostics } from '@codemirror/lint';
+import {
+    autocompletion,
+    closeBrackets,
+    closeBracketsKeymap,
+    completionKeymap,
+    startCompletion
+} from '@codemirror/autocomplete';
+import {
+    bracketMatching,
+    defaultHighlightStyle,
+    foldGutter,
+    foldKeymap,
+    indentOnInput,
+    indentUnit,
+    syntaxHighlighting
+} from '@codemirror/language';
+import { Compartment, EditorState, Prec } from '@codemirror/state';
+import {
+    crosshairCursor,
+    drawSelection,
+    dropCursor,
+    EditorView,
+    highlightActiveLine,
+    highlightActiveLineGutter,
+    highlightSpecialChars,
+    keymap,
+    lineNumbers,
+    rectangularSelection
+} from '@codemirror/view';
+import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
+import { lintKeymap, setDiagnostics } from '@codemirror/lint';
+import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import { createLSPClient, createLSPPlugin, switchBoard } from './lsp/client.js';
 import { restoreFromUrl, initShareDropdown, initReportIssueButton } from './share.js';
 //import { notifyDocumentChange, notifyDocumentOpen, updateDiagnosticsStatus, lintKeymapExtension, getWorkspaceDiagnostics } from './lsp/diagnostics.js';
@@ -20,6 +46,35 @@ import { DocumentManager } from './editor/document-manager.js';
 import { TabBar } from './ui/tab-bar.js';
 import { FileTree } from './ui/file-tree.js';
 import { Events } from './events.js';
+
+const basicSetup = [
+    lineNumbers(),
+    highlightActiveLineGutter(),
+    highlightSpecialChars(),
+    history(),
+    foldGutter(),
+    drawSelection(),
+    dropCursor(),
+    EditorState.allowMultipleSelections.of(true),
+    indentOnInput(),
+    syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+    bracketMatching(),
+    closeBrackets(),
+    autocompletion(),
+    rectangularSelection(),
+    crosshairCursor(),
+    highlightActiveLine(),
+    highlightSelectionMatches(),
+    keymap.of([
+        ...closeBracketsKeymap,
+        ...defaultKeymap,
+        ...searchKeymap,
+        ...historyKeymap,
+        ...foldKeymap,
+        ...completionKeymap,
+        ...lintKeymap,
+    ]),
+];
 
 // Sample Python code - will be loaded from file
 let sampleCode = '# Loading example...\n';
