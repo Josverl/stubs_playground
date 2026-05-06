@@ -1320,6 +1320,56 @@ body.dark-theme .cm-hover-fields dd {
     color: #bac2de;
 }
 
+.cm-hover-admonition {
+    margin: 8px 0;
+    border: 1px solid #d9c77a;
+    border-left: 4px solid #a16207;
+    border-radius: 6px;
+    background: linear-gradient(180deg, #fffbea 0%, #fffdf5 100%);
+    overflow: hidden;
+}
+
+body.dark-theme .cm-hover-admonition {
+    border-color: #5b4a1a;
+    border-left-color: #eab308;
+    background: linear-gradient(180deg, #221b0b 0%, #181412 100%);
+}
+
+.cm-hover-admonition-title {
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #7c4a03;
+    background-color: rgba(245, 158, 11, 0.14);
+    border-bottom: 1px solid rgba(161, 98, 7, 0.18);
+}
+
+body.dark-theme .cm-hover-admonition-title {
+    color: #fcd34d;
+    background-color: rgba(234, 179, 8, 0.12);
+    border-bottom-color: rgba(234, 179, 8, 0.18);
+}
+
+.cm-hover-admonition-body {
+    padding: 6px 10px;
+}
+
+.cm-hover-admonition-body > :first-child {
+    margin-top: 0;
+}
+
+.cm-hover-admonition-body > :last-child {
+    margin-bottom: 0;
+}
+
+.cm-hover-admonition-attention {
+    border-left-color: #b45309;
+}
+
+body.dark-theme .cm-hover-admonition-attention {
+    border-left-color: #f59e0b;
+}
+
 .cm-lsp-hover a {
     color: #0550ae;
     text-decoration: underline;

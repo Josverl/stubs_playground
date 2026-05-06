@@ -17,6 +17,40 @@
  */
 export const PYRIGHT_SIG_RE = /^\((?:module|class|function|method|variable|parameter|property|constant|overload|type alias|type)\)\s+|^(?:class|def)\s+\w/;
 
+const RST_FIELD_RE = /^:(param|type|returns?|rtype|raises?|var|ivar|cvar)\b/;
+const RST_ADMONITION_RE = /^Admonition:\s*(.+?)(?:\s+:class:\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)*))?\s*$/;
+const RST_ADMONITION_CLASS_LINE_RE = /^:class:\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)*)\s*$/;
+
+function parseAdmonitionHeader(line) {
+    const match = line.match(RST_ADMONITION_RE);
+    if (!match) return null;
+
+    return {
+        title: match[1].trim().replace(/\s+:class:\s+[A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)*\s*$/, ''),
+        classes: match[2] ? match[2].split(/\s+/).filter(Boolean) : [],
+    };
+}
+
+function parseAdmonitionClassLine(line) {
+    const match = line.trim().match(RST_ADMONITION_CLASS_LINE_RE);
+    if (!match) return null;
+    return match[1].split(/\s+/).filter(Boolean);
+}
+
+function isBlockBoundaryStart(line) {
+    const trimmed = line.trimEnd();
+    if (!trimmed.trim()) return false;
+
+    return (
+        /^#{1,6}\s+/.test(trimmed) ||
+        /^[-*_]{3,}$/.test(trimmed.trim()) ||
+        /^[\-*+]\s+\S/.test(trimmed) ||
+        /^\d+\.\s+\S/.test(trimmed) ||
+        RST_FIELD_RE.test(trimmed) ||
+        !!parseAdmonitionHeader(trimmed)
+    );
+}
+
 /**
  * Process inline text formatting into a DocumentFragment.
  *
@@ -174,7 +208,7 @@ export function renderBlocks(text, container) {
         }
 
         // ── RST field list: :param …:, :returns:, :rtype:, :raises …: ─────────
-        if (/^:(param|type|returns?|rtype|raises?|var|ivar|cvar)\b/.test(trimmed)) {
+        if (RST_FIELD_RE.test(trimmed)) {
             const dl = document.createElement('dl');
             dl.className = 'cm-hover-fields';
 
@@ -201,6 +235,75 @@ export function renderBlocks(text, container) {
             }
 
             container.appendChild(dl);
+            continue;
+        }
+
+        // ── Flattened RST admonition: Admonition:Title :class: attention ─────
+        const admonitionMeta = parseAdmonitionHeader(trimmed);
+        if (admonitionMeta) {
+            const admonition = document.createElement('section');
+            admonition.className = 'cm-hover-admonition';
+
+            const title = document.createElement('div');
+            title.className = 'cm-hover-admonition-title';
+            title.appendChild(processInline(admonitionMeta.title));
+            admonition.appendChild(title);
+
+            for (const className of admonitionMeta.classes) {
+                admonition.classList.add(`cm-hover-admonition-${className.toLowerCase()}`);
+            }
+
+            i++;
+            while (i < lines.length && !lines[i].trim()) i++;
+
+            if (i < lines.length) {
+                const classLineClasses = parseAdmonitionClassLine(lines[i]);
+                if (classLineClasses) {
+                    for (const className of classLineClasses) {
+                        admonition.classList.add(`cm-hover-admonition-${className.toLowerCase()}`);
+                    }
+                    i++;
+                    while (i < lines.length && !lines[i].trim()) i++;
+                }
+            }
+
+            const bodyLines = [];
+            while (i < lines.length) {
+                const current = lines[i];
+                const currentClassLineClasses = parseAdmonitionClassLine(current);
+                if (currentClassLineClasses) {
+                    for (const className of currentClassLineClasses) {
+                        admonition.classList.add(`cm-hover-admonition-${className.toLowerCase()}`);
+                    }
+                    i++;
+                    continue;
+                }
+
+                if (!current.trim()) {
+                    let next = i + 1;
+                    while (next < lines.length && !lines[next].trim()) next++;
+                    if (next >= lines.length) {
+                        i = next;
+                        break;
+                    }
+                    if (isBlockBoundaryStart(lines[next])) break;
+                    bodyLines.push('');
+                    i++;
+                    continue;
+                }
+
+                bodyLines.push(current);
+                i++;
+            }
+
+            if (bodyLines.length > 0) {
+                const body = document.createElement('div');
+                body.className = 'cm-hover-admonition-body';
+                renderBlocks(bodyLines.join('\n'), body);
+                admonition.appendChild(body);
+            }
+
+            container.appendChild(admonition);
             continue;
         }
 
@@ -302,7 +405,8 @@ export function renderBlocks(text, container) {
             if (/^[-*_]{3,}$/.test(pl.trim())) break;
             if (/^[\-*+]\s+\S/.test(pl)) break;
             if (/^\d+\.\s+\S/.test(pl)) break;
-            if (/^:(param|type|returns?|rtype|raises?|var|ivar|cvar)\b/.test(pl)) break;
+            if (RST_FIELD_RE.test(pl)) break;
+            if (parseAdmonitionHeader(pl)) break;
             // Stop if next line is a setext-style underline
             if (paraLines.length > 0 && i + 1 < lines.length) {
                 const nx = lines[i + 1].trimEnd();

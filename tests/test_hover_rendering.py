@@ -243,6 +243,66 @@ def test_rst_multiple_fields(render_page):
     assert len(dts) == 4
 
 
+def test_rst_admonition_attention(render_page):
+    rst = (
+        "Admonition:Difference to CPython :class: attention\n\n"
+        "This function is a MicroPython extension.\n"
+    )
+    titles = _query(render_page, rst, ".cm-hover-admonition-title")
+    assert titles == ["Difference to CPython"]
+
+    bodies = _query(render_page, rst, ".cm-hover-admonition-body p")
+    assert bodies == ["This function is a MicroPython extension."]
+
+    classes = _attr(render_page, rst, ".cm-hover-admonition", "class")
+    assert any("cm-hover-admonition-attention" in (value or "") for value in classes)
+
+
+def test_rst_admonition_hides_arbitrary_class_metadata(render_page):
+    rst = (
+        "Admonition:Implementation note :class: tip folded\n\n"
+        "Uses board-specific behavior.\n"
+    )
+    titles = _query(render_page, rst, ".cm-hover-admonition-title")
+    assert titles == ["Implementation note"]
+    assert all(":class:" not in title for title in titles)
+
+    classes = _attr(render_page, rst, ".cm-hover-admonition", "class")
+    assert any("cm-hover-admonition-tip" in (value or "") for value in classes)
+    assert any("cm-hover-admonition-folded" in (value or "") for value in classes)
+
+
+def test_rst_admonition_hides_body_class_metadata_line(render_page):
+    rst = (
+        "Admonition:Difference to CPython\n\n"
+        ":class: attention\n\n"
+        "This function is a MicroPython extension.\n"
+    )
+    titles = _query(render_page, rst, ".cm-hover-admonition-title")
+    assert titles == ["Difference to CPython"]
+
+    bodies = _query(render_page, rst, ".cm-hover-admonition-body p")
+    assert bodies == ["This function is a MicroPython extension."]
+    assert all(":class:" not in body for body in bodies)
+
+    classes = _attr(render_page, rst, ".cm-hover-admonition", "class")
+    assert any("cm-hover-admonition-attention" in (value or "") for value in classes)
+
+
+def test_rst_admonition_hides_indented_body_class_metadata_line(render_page):
+    rst = (
+        "Admonition:Difference to CPython\n\n"
+        "  :class: attention\n\n"
+        "This function is a MicroPython extension.\n"
+    )
+    bodies = _query(render_page, rst, ".cm-hover-admonition-body p")
+    assert bodies == ["This function is a MicroPython extension."]
+    assert all(":class:" not in body for body in bodies)
+
+    classes = _attr(render_page, rst, ".cm-hover-admonition", "class")
+    assert any("cm-hover-admonition-attention" in (value or "") for value in classes)
+
+
 # ---------------------------------------------------------------------------
 # Block-level: lists
 # ---------------------------------------------------------------------------
