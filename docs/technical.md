@@ -1022,6 +1022,30 @@ The worker uses ZenFS to provide an in-memory filesystem that Pyright expects:
 | `/typings` | MicroPython board stubs (loaded per selected board) |
 | `/tmp` | Scratch space |
 
+### Inspect Worker Filesystem from Browser Console
+
+For troubleshooting stub resolution problems, the app exposes a debug helper that can be used from the browsers developer tools.
+
+```javascript
+// List worker VFS tree from /typings (depth 3)
+await window.mpDebug.listVfs('/typings', 3);
+
+// Inspect workspace files visible to Pyright
+await window.mpDebug.listVfs('/workspace', 3);
+
+// Inspect mounted MicroPython typeshed
+await window.mpDebug.listVfs('/typeshed-micropython', 1);
+```
+
+Notes:
+
+- The helper returns `{ root, entries }` and also prints `entries` as a console table.
+- Each entry includes `path`, `kind` (`file` or `dir`), `depth`, and optional `size` for files.
+- If the console reports `LSP transport not ready`, wait for worker initialization and rerun.
+
+![DevTools Screenshot showing workspace files](devtools.png)
+
+
 ### Message Protocol
 
 Communication between the main thread and the worker follows this sequence:

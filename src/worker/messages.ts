@@ -52,10 +52,36 @@ export interface MsgDeleteFile {
     path: string;
 }
 
+export interface MsgDebugListFs {
+    type: "debugListFs";
+    /** Correlation id for matching request/response */
+    requestId: string;
+    /** Root path to inspect, e.g. /typings or /workspace */
+    root?: string;
+    /** Max depth from root. 0 means root only. */
+    depth?: number;
+}
+
+export interface MsgDebugListFsResult {
+    type: "debugListFsResult";
+    requestId: string;
+    ok: boolean;
+    root: string;
+    entries: Array<{
+        path: string;
+        kind: "file" | "dir";
+        depth: number;
+        size?: number;
+    }>;
+    error?: string;
+}
+
 export type WorkerMessage =
     | MsgServerLoaded
     | MsgInitServer
     | MsgServerInitialized
     | MsgServerError
     | MsgSyncFile
-    | MsgDeleteFile;
+    | MsgDeleteFile
+    | MsgDebugListFs
+    | MsgDebugListFsResult;

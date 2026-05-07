@@ -39,7 +39,14 @@ import { createConnection } from "vscode-languageserver/node";
 
 import { PyrightServer } from "pyright/packages/pyright-internal/src/server";
 
-import type { MsgInitServer, MsgSyncFile, MsgDeleteFile, UserFolder, WorkerMessage } from "./messages";
+import type {
+    MsgInitServer,
+    MsgSyncFile,
+    MsgDeleteFile,
+    MsgDebugListFs,
+    UserFolder,
+    WorkerMessage,
+} from "./messages";
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
@@ -240,6 +247,10 @@ async function handleInitServer(msg: MsgInitServer) {
                     handleDeleteFile(data as MsgDeleteFile);
                     return;
                 }
+                if (data.type === "debugListFs") {
+                    handleDebugListFs(data as MsgDebugListFs);
+                    return;
+                }
             }
             if (lspOnMessage) {
                 (lspOnMessage as (ev: MessageEvent) => void).call(ctx, event);
@@ -287,6 +298,77 @@ function handleDeleteFile(msg: MsgDeleteFile) {
     }
 }
 
+function normalizeDebugRoot(root?: string): string {
+    const candidate = String(root || "/typings").trim();
+    return candidate.startsWith("/") ? candidate : `/${candidate}`;
+}
+
+function clampDepth(depth: unknown): number {
+    const n = Number(depth);
+    if (!Number.isFinite(n)) return 2;
+    return Math.max(0, Math.min(8, Math.trunc(n)));
+}
+
+function listFsEntries(root: string, maxDepth: number) {
+    const entries: Array<{ path: string; kind: "file" | "dir"; depth: number; size?: number }> = [];
+
+    const walk = (currentPath: string, depth: number) => {
+        let stat: any;
+        try {
+            stat = fs.statSync(currentPath);
+        } catch {
+            return;
+        }
+
+        if (stat.isDirectory()) {
+            entries.push({ path: currentPath, kind: "dir", depth });
+            if (depth >= maxDepth) return;
+
+            let children: string[] = [];
+            try {
+                children = (fs.readdirSync(currentPath) as string[]).slice().sort();
+            } catch {
+                return;
+            }
+
+            for (const child of children) {
+                walk(path.posix.join(currentPath, child), depth + 1);
+            }
+            return;
+        }
+
+        entries.push({ path: currentPath, kind: "file", depth, size: stat.size });
+    };
+
+    walk(root, 0);
+    return entries;
+}
+
+function handleDebugListFs(msg: MsgDebugListFs) {
+    const root = normalizeDebugRoot(msg.root);
+    const maxDepth = clampDepth(msg.depth);
+
+    try {
+        const entries = listFsEntries(root, maxDepth);
+        ctx.postMessage({
+            type: "debugListFsResult",
+            requestId: msg.requestId,
+            ok: true,
+            root,
+            entries,
+        } as WorkerMessage);
+    } catch (err: any) {
+        ctx.postMessage({
+            type: "debugListFsResult",
+            requestId: msg.requestId,
+            ok: false,
+            root,
+            entries: [],
+            error: err?.message || String(err),
+        } as WorkerMessage);
+    }
+}
+
 // --- Worker entry point ---
 
 ctx.onmessage = (event: MessageEvent) => {
@@ -301,6 +383,9 @@ ctx.onmessage = (event: MessageEvent) => {
             break;
         case "deleteFile":
             handleDeleteFile(msg as MsgDeleteFile);
+            break;
+        case "debugListFs":
+            handleDebugListFs(msg as MsgDebugListFs);
             break;
         default:
             // LSP messages will be handled by BrowserMessageReader once the

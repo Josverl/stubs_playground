@@ -154,6 +154,29 @@ let currentTypeshedPath = sanitizeTypeshedPath(localStorage.getItem('mp_typeshed
 let currentPythonVersion = sanitizePythonVersion(localStorage.getItem('mp_pythonVersion') || '3.10');
 let currentVerboseOutput = parseStoredBoolean('mp_verboseOutput', true);
 
+function installWorkerDebugHelpers() {
+    const helpers = {
+        /**
+         * List virtual filesystem entries inside the Pyright worker.
+         * Usage from console: await window.mpDebug.listVfs('/typings', 3)
+         */
+        async listVfs(root = '/typings', depth = 3) {
+            if (!lspTransport || typeof lspTransport.debugListFs !== 'function') {
+                throw new Error('LSP transport not ready');
+            }
+
+            const result = await lspTransport.debugListFs(root, depth);
+            console.table(result.entries);
+            return result;
+        }
+    };
+
+    window.mpDebug = {
+        ...(window.mpDebug || {}),
+        ...helpers,
+    };
+}
+
 function updateVerboseOutputLabel() {
     const label = document.getElementById('verboseOutputLabel');
     if (!label) return;
@@ -1622,6 +1645,7 @@ updateVerboseOutputLabel();
 // Initialize with light theme
 document.body.classList.add('light-theme');
 initOptionsPanel();
+installWorkerDebugHelpers();
 
 // Set header icon src using the correct assets base path
 const headerIcon = document.getElementById('headerIcon');

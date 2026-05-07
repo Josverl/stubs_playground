@@ -25,7 +25,35 @@ export class WorkerTransport {
         this._pythonVersion = options.pythonVersion; // string | undefined
         this._verboseOutput = options.verboseOutput; // boolean | undefined
         this._workspaceFiles = options.workspaceFiles || {};
+        this._debugRequests = new Map(); // requestId -> {resolve,reject,timeout}
         this.pyrightVersion = ""; // set when serverInitialized is received
+    }
+
+    _handleDebugResponse(msg) {
+        if (!msg || msg.type !== 'debugListFsResult' || !msg.requestId) {
+            return false;
+        }
+
+        const pending = this._debugRequests.get(msg.requestId);
+        if (!pending) {
+            return true;
+        }
+
+        this._debugRequests.delete(msg.requestId);
+        if (pending.timeout) {
+            clearTimeout(pending.timeout);
+        }
+
+        if (msg.ok) {
+            pending.resolve({
+                root: msg.root,
+                entries: Array.isArray(msg.entries) ? msg.entries : [],
+            });
+        } else {
+            pending.reject(new Error(msg.error || 'debugListFs failed'));
+        }
+
+        return true;
     }
 
     /**
@@ -57,6 +85,10 @@ export class WorkerTransport {
 
             this.worker.onmessage = (e) => {
                 const msg = e.data;
+
+                if (this._handleDebugResponse(msg)) {
+                    return;
+                }
 
                 // --- Control-plane messages (handshake) ---
                 if (msg.type === 'serverLoaded') {
@@ -122,6 +154,10 @@ export class WorkerTransport {
      */
     _onSteadyStateMessage(e) {
         const msg = e.data;
+
+        if (this._handleDebugResponse(msg)) {
+            return;
+        }
 
         if (msg.jsonrpc === '2.0') {
             this._dispatchLSP(msg);
@@ -211,6 +247,13 @@ export class WorkerTransport {
 
     _cleanup() {
         this.connected = false;
+        for (const pending of this._debugRequests.values()) {
+            if (pending.timeout) {
+                clearTimeout(pending.timeout);
+            }
+            pending.reject(new Error('Worker transport closed'));
+        }
+        this._debugRequests.clear();
         if (this.worker) {
             this.worker.terminate();
             this.worker = null;
@@ -227,5 +270,29 @@ export class WorkerTransport {
      */
     isConnected() {
         return this.connected && this.worker !== null;
+    }
+
+    /**
+     * Debug helper: list worker virtual filesystem entries from a root path.
+     * Returns { root, entries } where each entry has path/kind/depth/size.
+     */
+    debugListFs(root = '/typings', depth = 2) {
+        if (!this.connected || !this.worker) {
+            return Promise.reject(new Error('WorkerTransport: not connected'));
+        }
+
+        const requestId = `fs_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                if (!this._debugRequests.has(requestId)) {
+                    return;
+                }
+                this._debugRequests.delete(requestId);
+                reject(new Error('debugListFs timed out'));
+            }, 5000);
+
+            this._debugRequests.set(requestId, { resolve, reject, timeout });
+            this.worker.postMessage({ type: 'debugListFs', requestId, root, depth });
+        });
     }
 }
