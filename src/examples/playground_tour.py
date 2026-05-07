@@ -3,10 +3,15 @@
 # <-- Open the file panel on the left to see the files
 #     Open the Open panel on the right to select different stubs -->
 # 
-#  Some things to try out:
-#  - Hover over the code to see type information
-#  - Try to edit the code and see how the stubs help you with autocompl....[Enter]
-#  - Press [F8] to see the warnings 
+# Some things to try out:
+# - Hover over the code to see type information
+# - Try to edit the code and see how the stubs help you with autocompl....[Enter]
+# - Import a .py file or a .zip file with your code to analyze it
+# - Export the current code as a .py file or a .zip file and run it on your device
+# - Share a code snippet almost anywhere Options --> [Share]
+# - Press [F8] to see the warnings
+# - Try some of the below samples 
+#   You will need to change to the correct stubs for that port 
 
 # --------------------------------------------
 # Can this snippet run on a stm32 ?
@@ -22,20 +27,23 @@ for _ in range(1_000):
 from machine import Pin
 import espnow
 
-BROADCAST = b"\xff\xff\xff\xff\xff\xff"
+_MAC1 = const(b"\x01\x02\x03\x04\x05\x06")
 
 # Initialize ESP-NOW
 e = espnow.ESPNow()
 
-peer_mac = BROADCAST
-e.add_peer(peer_mac)
-# Setup LED on pin 2 for status indication
+# What options are avaiable to add a peer device? (Hover)
+e.add_peer(_MAC1)
 led = Pin(2, Pin.OUT)
 
+# How can you retrieve the MAC address of the current device? and what type does it return? 
+# (Hover over e.config('mac') to see the type information)
+current_mac = e.
+print(f"Current device MAC address: {current_mac}")
 
 def send_message(message):
     """Send a message via ESP-NOW and indicate status with LED."""
-    e.send(peer_mac, message)
+    e.send(_MAC1, message)
     print(f"Sent: {message}")
     led.value(1)  # Turn on LED to indicate success
     sleep(0.2)
