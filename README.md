@@ -1,14 +1,15 @@
 # MicroPython stubs Playground
 
-This App/site provides shows that Type Checking for MicroPython can be used by anyone, and that no complex setup is needed.
+This App provides shows that Type Checking for MicroPython can be used by anyone, and that no complex setup is needed.
 
 The goal of this repo are to provide a simple tool that: 
-- Help to spot some the code issue that may otherwise show up at runtime.
-- Allows for a simple sanity check - would this code work on a different port ?
-- Allows you to share code-snippets with a single or multiple files
-- Shows the usefulness of static typing for MicroPython, even in a browser.
-- Serve as a Proof of Concept for other web based MicroPython or Python editors IDEs to implement something similar.
-- Allows for simple reporting of bugs to the the MicroPython stubs repo.
+1. Help to spot a code issue that might otherwise first show up during runtime.
+2. Allows for simple reporting of bugs to the the MicroPython stubs repo.
+3. Serve as a Proof of Concept for other web based MicroPython or Python editors IDEs to implement something similar.
+4. Allows for a simple sanity check - would this MicroPython code work on a different port ?
+5. Allows you to share code-snippets using a simple link without needing to set up a repo or gist.
+6. Shows the usefulness of static typing for MicroPython, even in a browser.
+
 
 **Built on:**
 - This App uses [*Codemirror 6* editor](https://codemirror.net/) with basic Python sypport
@@ -21,10 +22,10 @@ The goal of this repo are to provide a simple tool that:
 2. After 300ms of no typing, a `textDocument/didChange` notification is sent to Pyright
 3. Pyright analyzes your code and returns diagnostics
 4. Errors and warnings are displayed inline with visual markers
-5. Hover over imports, classes, variables etc to see the documentation and type information
+5. Hover over imports, classes, variables etc to see the documentation and type information (for the types that are present in the stubs)
 
 **Where does it run**
-The App is deployed to GitHub Pages as static files — no active server needed, no code shared (unles you choose to) - all runs in the user's browser.
+The App is deployed to GitHub Pages as static files — no active server needed, no code shared (unless you choose to) - all runs in the user's browser.
 
 I have used Pyright as an LSP, but in principle that is replacable by any other type-checker that can be made to run in a web-worker. All Python type-chekers will be able to "understand" MicroPython, with just a little configuration. 
 
