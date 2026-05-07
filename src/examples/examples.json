@@ -1,7 +1,8 @@
 [
+    "playground_tour.py",
     "blink_led.py",
     "temperature_sensor.py",
-    "espnow.py",
+    "espnow_sample.py",
     "rp2_pio.py",
     "cp_essentials.py"
 ]

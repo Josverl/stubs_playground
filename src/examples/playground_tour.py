@@ -17,6 +17,31 @@ for _ in range(1_000):
     led.toggle()
     time.sleep(0.5)
 # --------------------------------------------
+# ESP32
+
+from machine import Pin
+import espnow
+
+BROADCAST = b"\xff\xff\xff\xff\xff\xff"
+
+# Initialize ESP-NOW
+e = espnow.ESPNow()
+
+peer_mac = BROADCAST
+e.add_peer(peer_mac)
+# Setup LED on pin 2 for status indication
+led = Pin(2, Pin.OUT)
+
+
+def send_message(message):
+    """Send a message via ESP-NOW and indicate status with LED."""
+    e.send(peer_mac, message)
+    print(f"Sent: {message}")
+    led.value(1)  # Turn on LED to indicate success
+    sleep(0.2)
+    led.value(0)  # Turn off LED
+
+# --------------------------------------------
 # Is the below rp2 PIO  code correct? ( uncomment TYPE_CHECKING )
 # what are the parameters and defaults accepted by @asm_pio (Hover)
 

@@ -689,7 +689,7 @@ function populateExampleSelector() {
 }
 
 // Load sample code from file
-async function loadSampleFromFile(filename = 'blink_led.py') {
+async function loadSampleFromFile(filename = 'playground_tour.py') {
     try {
         const response = await fetch(`./examples/${filename}`);
         if (response.ok) {
