@@ -8,6 +8,12 @@
 import { lintGutter, setDiagnostics, openLintPanel, nextDiagnostic, previousDiagnostic } from '@codemirror/lint';
 import { keymap } from '@codemirror/view';
 import { Prec } from '@codemirror/state';
+import {
+    convertLSPDiagnostic,
+    lspSeverityToString,
+    runNextDiagnostic,
+    runPreviousDiagnostic,
+} from './diagnostics-core.mjs';
 
 /**
  * Workspace-level diagnostics cache: maps fileUri → CodeMirror diagnostics[].
@@ -26,19 +32,13 @@ export const lintKeymapExtension = Prec.high(keymap.of([
     {
         key: 'F8',
         run(view) {
-            openLintPanel(view);
-            const result = nextDiagnostic(view);
-            view.focus();
-            return result;
+            return runNextDiagnostic(view, openLintPanel, nextDiagnostic);
         }
     },
     {
         key: 'Shift-F8',
         run(view) {
-            openLintPanel(view);
-            const result = previousDiagnostic(view);
-            view.focus();
-            return result;
+            return runPreviousDiagnostic(view, openLintPanel, previousDiagnostic);
         }
     }
 ]));
@@ -130,70 +130,6 @@ export function createLSPDiagnostics(client, fileUri, view, onDiagnosticsChange 
 
     // Return linter extension with gutter
     return [lintGutter()];
-}
-
-/**
- * Convert LSP diagnostic to CodeMirror diagnostic
- */
-function convertLSPDiagnostic(lspDiag, doc) {
-    // LSP uses line/character positions, CodeMirror uses absolute offsets
-    const from = positionToOffset(doc, lspDiag.range.start);
-    const to = positionToOffset(doc, lspDiag.range.end);
-
-    // Map LSP severity to CodeMirror severity
-    const severity = lspSeverityToString(lspDiag.severity);
-
-    const source = lspDiag.code
-        ? `${lspDiag.source || 'lsp'}: ${lspDiag.code}`
-        : (lspDiag.source || 'lsp');
-
-    return {
-        from,
-        to,
-        severity,
-        message: lspDiag.message,
-        source
-    };
-}
-
-/**
- * Convert LSP position (line, character) to CodeMirror offset.
- * Clamps the result to valid document bounds so that stale diagnostics
- * arriving after the user has edited the document never produce an
- * out-of-bounds position (which would otherwise throw a RangeError
- * inside CodeMirror). LSP line numbers are 0-based (valid range: 0 to
- * doc.lines-1); CodeMirror line numbers are 1-based.
- */
-function positionToOffset(doc, position) {
-    try {
-        if (position.line >= doc.lines) {
-            // Line no longer exists — stale diagnostics from a previous document version.
-            return doc.length;
-        }
-        const line = doc.line(position.line + 1); // convert LSP 0-based to CodeMirror 1-based
-        // Clamp to line.to (excludes newline) so a stale character offset that
-        // exceeds the current line length doesn't push the marker onto the next line.
-        return Math.min(line.from + position.character, line.to);
-    } catch (error) {
-        // Unexpected mapping failure; log at info level since stale positions are normal.
-        console.info('positionToOffset: could not map position (stale diagnostics):', error.message);
-        return 0;
-    }
-}
-
-/**
- * Convert LSP severity number to CodeMirror severity string
- */
-function lspSeverityToString(severity) {
-    // LSP: 1 = Error, 2 = Warning, 3 = Information, 4 = Hint
-    // CodeMirror: 'error', 'warning', 'info'
-    switch (severity) {
-        case 1: return 'error';
-        case 2: return 'warning';
-        case 3: return 'info';
-        case 4: return 'info';
-        default: return 'error';
-    }
 }
 
 /**
