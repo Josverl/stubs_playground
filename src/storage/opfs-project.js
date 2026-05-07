@@ -277,13 +277,17 @@ async function _getBackend() {
 export const OPFSProject = {
     /**
      * Initialize: seed default files on first use.
+     * @param {{ defaultMainContent?: string }} [options]
      * @returns {Promise<void>}
      */
-    async init() {
+    async init(options = {}) {
+        const defaultMainContent = typeof options.defaultMainContent === 'string'
+            ? options.defaultMainContent
+            : DEFAULT_MAIN;
         const backend = await _getBackend();
         const hasMain = await backend.exists('main.py');
         if (!hasMain) {
-            await backend.writeFile('main.py', DEFAULT_MAIN);
+            await backend.writeFile('main.py', defaultMainContent);
             console.log('[OPFSProject] Seeded default main.py');
         }
     },

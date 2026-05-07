@@ -701,7 +701,8 @@ function populateExampleSelector() {
 
     // Set default selection to first file if available
     if (exampleFiles.length > 0) {
-        select.value = exampleFiles[0].file;
+        const hasTour = exampleFiles.some((example) => example.file === 'playground_tour.py');
+        select.value = hasTour ? 'playground_tour.py' : exampleFiles[0].file;
     }
 }
 
@@ -1078,12 +1079,14 @@ async function initializeEditor() {
     if (urlState.code) {
         sampleCode = urlState.code;
     } else {
-        const defaultFile = exampleFiles.length > 0 ? exampleFiles[0].file : 'blink_led.py';
+        const defaultFile = exampleFiles.some((example) => example.file === 'playground_tour.py')
+            ? 'playground_tour.py'
+            : (exampleFiles.length > 0 ? exampleFiles[0].file : 'blink_led.py');
         await loadSampleFromFile(defaultFile);
     }
 
     // Initialize OPFS storage before starting LSP so the worker can preload the project.
-    await OPFSProject.init();
+    await OPFSProject.init({ defaultMainContent: sampleCode });
 
     if (sharedFiles) {
         await replaceProjectFiles(sharedFiles);
@@ -1650,7 +1653,28 @@ installWorkerDebugHelpers();
 // Set header icon src using the correct assets base path
 const headerIcon = document.getElementById('headerIcon');
 if (headerIcon) {
-    headerIcon.src = `${getAssetsBase()}/colorstubs-xs.jpg`;
+    const base = getAssetsBase();
+    const iconCandidates = [
+        `${base}/stubs_playground_s.png`,
+        `${base}/stubs_playground_w.png`,
+        `${base}/stubs_playground_w.jpg`,
+        `${base}/stubs_playground_w.jpeg`,
+        `${base}/stubs_playground_w.webp`,
+    ];
+
+    const tryNextIcon = (index = 0) => {
+        if (index >= iconCandidates.length) return;
+        const probe = new Image();
+        probe.onload = () => {
+            headerIcon.src = iconCandidates[index];
+        };
+        probe.onerror = () => {
+            tryNextIcon(index + 1);
+        };
+        probe.src = iconCandidates[index];
+    };
+
+    tryNextIcon();
 }
 
 // Export the view for testing purposes

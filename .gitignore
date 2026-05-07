@@ -49,7 +49,8 @@ htmlcov/
 # Playwright screenshots and reports
 .playwright-mcp
 *.png
-!docs/*.png
+!docs/**/*.png
+!assets/**/*.png
 # type stubs for MicroPython 
 typings/
 # Squad: ignore runtime state (logs, inbox, sessions)
