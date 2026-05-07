@@ -6,50 +6,43 @@
       "id": "stdlib",
       "package": "micropython-stdlib-stubs",
       "package_version": "1.28.0.post4",
-      "file": "stubs-stdlib.zip",
-      "bundled": false
+      "file": "stubs-stdlib.zip"
     },
     {
       "id": "esp32",
       "package": "micropython-esp32-stubs",
       "package_version": "1.28.0.post3",
-      "file": "stubs-esp32.zip",
-      "bundled": true
+      "file": "stubs-esp32.zip"
     },
     {
       "id": "rp2",
       "package": "micropython-rp2-stubs",
       "package_version": "1.28.0.post3",
-      "file": "stubs-rp2.zip",
-      "bundled": false
+      "file": "stubs-rp2.zip"
     },
     {
       "id": "stm32",
       "package": "micropython-stm32-stubs",
       "package_version": "1.28.0.post4",
-      "file": "stubs-stm32.zip",
-      "bundled": false
+      "file": "stubs-stm32.zip"
     },
     {
       "id": "samd",
       "package": "micropython-samd-stubs",
       "package_version": "1.28.0.post3",
-      "file": "stubs-samd.zip",
-      "bundled": false
+      "file": "stubs-samd.zip"
     },
     {
       "id": "circuitpython",
       "package": "circuitpython-stubs",
       "package_version": "10.2.0",
-      "file": "stubs-circuitpython.zip",
-      "bundled": false
+      "file": "stubs-circuitpython.zip"
     },
     {
       "id": "cpython",
       "package": "No Stubs",
       "package_version": "",
-      "file": null,
-      "bundled": false
+      "file": null
     }
   ]
 }

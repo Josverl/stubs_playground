@@ -22,7 +22,7 @@ import shutil
 import subprocess
 import sys
 import zipfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -34,15 +34,17 @@ TMP = ROOT / "tmp_stubs"
 class Board:
     id: str
     package: str
-    bundled: bool = False
     file: str | None = None
     package_version: str = ""
+
+
+DEFAULT_BOARD_ID = "esp32"
 
 
 # Boards that have installable stub packages
 BOARDS: list[Board] = [
     Board(id="stdlib",  package="micropython-stdlib-stubs"), # Used for stdlib only
-    Board(id="esp32", package="micropython-esp32-stubs", bundled=True),
+    Board(id="esp32", package="micropython-esp32-stubs"),
     Board(id="rp2",   package="micropython-rp2-stubs"),
     Board(id="stm32", package="micropython-stm32-stubs"),
     Board(id="samd",  package="micropython-samd-stubs"),
@@ -198,7 +200,7 @@ def main() -> None:
         results.append(vb)
 
     # Generate manifest
-    default_id = next((b.id for b in BOARDS if b.bundled), boards[0].id)
+    default_id = DEFAULT_BOARD_ID if any(b.id == DEFAULT_BOARD_ID for b in BOARDS) else boards[0].id
     manifest = {
         "version": "1.0",
         "default": default_id,
@@ -208,7 +210,6 @@ def main() -> None:
                 "package": b.package,
                 "package_version": b.package_version,
                 "file": b.file,
-                "bundled": b.bundled,
             }
             for b in results
         ],

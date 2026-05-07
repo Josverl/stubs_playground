@@ -458,7 +458,7 @@ async function initBoardSelector() {
         select.addEventListener('change', handleBoardChange);
     } catch (err) {
         console.warn('Could not load board manifest:', err);
-        select.innerHTML = '<option value="">Default (bundled)</option>';
+        select.innerHTML = '<option value="">Default</option>';
     }
 }
 
@@ -473,12 +473,6 @@ async function fetchBoardStubs(boardId) {
     if (!board.file) {
         stubsCache.set(boardId, false);
         return false;
-    }
-
-    // Bundled board doesn't need fetching — pass undefined to use worker's default
-    if (board.bundled) {
-        stubsCache.set(boardId, undefined);
-        return undefined;
     }
 
     const base = getAssetsBase();
