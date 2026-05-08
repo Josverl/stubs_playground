@@ -191,7 +191,7 @@ def test_build_issue_url_contains_playground_link(ri_page):
     from urllib.parse import urlparse, parse_qs, unquote_plus
     params = parse_qs(urlparse(result).query)
     body = unquote_plus(params['body'][0])
-    assert '## Issue reproduction' in body, f"Issue reproduction heading missing in body: {body[:300]}"
+    assert '## Issue reproduction' not in body, f"Issue reproduction heading should not be present: {body[:300]}"
     assert '[MicroPython-Stubs Playground](' in body, f"Markdown link label missing in body: {body[:300]}"
     assert '](https://example.com/playground?board=esp32)' in body, (
         f"Markdown link URL missing in body: {body[:300]}"
@@ -245,6 +245,30 @@ def test_build_issue_url_does_not_include_code_sample_block(ri_page):
     body = unquote_plus(params['body'][0])
     assert '## Code sample' not in body
     assert '```python' not in body
+
+
+def test_build_issue_url_places_code_block_before_link_when_provided(ri_page):
+    """When a code sample is supplied, markdown code block appears before the playground link."""
+    result = ri_page.evaluate("""() =>
+        import('./share.js').then(({ buildIssueUrl }) =>
+            buildIssueUrl(
+                'micropython-esp32-stubs',
+                '1.28.0.post3',
+                'standard',
+                'https://example.com/playground?board=esp32',
+                [],
+                [],
+                'from machine import Pin\\nled = Pin(2, Pin.OUT)'
+            ))
+    """)
+    from urllib.parse import urlparse, parse_qs, unquote_plus
+    params = parse_qs(urlparse(result).query)
+    body = unquote_plus(params['body'][0])
+    code_idx = body.find('```python')
+    link_idx = body.find('[MicroPython-Stubs Playground](')
+    assert code_idx != -1, f"Expected code block in issue body: {body[:300]}"
+    assert link_idx != -1, f"Expected playground link in issue body: {body[:300]}"
+    assert code_idx < link_idx, f"Expected code block before playground link in issue body: {body[:400]}"
 
 
 def test_resolve_report_issue_labels_returns_quality_when_exists(ri_page):

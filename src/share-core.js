@@ -269,7 +269,7 @@ export async function copyMarkdownWithLink(codeOrFiles, board, typeCheckMode, st
  */
 export async function copyMarkdownWithLinkAndCode(codeOrFiles, codeBlockText, board, typeCheckMode, stdlib, pythonVersion) {
     const url = await buildShareableUrl(codeOrFiles, board, typeCheckMode, stdlib, pythonVersion);
-    const md = `[MicroPython-Stubs Playground](${url})\n\n\`\`\`python\n${codeBlockText}\n\`\`\``;
+    const md = `\`\`\`python\n${codeBlockText}\n\`\`\`\n\n[MicroPython-Stubs Playground](${url})`;
     return copyToClipboard(md);
 }
 
@@ -358,9 +358,10 @@ export async function resolveReportIssueLabels(fetchImpl = globalThis.fetch) {
  * @param {string[]} [labels]    Optional labels to prefill on the issue
  * @param {Array<{fileName: string, line: number, character: number, message: string, severity: string}>} [diagnostics]
  *   Optional list of LSP diagnostics to embed as a table
+ * @param {string} [codeSample] Optional code sample to include before the playground link
  * @returns {string} GitHub new-issue URL with pre-filled title and body
  */
-export function buildIssueUrl(stubPackage, stubVersion, typeCheckMode, playgroundUrl, labels = [], diagnostics = []) {
+export function buildIssueUrl(stubPackage, stubVersion, typeCheckMode, playgroundUrl, labels = [], diagnostics = [], codeSample = '') {
     const normalizedVersion = stubVersion
         ? (stubVersion.startsWith('v') ? stubVersion : `v${stubVersion}`)
         : 'n/a';
@@ -380,17 +381,26 @@ export function buildIssueUrl(stubPackage, stubVersion, typeCheckMode, playgroun
             `${rows}\n`;
     }
 
+    const normalizedCodeSample = String(codeSample || '').trim();
+    const codeSampleSection = normalizedCodeSample
+        ? `\n\`\`\`python\n${normalizedCodeSample}\n\`\`\`\n`
+        : '';
+
     const body =
 `## Describe the issue
-<!-- Please describe what is incorrect or missing in the stub. -->
+<!--
+ - Please describe what is incorrect or missing in the stub.
+ - please add links to relevant docs or other code samples that can help understand the issue.
+-->
+
+${codeSampleSection}
+[MicroPython-Stubs Playground](${playgroundUrl})
 
 ## Context
 **Stub package:** ${stubPackage || 'unknown'}
 **Stub version:** ${normalizedVersion}
 **Type check mode:** ${typeCheckMode || 'standard'}
 
-## Issue reproduction
-[MicroPython-Stubs Playground](${playgroundUrl})
 ${diagnosticsSection}`;
 
     const url = new URL(REPORT_ISSUE_REPO);
