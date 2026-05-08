@@ -49,6 +49,19 @@ import { DocumentManager } from './editor/document-manager.js';
 import { TabBar } from './ui/tab-bar.js';
 import { FileTree } from './ui/file-tree.js';
 import { Events } from './events.js';
+import {
+    fetchPackageIndex,
+    selectStubWheelRelease,
+    downloadWheelFile,
+    extractTypeStubFilesFromWheel,
+    loadExtraStubsRegistry,
+    saveExtraStubsRegistry,
+    upsertExtraStubEntry,
+    clearExtraStubsRegistry,
+    buildWorkerExtraStubPayload,
+    buildAbsoluteExtraPaths,
+    normalizePackageName,
+} from './stubs/index.js';
 
 const basicSetup = [
     lineNumbers(),
@@ -114,6 +127,9 @@ let stubsCache = new Map(); // boardId → ArrayBuffer
 
 // Pyright version (received from worker on init)
 let pyrightVersion = "";
+
+// Additive extra stub packages installed from PyPI.
+let installedExtraStubs = loadExtraStubsRegistry();
 
 // Type checking mode
 let currentTypeCheckMode = localStorage.getItem('mp_typeCheckMode') || 'standard';
@@ -204,6 +220,10 @@ function setLSPControlsDisabled(disabled) {
         'typeshedPathToggle',
         'pythonVersion',
         'verboseOutputToggle',
+        'installExtraStubBtn',
+        'clearExtraStubsBtn',
+        'extraStubPackage',
+        'extraStubVersion',
     ];
     for (const id of ids) {
         const el = document.getElementById(id);
@@ -230,6 +250,8 @@ async function restartLSPWithCurrentSettings(boardId) {
             typeshedPath: currentTypeshedPath,
             pythonVersion: currentPythonVersion,
             verboseOutput: currentVerboseOutput,
+            extraStubPackages: getExtraStubPackagesPayload(),
+            extraPaths: getExtraPaths(),
         }
     );
 
@@ -281,6 +303,116 @@ function getSelectedStubMetadata() {
         package: parts[0] || '',
         version: parts[1] || '',
     };
+}
+
+function getExtraStubPackagesPayload() {
+    return buildWorkerExtraStubPayload(installedExtraStubs);
+}
+
+function getExtraPaths() {
+    return buildAbsoluteExtraPaths(installedExtraStubs);
+}
+
+function setExtraStubsStatus(message, state = 'idle') {
+    const statusEl = document.getElementById('extraStubsStatus');
+    if (!statusEl) return;
+    statusEl.textContent = message || '';
+    if (state && state !== 'idle') {
+        statusEl.dataset.state = state;
+        return;
+    }
+    delete statusEl.dataset.state;
+}
+
+function updateExtraStubsSummaryStatus() {
+    if (!installedExtraStubs.length) {
+        setExtraStubsStatus('No extra stubs installed.');
+        return;
+    }
+
+    const names = installedExtraStubs.map((entry) => (
+        entry.version ? `${entry.packageName}@${entry.version}` : entry.packageName
+    ));
+    setExtraStubsStatus(`Installed: ${names.join(', ')}`, 'success');
+}
+
+async function installExtraStubPackage() {
+    const packageInput = document.getElementById('extraStubPackage');
+    const versionInput = document.getElementById('extraStubVersion');
+    const installBtn = document.getElementById('installExtraStubBtn');
+    if (!packageInput || !versionInput || !installBtn) return;
+
+    const rawPackageName = packageInput.value.trim();
+    const versionSpecifier = versionInput.value.trim();
+    if (!rawPackageName) {
+        setExtraStubsStatus('Enter a package name first.', 'error');
+        return;
+    }
+
+    const normalizedName = normalizePackageName(rawPackageName);
+    try {
+        installBtn.disabled = true;
+        setExtraStubsStatus(`Resolving ${normalizedName}...`);
+
+        const indexResult = await fetchPackageIndex(normalizedName);
+        const selected = selectStubWheelRelease(indexResult.data, versionSpecifier);
+
+        setExtraStubsStatus(`Downloading ${selected.wheel.filename}...`);
+        const wheelBuffer = await downloadWheelFile(selected.wheel.url);
+
+        setExtraStubsStatus('Extracting .pyi files...');
+        const extracted = await extractTypeStubFilesFromWheel(wheelBuffer);
+
+        installedExtraStubs = upsertExtraStubEntry(installedExtraStubs, {
+            packageName: normalizedName,
+            version: selected.version,
+            wheelUrl: selected.wheel.url,
+            wheelFilename: selected.wheel.filename,
+            installedAt: Date.now(),
+            files: extracted.files,
+        });
+        installedExtraStubs = saveExtraStubsRegistry(installedExtraStubs);
+
+        if (lspClient && lspTransport) {
+            setExtraStubsStatus('Restarting language server...');
+            await restartLSPWithCurrentSettings(currentBoardId);
+        }
+
+        packageInput.value = '';
+        updateExtraStubsSummaryStatus();
+    } catch (err) {
+        console.error('Extra stubs install failed:', err);
+        setExtraStubsStatus(`Install failed: ${err.message || String(err)}`, 'error');
+    } finally {
+        installBtn.disabled = false;
+    }
+}
+
+async function clearAllExtraStubs() {
+    if (!installedExtraStubs.length) {
+        setExtraStubsStatus('No extra stubs to clear.');
+        return;
+    }
+
+    const clearBtn = document.getElementById('clearExtraStubsBtn');
+    if (clearBtn) clearBtn.disabled = true;
+
+    try {
+        installedExtraStubs = [];
+        clearExtraStubsRegistry();
+
+        if (lspClient && lspTransport) {
+            setExtraStubsStatus('Clearing and restarting language server...');
+            await restartLSPWithCurrentSettings(currentBoardId);
+        }
+
+        updateExtraStubsSummaryStatus();
+    } catch (err) {
+        console.error('Clear extra stubs failed:', err);
+        setExtraStubsStatus(`Clear failed: ${err.message || String(err)}`, 'error');
+    } finally {
+        if (clearBtn) clearBtn.disabled = false;
+    }
 }
 
 // Per-URI debounce timers for didChange notifications
@@ -1366,6 +1498,8 @@ function startEarlyLSPInit() {
                 typeshedPath: currentTypeshedPath,
                 pythonVersion: currentPythonVersion,
                 verboseOutput: currentVerboseOutput,
+                extraStubPackages: getExtraStubPackagesPayload(),
+                extraPaths: getExtraPaths(),
             });
 
             lspClient = lspResult.client;
@@ -1627,6 +1761,18 @@ document.getElementById('typeCheckMode').addEventListener('change', handleTypeCh
 document.getElementById('typeshedPathToggle').addEventListener('change', handleTypeshedPathToggleChange);
 document.getElementById('pythonVersion').addEventListener('change', handlePythonVersionChange);
 document.getElementById('verboseOutputToggle').addEventListener('change', handleVerboseOutputToggleChange);
+document.getElementById('installExtraStubBtn').addEventListener('click', installExtraStubPackage);
+document.getElementById('clearExtraStubsBtn').addEventListener('click', clearAllExtraStubs);
+document.getElementById('extraStubPackage').addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    installExtraStubPackage();
+});
+document.getElementById('extraStubVersion').addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    installExtraStubPackage();
+});
 
 // Restore saved type checking mode
 const savedTypeCheckMode = localStorage.getItem('mp_typeCheckMode');
@@ -1644,6 +1790,7 @@ typeshedToggle.checked = currentTypeshedPath === TYPESHED_PATH_MICROPYTHON;
 const verboseOutputToggle = document.getElementById('verboseOutputToggle');
 verboseOutputToggle.checked = currentVerboseOutput;
 updateVerboseOutputLabel();
+updateExtraStubsSummaryStatus();
 
 // Initialize with light theme
 document.body.classList.add('light-theme');

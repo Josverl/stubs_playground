@@ -44,6 +44,7 @@ import type {
     MsgSyncFile,
     MsgDeleteFile,
     MsgDebugListFs,
+    ExtraStubPackage,
     UserFolder,
     WorkerMessage,
 } from "./messages";
@@ -121,6 +122,33 @@ function writeWorkspaceFiles(files: Record<string, string> = {}) {
     }
 }
 
+function normalizeExtraPackageName(packageName: string): string {
+    return String(packageName || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]+/g, '-')
+        .replace(/[-_.]{2,}/g, '-')
+        .replace(/^[-_.]+|[-_.]+$/g, '')
+        || 'package';
+}
+
+function writeExtraStubPackages(extraStubPackages: ExtraStubPackage[] = []) {
+    fs.mkdirSync('/extra', { recursive: true });
+
+    for (const pkg of extraStubPackages) {
+        const packageName = normalizeExtraPackageName(pkg.packageName);
+        const base = `/extra/${packageName}`;
+        fs.mkdirSync(base, { recursive: true });
+
+        for (const [relativePath, content] of Object.entries(pkg.files || {})) {
+            if (!relativePath || relativePath.startsWith('/')) continue;
+            if (typeof content !== 'string') continue;
+            const fullPath = path.posix.join(base, relativePath);
+            fs.mkdirSync(path.posix.dirname(fullPath), { recursive: true });
+            fs.writeFileSync(fullPath, content);
+        }
+    }
+}
+
 /**
  * Create pyrightconfig.json in the virtual workspace
  */
@@ -129,13 +157,26 @@ function writePyrightConfig(options: {
     typeshedPath?: string;
     pythonVersion?: string;
     verboseOutput?: boolean;
+    extraPaths?: string[];
 } = {}) {
     const {
         typeCheckingMode = "standard",
         typeshedPath = "/typeshed-micropython",
         pythonVersion = "3.10",
         verboseOutput = true,
+        extraPaths = [],
     } = options;
+    const normalizedExtraPaths = Array.from(new Set(
+        (extraPaths || [])
+            .filter((p) => typeof p === 'string' && p.startsWith('/extra/'))
+            .map((p) => {
+                const trimmed = p.replace(/\/+$/, '');
+                const packageName = trimmed.slice('/extra/'.length);
+                return packageName ? `../extra/${packageName}` : null;
+            })
+            .filter((p): p is string => Boolean(p))
+    ));
+
 
     const resolvedTypeshedPath = typeshedPath === "/typeshed-fallback"
         ? "/typeshed-fallback"
@@ -165,7 +206,7 @@ function writePyrightConfig(options: {
         typeshedPath: resolvedTypeshedPath,
         stubPath: "/typings",
         include: ["."], // relative to /workspace
-        extraPaths: ["", ".", "/workspace/lib"],
+        extraPaths: ["", ".", "lib", ...normalizedExtraPaths],
         pythonPlatform: "Linux",
         pythonVersion: resolvedPythonVersion,
         ignore: ["/typings","/typeshed-*"], // relative to /workspace
@@ -210,12 +251,17 @@ async function handleInitServer(msg: MsgInitServer) {
             writeWorkspaceFiles(msg.workspaceFiles);
         }
 
+        if (msg.extraStubPackages && msg.extraStubPackages.length > 0) {
+            writeExtraStubPackages(msg.extraStubPackages);
+        }
+
         // Write pyrightconfig
         writePyrightConfig({
             typeCheckingMode: msg.typeCheckingMode,
             typeshedPath: msg.typeshedPath,
             pythonVersion: msg.pythonVersion,
             verboseOutput: msg.verboseOutput,
+            extraPaths: msg.extraPaths,
         });
 
         console.log("[pyright-worker] Creating Pyright server...");

@@ -17,6 +17,8 @@ import { getWorkerUrlCached } from './worker-config.js';
  * @param {string} [options.typeshedPath] - Pyright typeshedPath
  * @param {string} [options.pythonVersion] - Pyright pythonVersion
  * @param {boolean} [options.verboseOutput] - Pyright verboseOutput
+ * @param {Array<{packageName: string, files: Object.<string, string>}>} [options.extraStubPackages]
+ * @param {string[]} [options.extraPaths]
  * @returns {WorkerTransport}
  */
 export function createTransport(options = {}) {
@@ -29,5 +31,7 @@ export function createTransport(options = {}) {
         typeshedPath: options.typeshedPath,
         pythonVersion: options.pythonVersion,
         verboseOutput: options.verboseOutput,
+        extraStubPackages: options.extraStubPackages,
+        extraPaths: options.extraPaths,
     });
 }
