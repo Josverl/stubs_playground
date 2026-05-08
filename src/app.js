@@ -1438,6 +1438,7 @@ async function initializeEditor() {
         () => currentPythonVersion,
         () => collectShareFiles(),
         () => docManager?.activeFile || OPFSProject.getLastActiveFile() || 'main.py',
+        () => view?.state?.doc?.lineAt(view.state.selection.main.head)?.number || 1,
     );
 
     // Initialize report issue button
