@@ -54,6 +54,9 @@ export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTyp
     const setOpen = (open) => {
         dropdown.hidden = !open;
         if (backdrop) backdrop.hidden = !open;
+        if (!open && dropdown.contains(document.activeElement)) {
+            btn.focus({ preventScroll: true });
+        }
     };
 
     const getScope = () => {
@@ -163,6 +166,9 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
         e.stopPropagation();
         const opening = dropdown.hidden;
         dropdown.hidden = !dropdown.hidden;
+        if (!opening && dropdown.contains(document.activeElement)) {
+            shareBtn.focus({ preventScroll: true });
+        }
         if (opening) {
             await updatePayloadWarning();
         }
@@ -172,6 +178,9 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
     document.addEventListener('click', (e) => {
         if (!dropdown.contains(e.target) && e.target !== shareBtn) {
             dropdown.hidden = true;
+            if (dropdown.contains(document.activeElement)) {
+                shareBtn.focus({ preventScroll: true });
+            }
             if (warningEl) warningEl.hidden = true;
         }
     });
@@ -180,6 +189,9 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             dropdown.hidden = true;
+            if (dropdown.contains(document.activeElement)) {
+                shareBtn.focus({ preventScroll: true });
+            }
             if (warningEl) warningEl.hidden = true;
         }
     });
