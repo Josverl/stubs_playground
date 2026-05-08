@@ -5,7 +5,7 @@ Tests URL encoding/decoding, share dropdown UI, and URL restoration.
 """
 
 import pytest
-from playwright.sync_api import expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, expect
 from timing import CDN_TIMEOUT
 
 pytestmark = pytest.mark.editor
@@ -14,7 +14,19 @@ pytestmark = pytest.mark.editor
 def _goto_editor(page, live_server):
     """Navigate to the editor and wait for CodeMirror to initialise."""
     page.goto(f"{live_server}/index.html", wait_until="domcontentloaded")
-    page.wait_for_selector(".cm-editor", timeout=CDN_TIMEOUT)
+    _wait_for_editor_ready(page)
+
+
+def _wait_for_editor_ready(page):
+    """Wait for CodeMirror, retrying once to reduce transient CDN flakiness."""
+    for attempt in range(2):
+        try:
+            page.wait_for_selector(".cm-editor", timeout=CDN_TIMEOUT)
+            return
+        except PlaywrightTimeoutError:
+            if attempt == 1:
+                raise
+            page.reload(wait_until="domcontentloaded")
 
 
 def _reset_share_state(page):
