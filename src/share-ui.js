@@ -78,8 +78,9 @@ function flashCopied(button) {
  * @param {() => string} [getActiveFileName] Returns active file path
  * @param {() => Array<{fileName: string, line: number, character: number, message: string, severity: string}>} [getDiagnostics]
  *   Returns all current workspace diagnostics (from getWorkspaceDiagnostics)
+ * @param {() => number} [getCursorLine] Returns active cursor line number (1-based)
  */
-export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTypeCheckMode, getStdlib, getPythonVersion, getFiles, getActiveFileName, getDiagnostics) {
+export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTypeCheckMode, getStdlib, getPythonVersion, getFiles, getActiveFileName, getDiagnostics, getCursorLine) {
     const btn = document.getElementById('reportIssueBtn');
     const dropdown = document.getElementById('reportIssueDropdown');
     const backdrop = document.getElementById('reportIssueBackdrop');
@@ -149,7 +150,21 @@ export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTyp
             ? allDiagnostics.filter(d => d.fileName === activeFileName)
             : allDiagnostics;
 
-        const issueUrl = buildIssueUrl(stubPackage, stubVersion, shareSettings.typeCheckMode, playgroundUrl, labels, scopedDiagnostics);
+        const codeSnippet = getCenteredCodeSnippet(
+            getCode(),
+            typeof getCursorLine === 'function' ? getCursorLine() : 1,
+            MARKDOWN_CODE_SNIPPET_MAX_LINES,
+        );
+
+        const issueUrl = buildIssueUrl(
+            stubPackage,
+            stubVersion,
+            shareSettings.typeCheckMode,
+            playgroundUrl,
+            labels,
+            scopedDiagnostics,
+            codeSnippet,
+        );
         window.open(issueUrl, '_blank', 'noopener,noreferrer');
     });
 }

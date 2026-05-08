@@ -1452,6 +1452,7 @@ async function initializeEditor() {
         () => collectShareFiles(),
         () => docManager?.activeFile || OPFSProject.getLastActiveFile() || 'main.py',
         () => getWorkspaceDiagnostics(),
+        () => view?.state?.doc?.lineAt(view.state.selection.main.head)?.number || 1,
     );
 
     // Wire Export / Import buttons
