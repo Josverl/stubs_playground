@@ -8,22 +8,25 @@
 # - Try to edit the code and see how the stubs help you with autocompl....[Enter]
 # - Import a .py file or a .zip file with your code to analyze it
 # - Export the current code as a .py file or a .zip file and run it on your device
-# - Share a code snippet almost anywhere Options --> [Share]
-# - Press [F8] to see the warnings
+# - Share a code snippet to almost anywhere [Share]
+# - Report inaccuracies in the micropython-stubs[Report]
+
+# - Press [F8] to see the type diagnotics
 # - Try some of the below samples 
 #   You will need to change to the correct stubs for that port 
 
 # --------------------------------------------
-# Can this snippet run on a stm32 ?
+# Port: Any? 
+# Can this snippet run on a stm32, on Circuitpython ?
 from machine import Pin
 import time
 led = Pin(2, Pin.OUT)
 for _ in range(1_000):
     led.toggle()
     time.sleep(0.5)
+    
 # --------------------------------------------
-# ESP32
-
+# Port: esp32
 from machine import Pin
 import espnow
 
@@ -50,6 +53,7 @@ def send_message(message):
     led.value(0)  # Turn off LED
 
 # --------------------------------------------
+# Port: rp2
 # Is the below rp2 PIO  code correct? ( uncomment TYPE_CHECKING )
 # what are the parameters and defaults accepted by @asm_pio (Hover)
 
@@ -75,5 +79,3 @@ def blink_1hz():
     label("delay_low")
     nop()                     [29]
     jmp(x_dec, "delay_low")
-
-
