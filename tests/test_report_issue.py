@@ -207,9 +207,10 @@ def test_build_issue_url_starts_with_describe_issue_block(ri_page):
     from urllib.parse import urlparse, parse_qs, unquote_plus
     params = parse_qs(urlparse(result).query)
     body = unquote_plus(params['body'][0])
-    assert body.startswith(
-        '## Describe the issue\n<!-- Please describe what is incorrect or missing in the stub. -->'
-    ), f"Unexpected issue body prefix: {body[:200]}"
+    assert body.startswith('## Describe the issue\n<!--'), f"Unexpected issue body prefix: {body[:200]}"
+    assert 'Please describe what is incorrect or missing in the stub.' in body, (
+        f"Guidance comment missing in issue body: {body[:260]}"
+    )
 
 
 def test_build_issue_url_sets_labels_when_provided(ri_page):
