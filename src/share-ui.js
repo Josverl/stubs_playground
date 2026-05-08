@@ -59,6 +59,9 @@ export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTyp
         }
     };
 
+    // Clicking the dim backdrop is the standard modal-close gesture.
+    backdrop?.addEventListener('click', () => setOpen(false));
+
     const getScope = () => {
         const checked = dropdown.querySelector('input[name="reportScope"]:checked');
         return checked ? checked.value : 'current';

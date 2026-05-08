@@ -109,13 +109,13 @@ def test_share_warning_visible_for_large_payload(share_page):
 
 
 def test_share_dropdown_closes_on_outside_click(share_page):
-    """Clicking outside the dropdown closes it."""
+    """Clicking outside the modal dialog (on the dim backdrop) closes it."""
     _open_options_panel(share_page)
     share_page.locator("#shareBtn").click()
     expect(share_page.locator("#shareDropdown")).to_be_visible()
 
-    # Click elsewhere on the page
-    share_page.locator("main").click()
+    # The share modal is centered; click a viewport corner that is only backdrop.
+    share_page.mouse.click(5, 5)
     expect(share_page.locator("#shareDropdown")).to_be_hidden()
 
 
@@ -130,11 +130,13 @@ def test_share_dropdown_closes_on_escape(share_page):
 
 
 def test_share_dropdown_toggles(share_page):
-    """Clicking Share twice opens then closes the dropdown."""
+    """Opening then clicking outside the modal closes it (modal toggle behaviour)."""
     _open_options_panel(share_page)
     share_page.locator("#shareBtn").click()
     expect(share_page.locator("#shareDropdown")).to_be_visible()
-    share_page.locator("#shareBtn").click()
+    # The backdrop covers the share button while the modal is open.
+    # Click the backdrop corner to dismiss.
+    share_page.mouse.click(5, 5)
     expect(share_page.locator("#shareDropdown")).to_be_hidden()
 
 

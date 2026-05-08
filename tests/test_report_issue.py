@@ -107,19 +107,22 @@ def test_report_issue_dropdown_closes_on_escape(ri_page):
 
 
 def test_report_issue_dropdown_closes_on_outside_click(ri_page):
-    """Clicking outside the dropdown closes it."""
+    """Clicking outside the modal dialog (on the dim backdrop) closes it."""
     ri_page.locator("#reportIssueBtn").click()
     expect(ri_page.locator("#reportIssueDropdown")).to_be_visible()
-    # Click the header — always visible above the centered modal
-    ri_page.locator("header").click()
+    # The modal is centered; a top-left corner click lands on the backdrop only.
+    # The document-level click handler in share-ui.js calls setOpen(false).
+    ri_page.mouse.click(5, 5)
     expect(ri_page.locator("#reportIssueDropdown")).to_be_hidden()
 
 
 def test_report_issue_dropdown_toggles(ri_page):
-    """Clicking the button twice opens then closes the dropdown."""
+    """Opening then clicking outside the modal closes it (modal toggle behaviour)."""
     ri_page.locator("#reportIssueBtn").click()
     expect(ri_page.locator("#reportIssueDropdown")).to_be_visible()
-    ri_page.locator("#reportIssueBtn").click()
+    # The backdrop covers the button while the modal is open, so re-clicking
+    # the trigger is not possible.  Click the backdrop corner to dismiss.
+    ri_page.mouse.click(5, 5)
     expect(ri_page.locator("#reportIssueDropdown")).to_be_hidden()
 
 
