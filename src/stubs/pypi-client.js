@@ -45,7 +45,7 @@ function parseVersionSpecifier(specifier) {
         .map((part) => part.trim())
         .filter(Boolean)
         .map((part) => {
-            const m = /^(==|!=|>=|<=|>|<)?\s*([A-Za-z0-9][A-Za-z0-9_.+-]*)$/.exec(part);
+            const m = /^(==|!=|>=|<=|>|<)?\s*([A-Za-z0-9][A-Za-z0-9_.+*-]*)$/.exec(part);
             if (!m) {
                 throw new Error(`Invalid version specifier: ${part}`);
             }
@@ -56,10 +56,55 @@ function parseVersionSpecifier(specifier) {
         });
 }
 
+function matchesWildcardVersion(version, pattern) {
+    const rawPattern = String(pattern || '').toLowerCase();
+    if (!rawPattern.includes('*')) {
+        return String(version || '').toLowerCase() === rawPattern;
+    }
+
+    if (/\*/g.test(rawPattern) && rawPattern.split('*').length > 2) {
+        throw new Error(`Invalid wildcard version pattern: ${pattern}`);
+    }
+
+    if (rawPattern.endsWith('.*')) {
+        const prefix = rawPattern.slice(0, -2);
+        const candidate = String(version || '').toLowerCase();
+        const candidatePrefixes = [prefix];
+
+        // MicroPython stubs often publish as X.Y.0.postN while users may request
+        // X.Y.1.* based on firmware versioning. Allow this one-step patch fallback.
+        const numeric = /^(\d+)\.(\d+)\.(\d+)$/.exec(prefix);
+        if (numeric) {
+            const patch = Number.parseInt(numeric[3], 10);
+            if (Number.isFinite(patch) && patch === 1) {
+                candidatePrefixes.push(`${numeric[1]}.${numeric[2]}.0`);
+            }
+        }
+
+        return candidatePrefixes.some((candidatePrefix) => (
+            candidate === candidatePrefix || candidate.startsWith(`${candidatePrefix}.`)
+        ));
+    }
+
+    const [prefix, suffix] = rawPattern.split('*');
+    const candidate = String(version || '').toLowerCase();
+    if (!candidate.startsWith(prefix)) return false;
+    if (!suffix) return true;
+    return candidate.slice(prefix.length).endsWith(suffix);
+}
+
 function satisfiesVersion(version, constraints) {
     if (!constraints || constraints.length === 0) return true;
 
     return constraints.every(({ op, version: target }) => {
+        if (target.includes('*')) {
+            if (op !== '==' && op !== '!=') {
+                throw new Error(`Wildcard versions are only supported with == or != (got ${op}${target})`);
+            }
+            const matches = matchesWildcardVersion(version, target);
+            return op === '==' ? matches : !matches;
+        }
+
         const cmp = compareVersions(version, target);
         if (op === '==') return cmp === 0;
         if (op === '!=') return cmp !== 0;
@@ -80,6 +125,39 @@ export function normalizePackageName(name) {
         .trim()
         .toLowerCase()
         .replace(/[-_.]+/g, '-');
+}
+
+export function parsePackageSpecifier(value) {
+    const raw = String(value || '').trim();
+    if (!raw) {
+        return {
+            packageName: '',
+            versionSpecifier: '',
+        };
+    }
+
+    const packageMatch = /^([A-Za-z0-9][A-Za-z0-9._-]*)(.*)$/.exec(raw);
+    if (!packageMatch) {
+        throw new Error('Invalid package specifier');
+    }
+
+    const packageName = packageMatch[1];
+    const remainder = packageMatch[2].trim();
+    if (!remainder) {
+        return {
+            packageName,
+            versionSpecifier: '',
+        };
+    }
+
+    if (!/^(==|!=|>=|<=|>|<)/.test(remainder)) {
+        throw new Error('Version constraints must start with one of: ==, !=, >=, <=, >, <');
+    }
+
+    return {
+        packageName,
+        versionSpecifier: remainder,
+    };
 }
 
 export async function fetchPackageIndex(packageName) {

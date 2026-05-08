@@ -126,10 +126,9 @@
                 <button id="loadSampleBtn" aria-label="Load selected sample">Load</button>
             </div>
             <div class="extra-stubs-section" aria-label="Install additional type stubs from PyPI">
-                <label for="extraStubPackage">Extra stubs:</label>
+                <label for="extraStubSpecifier">Install extra stubs from PyPI:</label>
                 <div class="extra-stubs-controls">
-                    <input id="extraStubPackage" type="text" placeholder="package-name-stubs" aria-label="PyPI stub package name">
-                    <input id="extraStubVersion" type="text" placeholder="version specifier (optional)" aria-label="PyPI version specifier">
+                    <input id="extraStubSpecifier" type="text" placeholder="package-name-stubs==1.20.0.* (or package only)" aria-label="PyPI package specifier">
                     <div class="extra-stubs-buttons">
                         <button id="installExtraStubBtn" type="button" aria-label="Install extra type stubs">Install</button>
                         <button id="clearExtraStubsBtn" type="button" aria-label="Clear all extra type stubs">Clear all</button>
