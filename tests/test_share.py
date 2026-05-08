@@ -140,6 +140,43 @@ def test_share_dropdown_toggles(share_page):
     expect(share_page.locator("#shareDropdown")).to_be_hidden()
 
 
+def test_copy_shows_brief_feedback_then_closes_dropdown(share_page):
+    """Copy action should briefly show copied feedback and auto-close dropdown."""
+    _open_options_panel(share_page)
+    share_page.locator("#shareBtn").click()
+    expect(share_page.locator("#shareDropdown")).to_be_visible()
+
+    # Stub clipboard write so the copy path is deterministic in tests.
+    share_page.evaluate("""() => {
+        const original = navigator.clipboard;
+        Object.defineProperty(navigator, 'clipboard', {
+            configurable: true,
+            value: {
+                writeText: async () => {},
+            },
+        });
+        window.__restoreClipboardWriteText = () => {
+            Object.defineProperty(navigator, 'clipboard', {
+                configurable: true,
+                value: original,
+            });
+        };
+    }""")
+
+    option = share_page.locator("#copyMdLink")
+    option.click()
+    expect(option).to_contain_text("Copied")
+
+    share_page.wait_for_timeout(1250)
+    expect(share_page.locator("#shareDropdown")).to_be_hidden()
+
+    share_page.evaluate("""() => {
+        if (typeof window.__restoreClipboardWriteText === 'function') {
+            window.__restoreClipboardWriteText();
+        }
+    }""")
+
+
 # ---------------------------------------------------------------------------
 # Compression roundtrip (tested in-browser via evaluate)
 # ---------------------------------------------------------------------------

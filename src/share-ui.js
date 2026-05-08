@@ -16,6 +16,7 @@ import {
 } from './share-core.js';
 
 export const MARKDOWN_CODE_SNIPPET_MAX_LINES = 16;
+const SHARE_COPY_FEEDBACK_MS = 1100;
 
 /**
  * Build a centered line snippet around the active cursor line.
@@ -53,6 +54,7 @@ export function getCenteredCodeSnippet(text, cursorLine, maxLines = MARKDOWN_COD
  * @param {HTMLElement} button
  */
 function flashCopied(button) {
+    if (!button) return;
     const original = button.textContent;
     button.textContent = '✓ Copied!';
     button.classList.add('share-copied');
@@ -171,12 +173,26 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
     const warningEl = document.getElementById('sharePayloadWarning');
     if (!shareBtn || !dropdown) return;
 
+    let closeTimer = null;
+
     const setOpen = (open) => {
+        if (closeTimer) {
+            clearTimeout(closeTimer);
+            closeTimer = null;
+        }
         dropdown.hidden = !open;
         if (backdrop) backdrop.hidden = !open;
         if (!open && dropdown.contains(document.activeElement)) {
             shareBtn.focus({ preventScroll: true });
         }
+    };
+
+    const scheduleCloseAfterCopy = () => {
+        if (closeTimer) clearTimeout(closeTimer);
+        closeTimer = setTimeout(() => {
+            setOpen(false);
+            if (warningEl) warningEl.hidden = true;
+        }, SHARE_COPY_FEEDBACK_MS);
     };
 
     const getScope = () => {
@@ -235,6 +251,7 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
 
     // Wire up copy buttons
     document.getElementById('copyLink')?.addEventListener('click', async (e) => {
+        const button = e.currentTarget;
         const files = await resolveShareFiles();
         const shareSettings = resolveShareSettings(getBoard, getTypeCheckMode, getStdlib, getPythonVersion);
         const ok = await copyShareableLink(
@@ -244,10 +261,14 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
             shareSettings.stdlib,
             shareSettings.pythonVersion,
         );
-        if (ok) flashCopied(e.currentTarget);
+        if (ok) {
+            flashCopied(button);
+            scheduleCloseAfterCopy();
+        }
     });
 
     document.getElementById('copyMdLink')?.addEventListener('click', async (e) => {
+        const button = e.currentTarget;
         const files = await resolveShareFiles();
         const shareSettings = resolveShareSettings(getBoard, getTypeCheckMode, getStdlib, getPythonVersion);
         const ok = await copyMarkdownWithLink(
@@ -257,10 +278,14 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
             shareSettings.stdlib,
             shareSettings.pythonVersion,
         );
-        if (ok) flashCopied(e.currentTarget);
+        if (ok) {
+            flashCopied(button);
+            scheduleCloseAfterCopy();
+        }
     });
 
     document.getElementById('copyMdCode')?.addEventListener('click', async (e) => {
+        const button = e.currentTarget;
         const files = await resolveShareFiles();
         const shareSettings = resolveShareSettings(getBoard, getTypeCheckMode, getStdlib, getPythonVersion);
         const snippet = getCenteredCodeSnippet(
@@ -276,6 +301,9 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
             shareSettings.stdlib,
             shareSettings.pythonVersion,
         );
-        if (ok) flashCopied(e.currentTarget);
+        if (ok) {
+            flashCopied(button);
+            scheduleCloseAfterCopy();
+        }
     });
 }
