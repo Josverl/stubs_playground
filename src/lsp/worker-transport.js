@@ -28,6 +28,7 @@ export class WorkerTransport {
         this._extraPaths = options.extraPaths || [];
         this._workspaceFiles = options.workspaceFiles || {};
         this._debugRequests = new Map(); // requestId -> {resolve,reject,timeout}
+        this._generatedConfigRequests = new Map(); // requestId -> {resolve,reject,timeout}
         this.pyrightVersion = ""; // set when serverInitialized is received
     }
 
@@ -53,6 +54,30 @@ export class WorkerTransport {
             });
         } else {
             pending.reject(new Error(msg.error || 'debugListFs failed'));
+        }
+
+        return true;
+    }
+
+    _handleGeneratedConfigResponse(msg) {
+        if (!msg || msg.type !== 'readGeneratedConfigResult' || !msg.requestId) {
+            return false;
+        }
+
+        const pending = this._generatedConfigRequests.get(msg.requestId);
+        if (!pending) {
+            return true;
+        }
+
+        this._generatedConfigRequests.delete(msg.requestId);
+        if (pending.timeout) {
+            clearTimeout(pending.timeout);
+        }
+
+        if (msg.ok) {
+            pending.resolve(typeof msg.content === 'string' ? msg.content : '');
+        } else {
+            pending.reject(new Error(msg.error || 'readGeneratedConfig failed'));
         }
 
         return true;
@@ -89,6 +114,10 @@ export class WorkerTransport {
                 const msg = e.data;
 
                 if (this._handleDebugResponse(msg)) {
+                    return;
+                }
+
+                if (this._handleGeneratedConfigResponse(msg)) {
                     return;
                 }
 
@@ -160,6 +189,10 @@ export class WorkerTransport {
         const msg = e.data;
 
         if (this._handleDebugResponse(msg)) {
+            return;
+        }
+
+        if (this._handleGeneratedConfigResponse(msg)) {
             return;
         }
 
@@ -258,6 +291,13 @@ export class WorkerTransport {
             pending.reject(new Error('Worker transport closed'));
         }
         this._debugRequests.clear();
+        for (const pending of this._generatedConfigRequests.values()) {
+            if (pending.timeout) {
+                clearTimeout(pending.timeout);
+            }
+            pending.reject(new Error('Worker transport closed'));
+        }
+        this._generatedConfigRequests.clear();
         if (this.worker) {
             this.worker.terminate();
             this.worker = null;
@@ -297,6 +337,29 @@ export class WorkerTransport {
 
             this._debugRequests.set(requestId, { resolve, reject, timeout });
             this.worker.postMessage({ type: 'debugListFs', requestId, root, depth });
+        });
+    }
+
+    /**
+     * Read generated pyproject.toml content from worker VFS.
+     */
+    readGeneratedConfig() {
+        if (!this.connected || !this.worker) {
+            return Promise.reject(new Error('WorkerTransport: not connected'));
+        }
+
+        const requestId = `cfg_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                if (!this._generatedConfigRequests.has(requestId)) {
+                    return;
+                }
+                this._generatedConfigRequests.delete(requestId);
+                reject(new Error('readGeneratedConfig timed out'));
+            }, 5000);
+
+            this._generatedConfigRequests.set(requestId, { resolve, reject, timeout });
+            this.worker.postMessage({ type: 'readGeneratedConfig', requestId });
         });
     }
 }

@@ -15,14 +15,14 @@ export class DocumentManager {
     /**
      * @param {HTMLElement} containerEl
      *   The DOM element that will host one editor pane per open file.
-     * @param {(path: string, content: string, paneEl: HTMLElement) => import('@codemirror/view').EditorView} createView
+    * @param {(path: string, content: string, paneEl: HTMLElement, options?: { readOnly?: boolean, language?: string }) => import('@codemirror/view').EditorView} createView
      *   Factory that creates a fully-configured EditorView mounted into paneEl.
      */
     constructor(containerEl, createView) {
         this._container = containerEl;
         this._createView = createView;
 
-        /** @type {Map<string, { view: import('@codemirror/view').EditorView, paneEl: HTMLElement, dirty: boolean }>} */
+        /** @type {Map<string, { view: import('@codemirror/view').EditorView, paneEl: HTMLElement, dirty: boolean, virtual: boolean, readOnly: boolean }>} */
         this._docs = new Map();
 
         /** @type {string|null} */
@@ -68,7 +68,7 @@ export class DocumentManager {
             this._container.appendChild(paneEl);
 
             const view = this._createView(path, content, paneEl);
-            this._docs.set(path, { view, paneEl, dirty: false });
+            this._docs.set(path, { view, paneEl, dirty: false, virtual: false, readOnly: false });
         }
 
         // Toggle visibility of all panes
@@ -77,7 +77,10 @@ export class DocumentManager {
         }
 
         this._activeFile = path;
-        OPFSProject.setLastActiveFile(path);
+        const activeEntry = this._docs.get(path);
+        if (!activeEntry?.virtual) {
+            OPFSProject.setLastActiveFile(path);
+        }
 
         // Focus the newly-active editor on the next frame so layout has settled
         const entry = this._docs.get(path);
@@ -85,6 +88,38 @@ export class DocumentManager {
 
         this._notifyListeners(path);
         dispatch(Events.ACTIVE_CHANGED, { path });
+    }
+
+    /**
+     * Open a virtual file that should not persist to OPFS.
+     * Existing open virtual files are updated with the latest content.
+     * @param {string} path
+     * @param {string} content
+     * @param {{ readOnly?: boolean, language?: string }} [options]
+     */
+    async openVirtualFile(path, content, options = {}) {
+        const readOnly = !!options.readOnly;
+        if (!this._docs.has(path)) {
+            const paneEl = document.createElement('div');
+            paneEl.className = 'editor-pane';
+            paneEl.dataset.path = path;
+            this._container.appendChild(paneEl);
+
+            const view = this._createView(path, content, paneEl, options);
+            this._docs.set(path, { view, paneEl, dirty: false, virtual: true, readOnly });
+        } else {
+            const entry = this._docs.get(path);
+            if (entry) {
+                entry.view.dispatch({
+                    changes: { from: 0, to: entry.view.state.doc.length, insert: content },
+                });
+                entry.dirty = false;
+                entry.virtual = true;
+                entry.readOnly = readOnly;
+            }
+        }
+
+        await this.openFile(path);
     }
 
     /**
@@ -96,6 +131,9 @@ export class DocumentManager {
         if (!target) return;
         const entry = this._docs.get(target);
         if (!entry) return;
+        if (entry.virtual || entry.readOnly) {
+            return;
+        }
 
         const content = entry.view.state.doc.toString();
         await OPFSProject.writeFile(target, content);
@@ -152,6 +190,7 @@ export class DocumentManager {
         const target = path || this._activeFile;
         if (!target) return;
         const entry = this._docs.get(target);
+        if (entry?.virtual || entry?.readOnly) return;
         if (entry && !entry.dirty) {
             entry.dirty = true;
             this._notifyListeners(this._activeFile);

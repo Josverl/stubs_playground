@@ -44,6 +44,7 @@ import type {
     MsgSyncFile,
     MsgDeleteFile,
     MsgDebugListFs,
+    MsgReadGeneratedConfig,
     ExtraStubPackage,
     UserFolder,
     WorkerMessage,
@@ -198,9 +199,9 @@ function writeExtraStubPackages(extraStubPackages: ExtraStubPackage[] = []) {
 }
 
 /**
- * Create pyrightconfig.json in the virtual workspace
+ * Create pyproject.toml with [tool.pyright] in the virtual workspace.
  */
-function writePyrightConfig(options: {
+function writePyprojectToml(options: {
     typeCheckingMode?: string;
     typeshedPath?: string;
     pythonVersion?: string;
@@ -235,7 +236,7 @@ function writePyrightConfig(options: {
         ? `3.${Math.max(10, Math.min(14, pythonMinor))}`
         : "3.10";
 
-    // Pyright requires `include`/`extraPaths` in pyrightconfig.json to be
+    // Pyright requires `include`/`extraPaths` to be
     // RELATIVE to the config file's location (here: /workspace). Absolute
     // paths are silently dropped with "Ignoring path … because it is not
     // relative", which makes Pyright report "No source files found" and
@@ -271,15 +272,43 @@ function writePyrightConfig(options: {
         reportMissingModuleSource: false,
         reportMissingTypeStubs: false,
     };
-    // reportConstantRedefinition : "warning",
-    // reportAttributeAccessIssue : "warning", // unknown attributes
-    
-    const configJson = JSON.stringify(config, null, 2);
-    fs.writeFileSync(
-        "/workspace/pyrightconfig.json",
-        configJson
-    );
 
+    const tomlValue = (value: string | boolean | string[]): string => {
+        if (typeof value === "boolean") return value ? "true" : "false";
+        if (Array.isArray(value)) {
+            return `[${value.map((entry) => JSON.stringify(entry)).join(", ")}]`;
+        }
+        return JSON.stringify(value);
+    };
+
+    const tomlKeys: Array<keyof typeof config> = [
+        "typeshedPath",
+        "stubPath",
+        "include",
+        "extraPaths",
+        "pythonPlatform",
+        "pythonVersion",
+        "ignore",
+        "verboseOutput",
+        "typeCheckingMode",
+        "reportMissingImports",
+        "reportUnusedImport",
+        "reportUnusedVariable",
+        "reportUnknownArgumentType",
+        "reportUnknownVariableType",
+        "reportUnknownMemberType",
+        "reportPrivateImportUsage",
+        "reportPrivateUsage",
+        "reportMissingModuleSource",
+        "reportMissingTypeStubs",
+    ];
+
+    const tomlLines = ["[tool.pyright]"];
+    for (const key of tomlKeys) {
+        tomlLines.push(`${key} = ${tomlValue(config[key])}`);
+    }
+
+    fs.writeFileSync("/workspace/pyproject.toml", `${tomlLines.join("\n")}\n`);
 }
 
 /**
@@ -303,8 +332,8 @@ async function handleInitServer(msg: MsgInitServer) {
             writeExtraStubPackages(msg.extraStubPackages);
         }
 
-        // Write pyrightconfig
-        writePyrightConfig({
+        // Write pyproject.toml
+        writePyprojectToml({
             typeCheckingMode: msg.typeCheckingMode,
             typeshedPath: msg.typeshedPath,
             pythonVersion: msg.pythonVersion,
@@ -343,6 +372,10 @@ async function handleInitServer(msg: MsgInitServer) {
                 }
                 if (data.type === "debugListFs") {
                     handleDebugListFs(data as MsgDebugListFs);
+                    return;
+                }
+                if (data.type === "readGeneratedConfig") {
+                    handleReadGeneratedConfig(data as MsgReadGeneratedConfig);
                     return;
                 }
             }
@@ -463,6 +496,27 @@ function handleDebugListFs(msg: MsgDebugListFs) {
     }
 }
 
+function handleReadGeneratedConfig(msg: MsgReadGeneratedConfig) {
+    const generatedPath = "/workspace/pyproject.toml";
+    try {
+        const content = fs.readFileSync(generatedPath, "utf8");
+        ctx.postMessage({
+            type: "readGeneratedConfigResult",
+            requestId: msg.requestId,
+            ok: true,
+            content,
+        } as WorkerMessage);
+    } catch (err: any) {
+        ctx.postMessage({
+            type: "readGeneratedConfigResult",
+            requestId: msg.requestId,
+            ok: false,
+            content: "",
+            error: err?.message || String(err),
+        } as WorkerMessage);
+    }
+}
+
 // --- Worker entry point ---
 
 ctx.onmessage = (event: MessageEvent) => {
@@ -480,6 +534,9 @@ ctx.onmessage = (event: MessageEvent) => {
             break;
         case "debugListFs":
             handleDebugListFs(msg as MsgDebugListFs);
+            break;
+        case "readGeneratedConfig":
+            handleReadGeneratedConfig(msg as MsgReadGeneratedConfig);
             break;
         default:
             // LSP messages will be handled by BrowserMessageReader once the
