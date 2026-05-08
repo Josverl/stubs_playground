@@ -115,6 +115,54 @@ def test_extra_stubs_controls_exist(editor_page):
     expect(editor_page.locator("#clearExtraStubsBtn")).to_be_visible()
 
 
+def test_generated_config_button_exists(editor_page):
+    """Options panel contains the generated pyproject read-only action button."""
+    _open_options_panel(editor_page)
+    expect(editor_page.locator("#openGeneratedConfigBtn")).to_be_visible()
+
+
+def test_generated_config_opens_read_only_tab_when_lsp_ready(editor_page):
+    """Open Read-Only creates a pyproject.toml tab with non-editable editor content."""
+    lsp_state = editor_page.evaluate(
+        """() => ({
+            ready: window.__lspReady === true,
+            failed: window.__lspFailed === true,
+        })"""
+    )
+    if lsp_state.get("failed") and not lsp_state.get("ready"):
+        pytest.skip("LSP failed to initialize in this environment")
+
+    _open_options_panel(editor_page)
+    editor_page.locator("#openGeneratedConfigBtn").click()
+    editor_page.wait_for_function(
+        """() => Array.from(document.querySelectorAll('.tab-bar__label'))
+            .some((el) => (el.textContent || '').includes('pyproject.toml'))""",
+        timeout=CDN_TIMEOUT,
+    )
+
+    active_label = editor_page.locator(".tab-bar__tab--active .tab-bar__label").inner_text()
+    assert "pyproject.toml" in active_label
+
+    attrs = editor_page.evaluate(
+        """() => {
+            const el = document.querySelector('.editor-pane--active .cm-content');
+            return {
+                ariaReadonly: el?.getAttribute('aria-readonly') || null,
+                contentEditable: el?.getAttribute('contenteditable') || null,
+            };
+        }"""
+    )
+    assert attrs["ariaReadonly"] == "true"
+    assert attrs["contentEditable"] == "false"
+
+    editor_page.locator(".tab-bar__tab", has_text="pyproject.toml").locator(".tab-bar__close").click()
+    editor_page.wait_for_function(
+        """() => !Array.from(document.querySelectorAll('.tab-bar__label'))
+            .some((el) => (el.textContent || '').includes('pyproject.toml'))""",
+        timeout=CDN_TIMEOUT,
+    )
+
+
 def test_footer_has_github_star_buttons_with_counts(editor_page):
     """Footer includes both GitHub star buttons configured to show star counts.
 

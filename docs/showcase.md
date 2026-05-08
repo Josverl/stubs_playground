@@ -251,13 +251,15 @@ See `scripts/pack-stubs.mjs` for the packing logic. You can also fetch stub zips
 
 ### Step 6: Add Configuration (Optional)
 
-Pyright reads `pyrightconfig.json` from the virtual filesystem. You can write one into ZenFS at worker startup to control:
+Pyright reads configuration from `pyproject.toml` (`[tool.pyright]`) in the virtual filesystem. This is automatically generated based on the options selected to control:
 
 - `typeCheckingMode` — `"off"`, `"basic"`, `"standard"`, or `"strict"` (recommended `"standard"` ) 
 - `pythonVersion` — e.g., `"3.4"` (MicroPython roughly targets Python 3.4)
 - `pythonPlatform` — e.g., `"Linux"`
 - `typingsPath` — where to find stubs (default: `./typings`)
 - `typeshedPath` — required to override stdlib stubs such as `time.sleep_ms()` (default: `./typings`)
+
+You can view (not edit) the generated `pyproject.toml` in the editor as a read-only document.
 
 ### Step 7: Add Board / Port / Version Switching (Optional)
 
@@ -295,7 +297,7 @@ The worker teardown/recreate approach is the simplest way to get a clean Pyright
 - **More LSP features** — Go-to-definition, find-references, rename symbol, signature help, code actions.
 - **Multi-file support** — Virtual project with multiple files (e.g., `main.py` + `lib/` modules). Tab UI for switching between files.
 - **Custom stubs** — Allow users to drag-and-drop or upload their own `.pyi` stub files for custom MicroPython libraries.
-- **Pyright configuration** — Expose `pyrightconfig.json` settings in the UI: type checking level (off/basic/standard/strict), python version, python platform.
+- **Pyright configuration** — Expose generated `pyproject.toml` (`[tool.pyright]`) settings in the UI: type checking level (off/basic/standard/strict), python version, python platform.
 - **Offline support** — Service worker to cache CDN dependencies and the Pyright worker for offline use.
 - **Device integration** — Web Serial API for connecting to a MicroPython board. Upload files, run code, view serial output.
 - **Collaborative editing** — WebRTC or similar for real-time multi-user editing sessions.

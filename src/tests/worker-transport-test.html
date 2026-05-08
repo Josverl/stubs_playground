@@ -163,6 +163,18 @@ const tests = {
         t.close();
         return { success: true, hasCapabilities, diagnosticCount };
     },
+
+    async 'generated-config'() {
+        const t = new WorkerTransport('../../dist/pyright_worker.js');
+        await t.connect();
+        const content = await t.readGeneratedConfig();
+        t.close();
+        return {
+            success: true,
+            hasToolSection: content.includes('[tool.pyright]'),
+            hasStubPath: content.includes('stubPath = "/typings"'),
+        };
+    },
 };
 
 window.runTest = async function(name) {

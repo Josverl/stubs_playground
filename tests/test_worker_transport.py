@@ -102,3 +102,16 @@ def test_simple_client_with_worker_transport(page, test_page_url):
     assert result["success"] is True
     assert result["hasCapabilities"] is True
     assert result["diagnosticCount"] >= 1
+
+
+def test_worker_transport_reads_generated_config(page, test_page_url):
+    """WorkerTransport can read generated pyproject.toml content from worker VFS."""
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate("""() => {
+        return window.runTest('generated-config');
+    }""")
+
+    assert result["success"] is True
+    assert result["hasToolSection"] is True
+    assert result["hasStubPath"] is True

@@ -284,6 +284,7 @@ body.light-theme .options-header { color: #555; }
 #options-panel .typeshed-toggle,
 #options-panel .python-version-selector,
 #options-panel .verbose-toggle,
+#options-panel .generated-config-viewer,
 #options-panel .sample-selector {
     flex: 1 1 100%;
     display: grid;
@@ -300,7 +301,8 @@ body.light-theme .options-header { color: #555; }
 #options-panel .typecheck-selector label,
 #options-panel .typeshed-toggle label,
 #options-panel .python-version-selector label,
-#options-panel .verbose-toggle label {
+#options-panel .verbose-toggle label,
+#options-panel .generated-config-viewer label {
     text-align: right;
 }
 
@@ -383,6 +385,41 @@ body.light-theme #options-panel .extra-stubs-status {
 #options-panel .python-version-selector select {
     width: 100%;
     max-width: none;
+}
+
+#options-panel .generated-config-viewer button {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+}
+
+body.dark-theme #options-panel .generated-config-viewer button {
+    background-color: #3c3c3c;
+    color: #d4d4d4;
+    border: 1px solid #3e3e42;
+}
+
+body.dark-theme #options-panel .generated-config-viewer button:hover {
+    background-color: #4a4a4a;
+}
+
+body.light-theme #options-panel .generated-config-viewer button {
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #d4d4d4;
+}
+
+body.light-theme #options-panel .generated-config-viewer button:hover {
+    background-color: #f3f3f3;
+}
+
+#options-panel .generated-config-viewer button:focus {
+    outline: 2px solid #007acc;
+    outline-offset: 2px;
 }
 
 #options-panel .toggle-row {
@@ -499,7 +536,8 @@ body.light-theme #options-panel .extra-stubs-status {
 .typecheck-selector label,
 .typeshed-toggle label,
 .python-version-selector label,
-.verbose-toggle label {
+.verbose-toggle label,
+.generated-config-viewer label {
     font-size: 13px;
     font-weight: 500;
 }

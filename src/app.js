@@ -103,6 +103,7 @@ let exampleFiles = [];
 let lspClient = null;
 let lspTransport = null;
 let documentUri = 'file:///workspace/main.py'; // updated dynamically
+const GENERATED_PYPROJECT_TAB_PATH = '@generated/pyproject.toml';
 
 // Per-URI document version tracker. Each tab maintains its own monotonically
 // increasing version so that an in-flight didChange for the previously-active
@@ -185,6 +186,12 @@ function installWorkerDebugHelpers() {
             const result = await lspTransport.debugListFs(root, depth);
             console.table(result.entries);
             return result;
+        },
+        async readGeneratedConfig() {
+            if (!lspTransport || typeof lspTransport.readGeneratedConfig !== 'function') {
+                throw new Error('LSP transport not ready');
+            }
+            return lspTransport.readGeneratedConfig();
         }
     };
 
@@ -192,6 +199,32 @@ function installWorkerDebugHelpers() {
         ...(window.mpDebug || {}),
         ...helpers,
     };
+}
+
+async function openGeneratedPyprojectInEditor() {
+    if (!docManager) return;
+    if (!lspTransport || typeof lspTransport.readGeneratedConfig !== 'function') {
+        console.warn('Language server transport is not ready yet.');
+        return;
+    }
+
+    const button = document.getElementById('openGeneratedConfigBtn');
+    if (button) button.disabled = true;
+
+    try {
+        const content = await lspTransport.readGeneratedConfig();
+        await docManager.openVirtualFile(GENERATED_PYPROJECT_TAB_PATH, content, {
+            readOnly: true,
+            language: 'toml',
+        });
+        if (typeof refreshTabBarView === 'function') {
+            refreshTabBarView();
+        }
+    } catch (err) {
+        console.error('Failed to open generated pyproject.toml:', err);
+    } finally {
+        if (button) button.disabled = false;
+    }
 }
 
 function updateVerboseOutputLabel() {
@@ -435,6 +468,7 @@ function clearPendingDidChange(path) {
 let docManager = null;
 let tabBar = null;
 let fileTree = null;
+let refreshTabBarView = null;
 
 // Theme + LSP compartments are now created per-view in viewMeta (see below).
 
@@ -1055,7 +1089,9 @@ function dedentFourSpaces(targetView) {
  */
 const viewMeta = new WeakMap();
 
-function buildExtensions(path, themeC, lspC) {
+function buildExtensions(path, themeC, lspC, options = {}) {
+    const readOnly = !!options.readOnly;
+    const language = options.language || 'python';
     const uri = `file:///workspace/${path}`;
     const updateListener = EditorView.updateListener.of((update) => {
         if (!update.docChanged) return;
@@ -1079,7 +1115,8 @@ function buildExtensions(path, themeC, lspC) {
     return [
         basicSetup,
         indentUnit.of(INDENT),
-        python(),
+        ...(language === 'python' ? [python()] : []),
+        ...(readOnly ? [EditorState.readOnly.of(true), EditorView.editable.of(false)] : []),
         Prec.high(keymap.of([
             { key: 'Tab', run: indentWithFourSpaces },
             { key: 'Shift-Tab', run: dedentFourSpaces },
@@ -1105,12 +1142,12 @@ function buildExtensions(path, themeC, lspC) {
     ];
 }
 
-function createViewForPath(path, content, paneEl) {
+function createViewForPath(path, content, paneEl, options = {}) {
     const themeC = new Compartment();
     const lspC = new Compartment();
     const v = new EditorView({
         doc: content,
-        extensions: buildExtensions(path, themeC, lspC),
+        extensions: buildExtensions(path, themeC, lspC, options),
         parent: paneEl,
     });
     viewMeta.set(v, { themeC, lspC, path });
@@ -1408,6 +1445,7 @@ async function initializeEditor() {
         });
         if (docManager.activeFile) fileTree.setActiveFile(docManager.activeFile);
     }
+    refreshTabBarView = refreshTabBar;
     refreshTabBar();
 
     // Bind LSP to any views that were opened before the LSP client was ready.
@@ -1797,6 +1835,7 @@ document.getElementById('extraStubSpecifier').addEventListener('keydown', (event
     event.preventDefault();
     installExtraStubPackage();
 });
+document.getElementById('openGeneratedConfigBtn').addEventListener('click', openGeneratedPyprojectInEditor);
 
 // Restore saved type checking mode
 const savedTypeCheckMode = localStorage.getItem('mp_typeCheckMode');

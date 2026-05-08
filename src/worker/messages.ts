@@ -85,6 +85,20 @@ export interface MsgDebugListFsResult {
     error?: string;
 }
 
+export interface MsgReadGeneratedConfig {
+    type: "readGeneratedConfig";
+    /** Correlation id for matching request/response */
+    requestId: string;
+}
+
+export interface MsgReadGeneratedConfigResult {
+    type: "readGeneratedConfigResult";
+    requestId: string;
+    ok: boolean;
+    content: string;
+    error?: string;
+}
+
 export type WorkerMessage =
     | MsgServerLoaded
     | MsgInitServer
@@ -93,4 +107,6 @@ export type WorkerMessage =
     | MsgSyncFile
     | MsgDeleteFile
     | MsgDebugListFs
-    | MsgDebugListFsResult;
+    | MsgDebugListFsResult
+    | MsgReadGeneratedConfig
+    | MsgReadGeneratedConfigResult;
