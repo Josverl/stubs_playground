@@ -122,13 +122,61 @@ function writeWorkspaceFiles(files: Record<string, string> = {}) {
     }
 }
 
+// Trim trailing separators with a linear scan to avoid regex backtracking on user input.
+function trimTrailingChar(value: string, char: string): string {
+    let end = value.length;
+    while (end > 0 && value[end - 1] === char) {
+        end -= 1;
+    }
+    return value.slice(0, end);
+}
+
+// Remove leading and trailing package separators after normalization collapses mixed runs.
+function trimEdgeSeparators(value: string): string {
+    let start = 0;
+    let end = value.length;
+    while (start < end && (value[start] === '-' || value[start] === '_' || value[start] === '.')) {
+        start += 1;
+    }
+    while (end > start && (value[end - 1] === '-' || value[end - 1] === '_' || value[end - 1] === '.')) {
+        end -= 1;
+    }
+    return value.slice(start, end);
+}
+
+// Normalize package names with predictable character-by-character logic instead of regexes
+// so CodeQL does not flag sanitization on uncontrolled package names.
+function collapsePackageNameChars(value: string): string {
+    let result = '';
+    let previousWasSeparator = false;
+
+    for (const char of value) {
+        const isAlphaNumeric = (char >= 'a' && char <= 'z') || (char >= '0' && char <= '9');
+        const normalized = isAlphaNumeric || char === '.' || char === '_' || char === '-'
+            ? char
+            : '-';
+        const isSeparator = normalized === '.' || normalized === '_' || normalized === '-';
+
+        if (isSeparator) {
+            if (previousWasSeparator) {
+                result = `${result.slice(0, -1)}-`;
+            } else {
+                result += normalized;
+            }
+            previousWasSeparator = true;
+            continue;
+        }
+
+        result += normalized;
+        previousWasSeparator = false;
+    }
+
+    return trimEdgeSeparators(result);
+}
+
 function normalizeExtraPackageName(packageName: string): string {
-    return String(packageName || '')
-        .toLowerCase()
-        .replace(/[^a-z0-9._-]+/g, '-')
-        .replace(/[-_.]{2,}/g, '-')
-        .replace(/^[-_.]+|[-_.]+$/g, '')
-        || 'package';
+    const normalized = collapsePackageNameChars(String(packageName || '').toLowerCase());
+    return normalized || 'package';
 }
 
 function writeExtraStubPackages(extraStubPackages: ExtraStubPackage[] = []) {
@@ -170,7 +218,7 @@ function writePyrightConfig(options: {
         (extraPaths || [])
             .filter((p) => typeof p === 'string' && p.startsWith('/extra/'))
             .map((p) => {
-                const trimmed = p.replace(/\/+$/, '');
+                const trimmed = trimTrailingChar(p, '/');
                 const packageName = trimmed.slice('/extra/'.length);
                 return packageName ? `../extra/${packageName}` : null;
             })
