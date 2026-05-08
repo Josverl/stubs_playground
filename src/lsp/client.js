@@ -23,6 +23,8 @@ import { createTransport } from './transport-factory.js';
  * @param {string} [config.typeshedPath] - Pyright typeshedPath
  * @param {string} [config.pythonVersion] - Pyright pythonVersion
  * @param {boolean} [config.verboseOutput] - Pyright verboseOutput
+ * @param {Array<{packageName: string, files: Object.<string, string>}>} [config.extraStubPackages]
+ * @param {string[]} [config.extraPaths] - Absolute extra import search paths
  */
 export async function createLSPClient(config = {}) {
     const transport = createTransport({
@@ -33,6 +35,8 @@ export async function createLSPClient(config = {}) {
         typeshedPath: config.typeshedPath,
         pythonVersion: config.pythonVersion,
         verboseOutput: config.verboseOutput,
+        extraStubPackages: config.extraStubPackages,
+        extraPaths: config.extraPaths,
     });
 
     console.log('Creating LSP client...');
@@ -41,6 +45,9 @@ export async function createLSPClient(config = {}) {
         rootUri: 'file:///workspace',
         timeout: config.timeout || 5000,
         typeCheckingMode: config.typeCheckingMode,
+        typeshedPath: config.typeshedPath,
+        pythonVersion: config.pythonVersion,
+        extraPaths: config.extraPaths,
     });
 
     await transport.connect();

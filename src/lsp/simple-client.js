@@ -26,19 +26,20 @@ export class SimpleLSPClient {
         // and expects the value for that specific section.
         this.onRequest('workspace/configuration', (params) => {
             const mode = this.config.typeCheckingMode || 'standard';
+            const analysisExtraPaths = this._getAnalysisExtraPaths();
             const fullConfig = {
                 python: {
                     analysis: {
-                        typeshedPaths: ['/typeshed-fallback'],
+                        typeshedPaths: [this.config.typeshedPath || '/typeshed-fallback'],
                         stubPath: '/typings',
                         include: ['/workspace'],
-                        extraPaths: ['/workspace'],
+                        extraPaths: analysisExtraPaths,
                         typeCheckingMode: mode,
                         diagnosticSeverityOverrides: {
                             reportMissingModuleSource: 'none',
                         },
                     },
-                    pythonVersion: '3.11',
+                    pythonVersion: this.config.pythonVersion || '3.11',
                     pythonPlatform: 'Linux',
                 },
                 pyright: {
@@ -58,6 +59,15 @@ export class SimpleLSPClient {
                 return value || {};
             });
         });
+    }
+
+    _getAnalysisExtraPaths() {
+        const fromConfig = Array.isArray(this.config.extraPaths)
+            ? this.config.extraPaths.filter((p) => typeof p === 'string' && p.trim())
+            : [];
+
+        const extra = ['/workspace', ...fromConfig];
+        return Array.from(new Set(extra));
     }
 
     /**
@@ -133,16 +143,16 @@ export class SimpleLSPClient {
         const configSettings = {
             python: {
                 analysis: {
-                    typeshedPaths: ['/typeshed-fallback'],
+                    typeshedPaths: [this.config.typeshedPath || '/typeshed-fallback'],
                     stubPath: '/typings',
                     include: ['/workspace'],
-                    extraPaths: ['/workspace'],
+                    extraPaths: this._getAnalysisExtraPaths(),
                     typeCheckingMode: this.config.typeCheckingMode || 'standard',
                     diagnosticSeverityOverrides: {
                         reportMissingModuleSource: 'none',
                     },
                 },
-                pythonVersion: '3.11',
+                pythonVersion: this.config.pythonVersion || '3.11',
                 pythonPlatform: 'Linux',
             }
         };

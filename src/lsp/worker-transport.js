@@ -24,6 +24,8 @@ export class WorkerTransport {
         this._typeshedPath = options.typeshedPath; // string | undefined
         this._pythonVersion = options.pythonVersion; // string | undefined
         this._verboseOutput = options.verboseOutput; // boolean | undefined
+        this._extraStubPackages = options.extraStubPackages || [];
+        this._extraPaths = options.extraPaths || [];
         this._workspaceFiles = options.workspaceFiles || {};
         this._debugRequests = new Map(); // requestId -> {resolve,reject,timeout}
         this.pyrightVersion = ""; // set when serverInitialized is received
@@ -103,6 +105,8 @@ export class WorkerTransport {
                         typeshedPath: this._typeshedPath,
                         pythonVersion: this._pythonVersion,
                         verboseOutput: this._verboseOutput,
+                        extraStubPackages: this._extraStubPackages,
+                        extraPaths: this._extraPaths,
                     });
                     return;
                 }

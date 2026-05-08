@@ -85,6 +85,7 @@
                     <span id="verboseOutputLabel"></span>
                 </div>
             </div>
+
             <div class="share-wrapper">
                 <button id="shareBtn" aria-label="Share code" title="Share code">Share</button>
                 <div id="shareDropdown" class="share-dropdown" hidden>
@@ -116,6 +117,19 @@
                 </select>
                 <button id="loadSampleBtn" aria-label="Load selected sample">Load</button>
             </div>
+            <div class="extra-stubs-section" aria-label="Install additional type stubs from PyPI">
+                <label for="extraStubPackage">Extra stubs:</label>
+                <div class="extra-stubs-controls">
+                    <input id="extraStubPackage" type="text" placeholder="package-name-stubs" aria-label="PyPI stub package name">
+                    <input id="extraStubVersion" type="text" placeholder="version specifier (optional)" aria-label="PyPI version specifier">
+                    <div class="extra-stubs-buttons">
+                        <button id="installExtraStubBtn" type="button" aria-label="Install extra type stubs">Install</button>
+                        <button id="clearExtraStubsBtn" type="button" aria-label="Clear all extra type stubs">Clear all</button>
+                    </div>
+                    <div id="extraStubsStatus" class="extra-stubs-status" aria-live="polite"></div>
+                </div>
+            </div>
+
         </div>
     </aside>
 

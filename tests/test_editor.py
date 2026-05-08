@@ -107,6 +107,15 @@ def test_editor_container_exists(editor_page):
     expect(editor_page.locator("#editor-container")).to_be_visible()
 
 
+def test_extra_stubs_controls_exist(editor_page):
+    """Options panel contains PyPI extra stubs install controls."""
+    _open_options_panel(editor_page)
+    expect(editor_page.locator("#extraStubPackage")).to_be_visible()
+    expect(editor_page.locator("#extraStubVersion")).to_be_visible()
+    expect(editor_page.locator("#installExtraStubBtn")).to_be_visible()
+    expect(editor_page.locator("#clearExtraStubsBtn")).to_be_visible()
+
+
 def test_footer_has_github_star_buttons_with_counts(editor_page):
     """Footer includes both GitHub star buttons configured to show star counts.
 

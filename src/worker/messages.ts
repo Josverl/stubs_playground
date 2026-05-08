@@ -26,6 +26,15 @@ export interface MsgInitServer {
     pythonVersion?: string;
     /** Pyright verboseOutput */
     verboseOutput?: boolean;
+    /** Additional type-only stub packages materialized under /extra/<packageName> */
+    extraStubPackages?: ExtraStubPackage[];
+    /** Absolute extra search paths used for LSP workspace/configuration */
+    extraPaths?: string[];
+}
+
+export interface ExtraStubPackage {
+    packageName: string;
+    files: Record<string, string>;
 }
 
 export interface MsgServerInitialized {
