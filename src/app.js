@@ -1625,11 +1625,33 @@ function initSidebarResize() {
 function initOptionsPanel() {
     const panel = document.getElementById('options-panel');
     const handle = document.getElementById('options-panel-handle');
+    const optionsHeader = panel?.querySelector('.options-header');
+    const controls = panel?.querySelector('.controls');
     if (!panel || !handle) return;
 
+    function moveFocusOutsidePanelIfNeeded() {
+        if (!panel.contains(document.activeElement)) return;
+        const fallbackFocus = document.getElementById('themeToggle');
+        if (fallbackFocus instanceof HTMLElement) {
+            fallbackFocus.focus({ preventScroll: true });
+        }
+    }
+
     function syncState(open) {
+        if (!open) {
+            // Move focus before and after the toggle. A click on the handle can
+            // restore focus to it late in the event cycle.
+            moveFocusOutsidePanelIfNeeded();
+            setTimeout(moveFocusOutsidePanelIfNeeded, 0);
+        }
         document.body.classList.toggle('options-panel-open', open);
-        panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+        if (optionsHeader instanceof HTMLElement) {
+            optionsHeader.setAttribute('aria-hidden', open ? 'false' : 'true');
+        }
+        if (controls instanceof HTMLElement) {
+            controls.setAttribute('aria-hidden', open ? 'false' : 'true');
+        }
+        handle.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
 
     function toggle() {
