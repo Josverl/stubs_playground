@@ -15,6 +15,39 @@ import {
     resolveShareSettings,
 } from './share-core.js';
 
+export const MARKDOWN_CODE_SNIPPET_MAX_LINES = 16;
+
+/**
+ * Build a centered line snippet around the active cursor line.
+ * Returns at most maxLines lines.
+ *
+ * @param {string} text
+ * @param {number} cursorLine One-based cursor line number
+ * @param {number} maxLines
+ * @returns {string}
+ */
+export function getCenteredCodeSnippet(text, cursorLine, maxLines = MARKDOWN_CODE_SNIPPET_MAX_LINES) {
+    const lines = String(text ?? '').split('\n');
+    if (!lines.length || maxLines <= 0) return '';
+    if (lines.length <= maxLines) return lines.join('\n');
+
+    const safeCursorLine = Number.isFinite(cursorLine)
+        ? Math.max(1, Math.min(lines.length, Math.trunc(cursorLine)))
+        : 1;
+    const cursorIndex = safeCursorLine - 1;
+
+    const before = Math.floor(maxLines / 2);
+    let start = Math.max(0, cursorIndex - before);
+    let end = start + maxLines;
+
+    if (end > lines.length) {
+        end = lines.length;
+        start = Math.max(0, end - maxLines);
+    }
+
+    return lines.slice(start, end).join('\n');
+}
+
 /**
  * Show a brief "Copied!" flash next to the button that was clicked.
  * @param {HTMLElement} button
@@ -129,8 +162,9 @@ export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTyp
  * @param {() => string} [getPythonVersion] Returns python version
  * @param {() => Promise<Object<string,string>>} [getFiles] Returns full share file map
  * @param {() => string} [getActiveFileName] Returns active file path
+ * @param {() => number} [getCursorLine] Returns active cursor line number (1-based)
  */
-export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib, getPythonVersion, getFiles, getActiveFileName) {
+export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib, getPythonVersion, getFiles, getActiveFileName, getCursorLine) {
     const shareBtn = document.getElementById('shareBtn');
     const dropdown = document.getElementById('shareDropdown');
     const backdrop = document.getElementById('shareBackdrop');
@@ -229,9 +263,14 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
     document.getElementById('copyMdCode')?.addEventListener('click', async (e) => {
         const files = await resolveShareFiles();
         const shareSettings = resolveShareSettings(getBoard, getTypeCheckMode, getStdlib, getPythonVersion);
+        const snippet = getCenteredCodeSnippet(
+            getCode(),
+            typeof getCursorLine === 'function' ? getCursorLine() : 1,
+            MARKDOWN_CODE_SNIPPET_MAX_LINES,
+        );
         const ok = await copyMarkdownWithLinkAndCode(
             files,
-            getCode(),
+            snippet,
             shareSettings.board,
             shareSettings.typeCheckMode,
             shareSettings.stdlib,
