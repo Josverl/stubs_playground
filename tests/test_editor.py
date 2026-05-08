@@ -110,8 +110,7 @@ def test_editor_container_exists(editor_page):
 def test_extra_stubs_controls_exist(editor_page):
     """Options panel contains PyPI extra stubs install controls."""
     _open_options_panel(editor_page)
-    expect(editor_page.locator("#extraStubPackage")).to_be_visible()
-    expect(editor_page.locator("#extraStubVersion")).to_be_visible()
+    expect(editor_page.locator("#extraStubSpecifier")).to_be_visible()
     expect(editor_page.locator("#installExtraStubBtn")).to_be_visible()
     expect(editor_page.locator("#clearExtraStubsBtn")).to_be_visible()
 

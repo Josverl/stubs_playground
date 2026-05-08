@@ -3,6 +3,7 @@ export {
     selectStubWheelRelease,
     downloadWheelFile,
     normalizePackageName,
+    parsePackageSpecifier,
 } from './pypi-client.js';
 
 export { extractTypeStubFilesFromWheel } from './wheel-stub-extractor.js';

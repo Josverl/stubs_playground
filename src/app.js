@@ -61,6 +61,7 @@ import {
     buildWorkerExtraStubPayload,
     buildAbsoluteExtraPaths,
     normalizePackageName,
+    parsePackageSpecifier,
 } from './stubs/index.js';
 
 const basicSetup = [
@@ -222,8 +223,7 @@ function setLSPControlsDisabled(disabled) {
         'verboseOutputToggle',
         'installExtraStubBtn',
         'clearExtraStubsBtn',
-        'extraStubPackage',
-        'extraStubVersion',
+        'extraStubSpecifier',
     ];
     for (const id of ids) {
         const el = document.getElementById(id);
@@ -337,20 +337,25 @@ function updateExtraStubsSummaryStatus() {
 }
 
 async function installExtraStubPackage() {
-    const packageInput = document.getElementById('extraStubPackage');
-    const versionInput = document.getElementById('extraStubVersion');
+    const specifierInput = document.getElementById('extraStubSpecifier');
     const installBtn = document.getElementById('installExtraStubBtn');
-    if (!packageInput || !versionInput || !installBtn) return;
+    if (!specifierInput || !installBtn) return;
 
-    const rawPackageName = packageInput.value.trim();
-    const versionSpecifier = versionInput.value.trim();
-    if (!rawPackageName) {
-        setExtraStubsStatus('Enter a package name first.', 'error');
+    const rawSpecifier = specifierInput.value.trim();
+    if (!rawSpecifier) {
+        setExtraStubsStatus('Enter a package specifier first.', 'error');
         return;
     }
 
-    const normalizedName = normalizePackageName(rawPackageName);
     try {
+        const parsed = parsePackageSpecifier(rawSpecifier);
+        if (!parsed.packageName) {
+            setExtraStubsStatus('Enter a package name first.', 'error');
+            return;
+        }
+
+        const normalizedName = normalizePackageName(parsed.packageName);
+        const versionSpecifier = parsed.versionSpecifier;
         installBtn.disabled = true;
         setExtraStubsStatus(`Resolving ${normalizedName}...`);
 
@@ -378,7 +383,7 @@ async function installExtraStubPackage() {
             await restartLSPWithCurrentSettings(currentBoardId);
         }
 
-        packageInput.value = '';
+        specifierInput.value = '';
         updateExtraStubsSummaryStatus();
     } catch (err) {
         console.error('Extra stubs install failed:', err);
@@ -1785,12 +1790,7 @@ document.getElementById('pythonVersion').addEventListener('change', handlePython
 document.getElementById('verboseOutputToggle').addEventListener('change', handleVerboseOutputToggleChange);
 document.getElementById('installExtraStubBtn').addEventListener('click', installExtraStubPackage);
 document.getElementById('clearExtraStubsBtn').addEventListener('click', clearAllExtraStubs);
-document.getElementById('extraStubPackage').addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter') return;
-    event.preventDefault();
-    installExtraStubPackage();
-});
-document.getElementById('extraStubVersion').addEventListener('keydown', (event) => {
+document.getElementById('extraStubSpecifier').addEventListener('keydown', (event) => {
     if (event.key !== 'Enter') return;
     event.preventDefault();
     installExtraStubPackage();
