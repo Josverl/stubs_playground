@@ -65,6 +65,44 @@ function flashCopied(button) {
 }
 
 /**
+ * Read a checked radio value from within a dropdown.
+ * @param {HTMLElement} dropdown
+ * @param {string} name
+ * @param {string} [fallback='current']
+ * @returns {string}
+ */
+function getCheckedScopeValue(dropdown, name, fallback = 'current') {
+    const checked = dropdown.querySelector(`input[name="${name}"]:checked`);
+    return checked ? checked.value : fallback;
+}
+
+/**
+ * Attach shared modal close behavior (backdrop click, outside click, Escape).
+ * @param {HTMLElement} trigger
+ * @param {HTMLElement} dropdown
+ * @param {HTMLElement|null} backdrop
+ * @param {(open: boolean) => void} setOpen
+ */
+function attachModalCloseHandlers(trigger, dropdown, backdrop, setOpen) {
+    // Clicking the dim backdrop is the standard modal-close gesture.
+    backdrop?.addEventListener('click', () => setOpen(false));
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+        if (!dropdown.contains(e.target) && e.target !== trigger) {
+            setOpen(false);
+        }
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            setOpen(false);
+        }
+    });
+}
+
+/**
  * Initialise the "Report a stub issue" button and its confirmation dropdown.
  * Call once after the DOM is ready.
  *
@@ -95,32 +133,16 @@ export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTyp
         }
     };
 
-    // Clicking the dim backdrop is the standard modal-close gesture.
-    backdrop?.addEventListener('click', () => setOpen(false));
+    attachModalCloseHandlers(btn, dropdown, backdrop, setOpen);
 
     const getScope = () => {
-        const checked = dropdown.querySelector('input[name="reportScope"]:checked');
-        return checked ? checked.value : 'current';
+        return getCheckedScopeValue(dropdown, 'reportScope');
     };
 
     // Toggle dropdown
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
         setOpen(dropdown.hidden);
-    });
-
-    // Close on outside click
-    document.addEventListener('click', (e) => {
-        if (!dropdown.contains(e.target) && e.target !== btn) {
-            setOpen(false);
-        }
-    });
-
-    // Close on Escape
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            setOpen(false);
-        }
     });
 
     // Open GitHub issue in a new tab
@@ -197,22 +219,25 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
         }
         dropdown.hidden = !open;
         if (backdrop) backdrop.hidden = !open;
+        if (!open && warningEl) {
+            warningEl.hidden = true;
+        }
         if (!open && dropdown.contains(document.activeElement)) {
             shareBtn.focus({ preventScroll: true });
         }
     };
 
+    attachModalCloseHandlers(shareBtn, dropdown, backdrop, setOpen);
+
     const scheduleCloseAfterCopy = () => {
         if (closeTimer) clearTimeout(closeTimer);
         closeTimer = setTimeout(() => {
             setOpen(false);
-            if (warningEl) warningEl.hidden = true;
         }, SHARE_COPY_FEEDBACK_MS);
     };
 
     const getScope = () => {
-        const checked = dropdown.querySelector('input[name="shareScope"]:checked');
-        return checked ? checked.value : 'current';
+        return getCheckedScopeValue(dropdown, 'shareScope');
     };
 
     const resolveShareFiles = async () =>
@@ -248,77 +273,52 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
         }
     });
 
-    // Close dropdown on outside click
-    document.addEventListener('click', (e) => {
-        if (!dropdown.contains(e.target) && e.target !== shareBtn) {
-            setOpen(false);
-            if (warningEl) warningEl.hidden = true;
-        }
-    });
-
-    // Close dropdown on Escape
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            setOpen(false);
-            if (warningEl) warningEl.hidden = true;
-        }
-    });
+    const withShareCopyFeedback = async (button, copyAction) => {
+        const shareSettings = resolveShareSettings(getBoard, getTypeCheckMode, getStdlib, getPythonVersion);
+        const files = await resolveShareFiles();
+        const ok = await copyAction(files, shareSettings);
+        if (!ok) return;
+        flashCopied(button);
+        scheduleCloseAfterCopy();
+    };
 
     // Wire up copy buttons
     document.getElementById('copyLink')?.addEventListener('click', async (e) => {
         const button = e.currentTarget;
-        const files = await resolveShareFiles();
-        const shareSettings = resolveShareSettings(getBoard, getTypeCheckMode, getStdlib, getPythonVersion);
-        const ok = await copyShareableLink(
+        await withShareCopyFeedback(button, (files, settings) => copyShareableLink(
             files,
-            shareSettings.board,
-            shareSettings.typeCheckMode,
-            shareSettings.stdlib,
-            shareSettings.pythonVersion,
-        );
-        if (ok) {
-            flashCopied(button);
-            scheduleCloseAfterCopy();
-        }
+            settings.board,
+            settings.typeCheckMode,
+            settings.stdlib,
+            settings.pythonVersion,
+        ));
     });
 
     document.getElementById('copyMdLink')?.addEventListener('click', async (e) => {
         const button = e.currentTarget;
-        const files = await resolveShareFiles();
-        const shareSettings = resolveShareSettings(getBoard, getTypeCheckMode, getStdlib, getPythonVersion);
-        const ok = await copyMarkdownWithLink(
+        await withShareCopyFeedback(button, (files, settings) => copyMarkdownWithLink(
             files,
-            shareSettings.board,
-            shareSettings.typeCheckMode,
-            shareSettings.stdlib,
-            shareSettings.pythonVersion,
-        );
-        if (ok) {
-            flashCopied(button);
-            scheduleCloseAfterCopy();
-        }
+            settings.board,
+            settings.typeCheckMode,
+            settings.stdlib,
+            settings.pythonVersion,
+        ));
     });
 
     document.getElementById('copyMdCode')?.addEventListener('click', async (e) => {
         const button = e.currentTarget;
-        const files = await resolveShareFiles();
-        const shareSettings = resolveShareSettings(getBoard, getTypeCheckMode, getStdlib, getPythonVersion);
         const snippet = getCenteredCodeSnippet(
             getCode(),
             typeof getCursorLine === 'function' ? getCursorLine() : 1,
             MARKDOWN_CODE_SNIPPET_MAX_LINES,
         );
-        const ok = await copyMarkdownWithLinkAndCode(
+        await withShareCopyFeedback(button, (files, settings) => copyMarkdownWithLinkAndCode(
             files,
             snippet,
-            shareSettings.board,
-            shareSettings.typeCheckMode,
-            shareSettings.stdlib,
-            shareSettings.pythonVersion,
-        );
-        if (ok) {
-            flashCopied(button);
-            scheduleCloseAfterCopy();
-        }
+            settings.board,
+            settings.typeCheckMode,
+            settings.stdlib,
+            settings.pythonVersion,
+        ));
     });
 }

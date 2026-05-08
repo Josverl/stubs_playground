@@ -265,8 +265,11 @@ body.options-panel-open #options-panel-handle {
     margin: 0;
 }
 
-body.dark-theme .options-header { color: #bbb; }
-body.light-theme .options-header { color: #555; }
+body.dark-theme .options-header,
+body.dark-theme .file-tree__header { color: #bbb; }
+
+body.light-theme .options-header,
+body.light-theme .file-tree__header { color: #555; }
 
 #options-panel .controls {
     display: flex;
@@ -503,7 +506,8 @@ body.light-theme #options-panel .generated-config-viewer button:hover {
 
 #options-panel .share-wrapper #shareBtn,
 #options-panel #helpBtn,
-#options-panel #loadSampleBtn {
+#options-panel #loadSampleBtn,
+#options-panel .report-issue-wrapper #reportIssueBtn {
     min-width: 96px;
 }
 
@@ -585,11 +589,6 @@ body.dark-theme select:hover {
     background-color: #4a4a4a;
 }
 
-body.dark-theme select:focus {
-    outline: 2px solid #007acc;
-    outline-offset: 2px;
-}
-
 body.light-theme select {
     background-color: #ffffff;
     color: #000000;
@@ -600,7 +599,7 @@ body.light-theme select:hover {
     background-color: #f3f3f3;
 }
 
-body.light-theme select:focus {
+select:focus {
     outline: 2px solid #007acc;
     outline-offset: 2px;
 }
@@ -816,9 +815,6 @@ body.light-theme .tab-bar__tab--active {
     flex-shrink: 0;
     border-bottom: 1px solid rgba(127, 127, 127, 0.25);
 }
-
-body.dark-theme .file-tree__header { color: #bbb; }
-body.light-theme .file-tree__header { color: #555; }
 
 .file-tree__title { flex: 1; }
 
@@ -1786,7 +1782,8 @@ body.dark-theme .cm-lsp-hover a:hover {
     display: inline-block;
 }
 
-.share-dropdown {
+.share-dropdown,
+.report-issue-dropdown {
     position: fixed;
     top: 50%;
     left: 50%;
@@ -1800,20 +1797,24 @@ body.dark-theme .cm-lsp-hover a:hover {
     gap: 10px;
 }
 
-.share-dropdown[hidden] {
+.share-dropdown[hidden],
+.report-issue-dropdown[hidden] {
     display: none;
 }
 
-.share-dropdown:not([hidden]) {
+.share-dropdown:not([hidden]),
+.report-issue-dropdown:not([hidden]) {
     display: flex;
 }
 
-body.light-theme .share-dropdown {
+body.light-theme .share-dropdown,
+body.light-theme .report-issue-dropdown {
     background-color: #ffffff;
     border: 1px solid #d4d4d4;
 }
 
-body.dark-theme .share-dropdown {
+body.dark-theme .share-dropdown,
+body.dark-theme .report-issue-dropdown {
     background-color: #2d2d30;
     border: 1px solid #3e3e42;
 }
@@ -1832,9 +1833,9 @@ body.dark-theme .share-dropdown {
     margin-bottom: 6px;
 }
 
-.share-warning {
+.share-warning,
+.report-issue-warning {
     font-size: 12px;
-    line-height: 1.35;
     margin: 0 0 8px 0;
     padding: 8px 10px;
     border-radius: 4px;
@@ -1842,13 +1843,23 @@ body.dark-theme .share-dropdown {
     font-weight: 600;
 }
 
-body.light-theme .share-warning {
+.share-warning {
+    line-height: 1.35;
+}
+
+.report-issue-warning {
+    line-height: 1.4;
+}
+
+body.light-theme .share-warning,
+body.light-theme .report-issue-warning {
     color: #8a4b00;
     background-color: #fff5e6;
     border-color: #f2c07a;
 }
 
-body.dark-theme .share-warning {
+body.dark-theme .share-warning,
+body.dark-theme .report-issue-warning {
     color: #ffd9a6;
     background-color: #4b2f00;
     border-color: #9a6400;
@@ -1934,64 +1945,6 @@ body.dark-theme .share-option:hover {
 
 body.dark-theme .report-issue-backdrop {
     background: rgba(0, 0, 0, 0.6);
-}
-
-.report-issue-dropdown {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 1000;
-    width: min(90vw, 460px);
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-    flex-direction: column;
-    gap: 10px;
-}
-
-.report-issue-dropdown[hidden] {
-    display: none;
-}
-
-.report-issue-dropdown:not([hidden]) {
-    display: flex;
-}
-
-body.light-theme .report-issue-dropdown {
-    background-color: #ffffff;
-    border: 1px solid #d4d4d4;
-}
-
-body.dark-theme .report-issue-dropdown {
-    background-color: #2d2d30;
-    border: 1px solid #3e3e42;
-}
-
-.report-issue-warning {
-    font-size: 12px;
-    line-height: 1.4;
-    margin: 0 0 8px 0;
-    padding: 8px 10px;
-    border-radius: 4px;
-    border: 1px solid;
-    font-weight: 600;
-}
-
-body.light-theme .report-issue-warning {
-    color: #8a4b00;
-    background-color: #fff5e6;
-    border-color: #f2c07a;
-}
-
-body.dark-theme .report-issue-warning {
-    color: #ffd9a6;
-    background-color: #4b2f00;
-    border-color: #9a6400;
-}
-
-#options-panel .report-issue-wrapper #reportIssueBtn {
-    min-width: 96px;
 }
 
 /* Accessibility improvements */
