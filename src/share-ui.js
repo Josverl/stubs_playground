@@ -130,8 +130,17 @@ export function initReportIssueButton(getCode, getBoard, getStubMetadata, getTyp
 export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib, getPythonVersion, getFiles, getActiveFileName) {
     const shareBtn = document.getElementById('shareBtn');
     const dropdown = document.getElementById('shareDropdown');
+    const backdrop = document.getElementById('shareBackdrop');
     const warningEl = document.getElementById('sharePayloadWarning');
     if (!shareBtn || !dropdown) return;
+
+    const setOpen = (open) => {
+        dropdown.hidden = !open;
+        if (backdrop) backdrop.hidden = !open;
+        if (!open && dropdown.contains(document.activeElement)) {
+            shareBtn.focus({ preventScroll: true });
+        }
+    };
 
     const getScope = () => {
         const checked = dropdown.querySelector('input[name="shareScope"]:checked');
@@ -165,10 +174,7 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
     shareBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const opening = dropdown.hidden;
-        dropdown.hidden = !dropdown.hidden;
-        if (!opening && dropdown.contains(document.activeElement)) {
-            shareBtn.focus({ preventScroll: true });
-        }
+        setOpen(opening);
         if (opening) {
             await updatePayloadWarning();
         }
@@ -177,10 +183,7 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
     // Close dropdown on outside click
     document.addEventListener('click', (e) => {
         if (!dropdown.contains(e.target) && e.target !== shareBtn) {
-            dropdown.hidden = true;
-            if (dropdown.contains(document.activeElement)) {
-                shareBtn.focus({ preventScroll: true });
-            }
+            setOpen(false);
             if (warningEl) warningEl.hidden = true;
         }
     });
@@ -188,10 +191,7 @@ export function initShareDropdown(getCode, getBoard, getTypeCheckMode, getStdlib
     // Close dropdown on Escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            dropdown.hidden = true;
-            if (dropdown.contains(document.activeElement)) {
-                shareBtn.focus({ preventScroll: true });
-            }
+            setOpen(false);
             if (warningEl) warningEl.hidden = true;
         }
     });

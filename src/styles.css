@@ -122,11 +122,34 @@ header h1 {
     font-size: 24px;
     font-weight: 600;
     text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-actions {
+    grid-column: 3;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.header-action-btn {
+    min-height: 30px;
+    padding: 6px 10px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.header-btn-icon {
+    font-size: 13px;
+    line-height: 1;
 }
 
 #themeToggle {
-    grid-column: 3;
-    justify-self: end;
     background: transparent !important;
     border: none !important;
     color: inherit;
@@ -1515,6 +1538,12 @@ body.dark-theme .cm-lsp-hover a:hover {
         text-align: center;
     }
 
+    .header-action-btn {
+        min-height: 28px;
+        padding: 5px 8px;
+        font-size: 12px;
+    }
+
     /* .header-icon-wrap {
         width: 60px;
         height: 60px;
@@ -1720,22 +1749,17 @@ body.dark-theme .cm-lsp-hover a:hover {
 }
 
 .share-dropdown {
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    z-index: 100;
-    min-width: 280px;
-    border-radius: 6px;
-    padding: 14px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    width: min(90vw, 460px);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
     flex-direction: column;
-    gap: 6px;
-}
-
-#options-panel .share-dropdown {
-    right: auto;
-    left: 0;
-    width: min(94%, 320px);
+    gap: 10px;
 }
 
 .share-dropdown[hidden] {
@@ -1863,7 +1887,7 @@ body.dark-theme .share-option:hover {
     inset: 0;
     z-index: 999;
     background: rgba(0, 0, 0, 0.45);
-    pointer-events: none;
+    pointer-events: auto;
 }
 
 .report-issue-backdrop[hidden] {

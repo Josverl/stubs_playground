@@ -38,7 +38,39 @@
             >
         </a>
         <h1>MicroPython-Stubs Playground</h1>
-        <button id="themeToggle" aria-label="dark/light theme">🌓</button>
+        <div class="header-actions" aria-label="Primary actions">
+            <div class="share-wrapper">
+                <button id="shareBtn" class="header-action-btn" aria-label="Share code" title="Share code">
+                    <span class="header-btn-icon" aria-hidden="true">🔗</span>
+                    <span>Share</span>
+                </button>
+                <div id="shareDropdown" class="share-dropdown" hidden>
+                    <p class="share-title">Sharing a Code Sample</p>
+                    <p class="share-desc">Copy a link or markdown to the clipboard.</p>
+                    <div class="share-scope-row">
+                        <label class="share-scope-option"><input type="radio" name="shareScope" value="current" checked> Current file</label>
+                        <label class="share-scope-option"><input type="radio" name="shareScope" value="all"> All files</label>
+                    </div>
+                    <p id="sharePayloadWarning" class="share-warning" hidden></p>
+                    <button id="copyLink" class="share-option" aria-label="Copy shareable link">
+                        <span class="share-icon">📋</span> Shareable link
+                    </button>
+                    <button id="copyMdLink" class="share-option" aria-label="Copy markdown with link">
+                        <span class="share-icon">📋</span> Markdown with link
+                    </button>
+                    <button id="copyMdCode" class="share-option" aria-label="Copy markdown with link and code">
+                        <span class="share-icon">📋</span> Markdown with link and code
+                    </button>
+                </div>
+            </div>
+            <div class="report-issue-wrapper">
+                <button id="reportIssueBtn" class="header-action-btn" aria-label="Report a MicroPython stub issue" title="Report a MicroPython stub issue">
+                    <span class="header-btn-icon" aria-hidden="true">⚑</span>
+                    <span>Report</span>
+                </button>
+            </div>
+            <button id="themeToggle" aria-label="dark/light theme">🌓</button>
+        </div>
     </header>
 
     <aside id="options-panel">
@@ -86,30 +118,6 @@
                 </div>
             </div>
 
-            <div class="share-wrapper">
-                <button id="shareBtn" aria-label="Share code" title="Share code">Share</button>
-                <div id="shareDropdown" class="share-dropdown" hidden>
-                    <p class="share-title">Sharing a Code Sample</p>
-                    <p class="share-desc">Copy a link or markdown to the clipboard.</p>
-                    <div class="share-scope-row">
-                        <label class="share-scope-option"><input type="radio" name="shareScope" value="current" checked> Current file</label>
-                        <label class="share-scope-option"><input type="radio" name="shareScope" value="all"> All files</label>
-                    </div>
-                    <p id="sharePayloadWarning" class="share-warning" hidden></p>
-                    <button id="copyLink" class="share-option" aria-label="Copy shareable link">
-                        <span class="share-icon">📋</span> Shareable link
-                    </button>
-                    <button id="copyMdLink" class="share-option" aria-label="Copy markdown with link">
-                        <span class="share-icon">📋</span> Markdown with link
-                    </button>
-                    <button id="copyMdCode" class="share-option" aria-label="Copy markdown with link and code">
-                        <span class="share-icon">📋</span> Markdown with link and code
-                    </button>
-                </div>
-            </div>
-            <div class="report-issue-wrapper">
-                <button id="reportIssueBtn" aria-label="Report a MicroPython stub issue" title="Report a MicroPython stub issue">Report Issue</button>
-            </div>
             <button id="helpBtn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">⌨</button>
             <div class="sample-selector">
                 <select id="sampleSelect" aria-label="Select example file">
@@ -187,6 +195,9 @@
             >Star</a>
         </div>
     </footer>
+
+    <!-- Share modal backdrop -->
+    <div id="shareBackdrop" class="report-issue-backdrop" hidden></div>
 
     <!-- Report Issue modal (at body level to escape transformed ancestors) -->
     <div id="reportIssueBackdrop" class="report-issue-backdrop" hidden></div>
