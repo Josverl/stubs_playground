@@ -207,7 +207,7 @@ def test_build_issue_url_starts_with_describe_issue_block(ri_page):
     from urllib.parse import urlparse, parse_qs, unquote_plus
     params = parse_qs(urlparse(result).query)
     body = unquote_plus(params['body'][0])
-    assert body.startswith('## Describe the issue\n<!--'), f"Unexpected issue body prefix: {body[:200]}"
+    assert body.startswith('## The issue\n<!--'), f"Unexpected issue body prefix: {body[:200]}"
     assert 'Please describe what is incorrect or missing in the stub.' in body, (
         f"Guidance comment missing in issue body: {body[:260]}"
     )
@@ -326,8 +326,8 @@ def test_build_issue_url_includes_diagnostics_table(ri_page):
     params = parse_qs(urlparse(result).query)
     body = unquote_plus(params['body'][0])
     assert '## Diagnostics' in body, f"Diagnostics section missing: {body[:400]}"
-    assert '| File | Position | Level | Message |' in body
-    assert '| main.py | 3:5 | error | Unknown member |' in body
+    assert '|File|Position|Level|Message|' in body
+    assert '|main.py|3:5|error|Unknown member|' in body
 
 
 def test_build_issue_url_no_diagnostics_section_when_empty(ri_page):
@@ -359,9 +359,9 @@ def test_build_issue_url_diagnostics_multiple_rows(ri_page):
     from urllib.parse import urlparse, parse_qs, unquote_plus
     params = parse_qs(urlparse(result).query)
     body = unquote_plus(params['body'][0])
-    assert '| main.py | 1:1 | error | Err A |' in body
-    assert '| lib/util.py | 7:2 | warning | Warn B |' in body
-    assert '| main.py | 12:4 | info | Info C |' in body
+    assert '|main.py|1:1|error|Err A|' in body
+    assert '|lib/util.py|7:2|warning|Warn B|' in body
+    assert '|main.py|12:4|info|Info C|' in body
 
 
 def test_build_issue_url_diagnostics_escapes_pipe_in_message(ri_page):
