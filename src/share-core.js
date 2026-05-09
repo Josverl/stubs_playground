@@ -351,6 +351,9 @@ export async function resolveReportIssueLabels(fetchImpl = globalThis.fetch) {
 /**
  * Build a pre-filled GitHub issue URL for the micropython-stubs repo.
  *
+ * If the resulting URL exceeds 7200 bytes, the code sample is omitted and
+ * the URL is regenerated to ensure it can be processed by GitHub.
+ *
  * @param {string} stubPackage   Selected stubs package name (may be empty)
  * @param {string} stubVersion   Selected stubs package version (may be empty)
  * @param {string} typeCheckMode Current Pyright mode
@@ -371,13 +374,13 @@ export function buildIssueUrl(stubPackage, stubVersion, typeCheckMode, playgroun
     if (diagnostics.length > 0) {
         const rows = diagnostics
             .map(d =>
-                `| ${escapeMarkdownCell(d.fileName)} | ${d.line}:${d.character} | ${d.severity} | ${escapeMarkdownCell(d.message)} |`
+                `|${escapeMarkdownCell(d.fileName)}|${d.line}:${d.character}|${d.severity}|${escapeMarkdownCell(d.message)}|`
             )
             .join('\n');
         diagnosticsSection =
             `\n## Diagnostics\n\n` +
-            `| File | Position | Level | Message |\n` +
-            `|------|----------|-------|---------|\n` +
+            `|File|Position|Level|Message|\n` +
+            `|-|-|-|-|\n` +
             `${rows}\n`;
     }
 
@@ -387,10 +390,9 @@ export function buildIssueUrl(stubPackage, stubVersion, typeCheckMode, playgroun
         : '';
 
     const body =
-`## Describe the issue
+`## The issue
 <!--
  - Please describe what is incorrect or missing in the stub.
- - please add links to relevant docs or other code samples that can help understand the issue.
 -->
 
 ${codeSampleSection}
@@ -409,7 +411,35 @@ ${diagnosticsSection}`;
     if (labels.length > 0) {
         url.searchParams.set('labels', labels.join(','));
     }
-    return url.toString();
+
+    // If URI is too long, regenerate without code sample
+    const uriString = url.toString();
+    if (uriString.length >= 7200 && codeSampleSection) {
+        // Rebuild without code sample
+        const bodyWithoutCode =
+`## The issue
+
+ - 
+
+[MicroPython-Stubs Playground](${playgroundUrl})
+
+## Context
+**Stub package:** ${stubPackage || 'unknown'}
+**Stub version:** ${normalizedVersion}
+**Type check mode:** ${typeCheckMode || 'standard'}
+
+${diagnosticsSection}`;
+
+        const urlRetry = new URL(REPORT_ISSUE_REPO);
+        urlRetry.searchParams.set('title', title);
+        urlRetry.searchParams.set('body', bodyWithoutCode);
+        if (labels.length > 0) {
+            urlRetry.searchParams.set('labels', labels.join(','));
+        }
+        return urlRetry.toString();
+    }
+
+    return uriString;
 }
 
 export { LARGE_SHARE_WARNING_BYTES };
