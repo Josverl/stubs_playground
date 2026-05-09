@@ -82,7 +82,7 @@ jobs:
         run: npx webpack --mode production
 
       - name: Upload worker artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pyright-worker-dist
           path: dist/pyright_worker.js
