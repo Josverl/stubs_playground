@@ -256,6 +256,7 @@ function setLSPControlsDisabled(disabled) {
         'verboseOutputToggle',
         'installExtraStubBtn',
         'clearExtraStubsBtn',
+        'extraStubManifestSelect',
         'extraStubSpecifier',
     ];
     for (const id of ids) {
@@ -369,46 +370,203 @@ function updateExtraStubsSummaryStatus() {
     setExtraStubsStatus(`Installed: ${names.join(', ')}`, 'success');
 }
 
-async function installExtraStubPackage() {
-    const specifierInput = document.getElementById('extraStubSpecifier');
-    const installBtn = document.getElementById('installExtraStubBtn');
-    if (!specifierInput || !installBtn) return;
+function getManifestExtraEntries() {
+    return (boardManifest?.extras || [])
+        .filter((extra) => extra?.package)
+        .map((extra) => {
+            const packageName = String(extra.package).trim();
+            const version = String(extra.package_version || '').trim();
+            const specifier = version ? `${packageName}==${version}` : packageName;
+            return {
+                id: String(extra.id || packageName).trim(),
+                packageName,
+                version,
+                specifier,
+                file: String(extra.file || '').trim(),
+            };
+        })
+        .filter((extra) => extra.packageName);
+}
 
-    const rawSpecifier = specifierInput.value.trim();
-    if (!rawSpecifier) {
-        setExtraStubsStatus('Enter a package specifier first.', 'error');
+function populateManifestExtraStubSelector() {
+    const select = document.getElementById('extraStubManifestSelect');
+    if (!select) return;
+
+    select.innerHTML = '';
+    const extras = getManifestExtraEntries();
+
+    if (!extras.length) {
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = 'No manifest extras available';
+        emptyOption.disabled = true;
+        emptyOption.selected = true;
+        select.appendChild(emptyOption);
+        select.disabled = true;
         return;
     }
 
+    for (const extra of extras) {
+        const option = document.createElement('option');
+        option.value = extra.id;
+        option.dataset.specifier = extra.specifier;
+        option.dataset.packageName = extra.packageName;
+        option.dataset.version = extra.version;
+        option.dataset.file = extra.file;
+        option.textContent = extra.version
+            ? `${extra.id} (${extra.packageName} ${extra.version})`
+            : `${extra.id} (${extra.packageName})`;
+        select.appendChild(option);
+    }
+
+    select.disabled = false;
+}
+
+function getSelectedManifestExtraSpecifiers() {
+    const select = document.getElementById('extraStubManifestSelect');
+    if (!select || select.disabled) return [];
+
+    return Array.from(select.selectedOptions || [])
+        .map((opt) => ({
+            id: String(opt.value || '').trim(),
+            specifier: String(opt.dataset.specifier || '').trim(),
+            packageName: String(opt.dataset.packageName || '').trim(),
+            version: String(opt.dataset.version || '').trim(),
+            file: String(opt.dataset.file || '').trim(),
+        }))
+        .filter((entry) => entry.specifier);
+}
+
+function clearManifestExtraSelection() {
+    const select = document.getElementById('extraStubManifestSelect');
+    if (!select) return;
+    for (const option of Array.from(select.options)) {
+        option.selected = false;
+    }
+}
+
+async function installExtraStubPackage() {
+    const specifierInput = document.getElementById('extraStubSpecifier');
+    const installBtn = document.getElementById('installExtraStubBtn');
+    const manifestSelect = document.getElementById('extraStubManifestSelect');
+    if (!specifierInput || !installBtn) return;
+
+    const rawSpecifier = specifierInput.value.trim();
+    const selectedManifestSpecifiers = getSelectedManifestExtraSpecifiers();
+    const requestedSpecifiers = [];
+
+    if (rawSpecifier) {
+        requestedSpecifiers.push({
+            source: 'manual',
+            key: rawSpecifier,
+            specifier: rawSpecifier,
+        });
+    }
+    for (const entry of selectedManifestSpecifiers) {
+        const key = `manifest:${entry.id || entry.specifier}`;
+        if (!requestedSpecifiers.some((item) => item.key === key)) {
+            requestedSpecifiers.push({
+                source: 'manifest',
+                key,
+                specifier: entry.specifier,
+                manifestEntry: entry,
+            });
+        }
+    }
+
+    if (!requestedSpecifiers.length) {
+        setExtraStubsStatus('Select manifest package(s) or enter a package specifier first.', 'error');
+        return;
+    }
+
+    const successfulInstalls = [];
+    const failedInstalls = [];
+
     try {
-        const parsed = parsePackageSpecifier(rawSpecifier);
-        if (!parsed.packageName) {
-            setExtraStubsStatus('Enter a package name first.', 'error');
-            return;
+        installBtn.disabled = true;
+        specifierInput.disabled = true;
+        if (manifestSelect) manifestSelect.disabled = true;
+
+        for (let index = 0; index < requestedSpecifiers.length; index += 1) {
+            const request = requestedSpecifiers[index];
+            const raw = request.specifier;
+
+            try {
+                const parsed = parsePackageSpecifier(raw);
+                if (!parsed.packageName) {
+                    throw new Error('Package name is missing');
+                }
+
+                const normalizedName = normalizePackageName(parsed.packageName);
+                const versionSpecifier = parsed.versionSpecifier;
+                const itemLabel = `${index + 1}/${requestedSpecifiers.length} ${normalizedName}`;
+                let selectedVersion = '';
+                let selectedWheelUrl = '';
+                let selectedWheelFilename = '';
+                let extracted = null;
+
+                const bundledFile = request.manifestEntry?.file || '';
+                if (request.source === 'manifest' && bundledFile) {
+                    setExtraStubsStatus(`Loading bundled stubs ${itemLabel}...`);
+                    const resp = await fetch(`${getAssetsBase()}/${bundledFile}`);
+                    if (!resp.ok) {
+                        throw new Error(`Failed to fetch bundled stubs (${resp.status})`);
+                    }
+
+                    const { unzipSync, strFromU8 } = await import('https://esm.sh/fflate@0.8.2');
+                    const entries = unzipSync(new Uint8Array(await resp.arrayBuffer()));
+                    const extractedFiles = {};
+                    let pyiCount = 0;
+                    for (const [entryPath, data] of Object.entries(entries)) {
+                        if (!entryPath || entryPath.endsWith('/')) continue;
+                        if (entryPath.endsWith('.pyi') || entryPath.endsWith('/py.typed') || entryPath === 'py.typed') {
+                            extractedFiles[entryPath] = strFromU8(data);
+                            if (entryPath.endsWith('.pyi')) pyiCount += 1;
+                        }
+                    }
+                    if (pyiCount === 0) {
+                        throw new Error('Bundled stubs archive does not contain any .pyi files');
+                    }
+
+                    extracted = { files: extractedFiles };
+                    selectedVersion = request.manifestEntry?.version || '';
+                    selectedWheelFilename = bundledFile;
+                    selectedWheelUrl = `${getAssetsBase()}/${bundledFile}`;
+                } else {
+                    setExtraStubsStatus(`Resolving ${itemLabel}...`);
+                    const indexResult = await fetchPackageIndex(normalizedName);
+                    const selected = selectStubWheelRelease(indexResult.data, versionSpecifier);
+
+                    setExtraStubsStatus(`Downloading ${itemLabel}: ${selected.wheel.filename}...`);
+                    const wheelBuffer = await downloadWheelFile(selected.wheel.url);
+
+                    setExtraStubsStatus(`Extracting ${itemLabel}...`);
+                    extracted = await extractTypeStubFilesFromWheel(wheelBuffer);
+                    selectedVersion = selected.version;
+                    selectedWheelFilename = selected.wheel.filename;
+                    selectedWheelUrl = selected.wheel.url;
+                }
+
+                installedExtraStubs = upsertExtraStubEntry(installedExtraStubs, {
+                    packageName: normalizedName,
+                    version: selectedVersion,
+                    wheelUrl: selectedWheelUrl,
+                    wheelFilename: selectedWheelFilename,
+                    installedAt: Date.now(),
+                    files: extracted.files,
+                });
+
+                successfulInstalls.push(selectedVersion ? `${normalizedName}@${selectedVersion}` : normalizedName);
+            } catch (err) {
+                const message = err?.message || String(err);
+                failedInstalls.push(`${raw} (${message})`);
+            }
         }
 
-        const normalizedName = normalizePackageName(parsed.packageName);
-        const versionSpecifier = parsed.versionSpecifier;
-        installBtn.disabled = true;
-        setExtraStubsStatus(`Resolving ${normalizedName}...`);
+        if (!successfulInstalls.length) {
+            throw new Error(`Install failed: ${failedInstalls.join('; ')}`);
+        }
 
-        const indexResult = await fetchPackageIndex(normalizedName);
-        const selected = selectStubWheelRelease(indexResult.data, versionSpecifier);
-
-        setExtraStubsStatus(`Downloading ${selected.wheel.filename}...`);
-        const wheelBuffer = await downloadWheelFile(selected.wheel.url);
-
-        setExtraStubsStatus('Extracting .pyi files...');
-        const extracted = await extractTypeStubFilesFromWheel(wheelBuffer);
-
-        installedExtraStubs = upsertExtraStubEntry(installedExtraStubs, {
-            packageName: normalizedName,
-            version: selected.version,
-            wheelUrl: selected.wheel.url,
-            wheelFilename: selected.wheel.filename,
-            installedAt: Date.now(),
-            files: extracted.files,
-        });
         installedExtraStubs = saveExtraStubsRegistry(installedExtraStubs);
 
         if (lspClient && lspTransport) {
@@ -417,12 +575,26 @@ async function installExtraStubPackage() {
         }
 
         specifierInput.value = '';
+        clearManifestExtraSelection();
+
+        if (failedInstalls.length) {
+            setExtraStubsStatus(
+                `Installed ${successfulInstalls.length} package(s), failed ${failedInstalls.length}: ${failedInstalls.join('; ')}`,
+                'error'
+            );
+            return;
+        }
+
         updateExtraStubsSummaryStatus();
     } catch (err) {
         console.error('Extra stubs install failed:', err);
         setExtraStubsStatus(`Install failed: ${err.message || String(err)}`, 'error');
     } finally {
         installBtn.disabled = false;
+        specifierInput.disabled = false;
+        if (manifestSelect) {
+            manifestSelect.disabled = getManifestExtraEntries().length === 0;
+        }
     }
 }
 
@@ -648,11 +820,13 @@ async function initBoardSelector() {
 
         // Ensure status line reflects selected stubs immediately.
         updateDiagnosticsStatus([], pyrightVersion, getSelectedStubsStatusLabel());
+        populateManifestExtraStubSelector();
 
         select.addEventListener('change', handleBoardChange);
     } catch (err) {
         console.warn('Could not load board manifest:', err);
         select.innerHTML = '<option value="">Default</option>';
+        populateManifestExtraStubSelector();
     }
 }
 

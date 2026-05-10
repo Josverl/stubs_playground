@@ -130,8 +130,13 @@
                 <button id="loadSampleBtn" aria-label="Load selected sample">Load</button>
             </div>
             <div class="extra-stubs-section" aria-label="Install additional type stubs from PyPI">
-                <label for="extraStubSpecifier">Install extra stubs from PyPI:</label>
                 <div class="extra-stubs-controls">
+                    <label for="extraStubManifestSelect">Install extra stubs:</label>
+                    <label class="extra-stubs-field-label" for="extraStubManifestSelect">Select bundled package(s):</label>
+                    <select id="extraStubManifestSelect" multiple size="4" aria-label="Select manifest extra stub packages">
+                        <option value="" disabled>Loading manifest extras...</option>
+                    </select>
+                    <label class="extra-stubs-field-label" for="extraStubSpecifier">Or specify PyPI package:</label>
                     <input id="extraStubSpecifier" type="text" placeholder="package-name-stubs==1.20.0.* (or package only)" aria-label="PyPI package specifier">
                     <div class="extra-stubs-buttons">
                         <button id="installExtraStubBtn" type="button" aria-label="Install extra type stubs">Install</button>

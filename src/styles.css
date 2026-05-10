@@ -328,9 +328,22 @@ body.light-theme .file-tree__header { color: #555; }
     gap: 6px;
 }
 
+#options-panel .extra-stubs-field-label {
+    font-size: 12px;
+    font-weight: 500;
+}
+
 #options-panel .extra-stubs-controls input {
     width: 100%;
     padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+}
+
+#options-panel .extra-stubs-controls select {
+    width: 100%;
+    min-height: 84px;
+    padding: 4px;
     font-size: 12px;
     border-radius: 4px;
 }
@@ -341,7 +354,19 @@ body.dark-theme #options-panel .extra-stubs-controls input {
     border: 1px solid #3e3e42;
 }
 
+body.dark-theme #options-panel .extra-stubs-controls select {
+    background-color: #3c3c3c;
+    color: #d4d4d4;
+    border: 1px solid #3e3e42;
+}
+
 body.light-theme #options-panel .extra-stubs-controls input {
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #d4d4d4;
+}
+
+body.light-theme #options-panel .extra-stubs-controls select {
     background-color: #ffffff;
     color: #000000;
     border: 1px solid #d4d4d4;
