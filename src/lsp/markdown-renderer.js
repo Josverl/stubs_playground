@@ -18,6 +18,119 @@
 export const PYRIGHT_SIG_RE = /^\((?:module|class|function|method|variable|parameter|property|constant|overload|type alias|type)\)\s+|^(?:class|def)\s+\w/;
 
 const RST_FIELD_RE = /^:(param|type|returns?|rtype|raises?|var|ivar|cvar)\b/;
+
+/**
+ * Known RST substitution references found in MicroPython stubs.
+ * Maps substitution name → human-readable label for display.
+ * @type {Object.<string, string>}
+ */
+const RST_SUBSTITUTIONS = {
+    see_cpython_module: 'See CPython module',
+    see_cpython_class: 'See CPython class',
+    see_cpython_function: 'See CPython function',
+    see_cpython_method: 'See CPython method',
+    see_cpython_attribute: 'See CPython attribute',
+};
+
+/**
+ * Return true if the trimmed line is an RST grid-table separator.
+ * Grid table separators look like: +---+---+  or  +===+===+
+ * @param {string} line - Already-trimmed line
+ * @returns {boolean}
+ */
+function isGridSeparator(line) {
+    return /^\+[-=+]+\+$/.test(line);
+}
+
+/**
+ * Return true if the trimmed line is an RST grid-table data row.
+ * Data rows start with a pipe character: | cell | cell |
+ * @param {string} line - Already-trimmed line
+ * @returns {boolean}
+ */
+function isGridTableRow(line) {
+    return line.startsWith('|') && line.endsWith('|');
+}
+
+/**
+ * Parse a list of RST grid-table lines (already trimmed) into an HTML table element.
+ *
+ * Rows before the first `+===+` separator line become `<thead>` cells (`<th>`).
+ * Rows after it become `<tbody>` cells (`<td>`).
+ * If no `+===+` separator is found the first data row is treated as the header.
+ *
+ * Cell content is passed through processInline so inline markup (``code``,
+ * :role:`…`, **bold**, etc.) is rendered correctly.
+ *
+ * @param {string[]} lines - Trimmed table lines (separators and data rows)
+ * @returns {HTMLElement|null}
+ */
+function parseRstGridTable(lines) {
+    const table = document.createElement('table');
+    table.className = 'cm-hover-table';
+
+    // Find the index of the header/body separator line (+===+)
+    let headerSepIdx = -1;
+    for (let i = 0; i < lines.length; i++) {
+        if (/^\+={3,}/.test(lines[i])) {
+            headerSepIdx = i;
+            break;
+        }
+    }
+
+    const headerRows = [];
+    const bodyRows = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!isGridTableRow(line)) continue; // skip separator lines
+
+        // Split on | and remove leading/trailing empty strings
+        const cells = line.split('|').slice(1, -1).map(c => c.trim());
+
+        if (headerSepIdx === -1 || i < headerSepIdx) {
+            headerRows.push(cells);
+        } else {
+            bodyRows.push(cells);
+        }
+    }
+
+    // If no +===+ separator, promote first data row to header
+    if (headerSepIdx === -1 && headerRows.length > 0) {
+        bodyRows.unshift(...headerRows.slice(1));
+        headerRows.length = 1; // keep only the first row as header
+    }
+
+    if (headerRows.length > 0) {
+        const thead = document.createElement('thead');
+        for (const cells of headerRows) {
+            const tr = document.createElement('tr');
+            for (const cell of cells) {
+                const th = document.createElement('th');
+                th.appendChild(processInline(cell));
+                tr.appendChild(th);
+            }
+            thead.appendChild(tr);
+        }
+        table.appendChild(thead);
+    }
+
+    if (bodyRows.length > 0) {
+        const tbody = document.createElement('tbody');
+        for (const cells of bodyRows) {
+            const tr = document.createElement('tr');
+            for (const cell of cells) {
+                const td = document.createElement('td');
+                td.appendChild(processInline(cell));
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        }
+        table.appendChild(tbody);
+    }
+
+    return table.childNodes.length > 0 ? table : null;
+}
 const RST_ADMONITION_RE = /^Admonition:\s*(.+?)(?:\s+:class:\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)*))?\s*$/;
 const RST_ADMONITION_CLASS_LINE_RE = /^:class:\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)*)\s*$/;
 
@@ -55,6 +168,7 @@ function isBlockBoundaryStart(line) {
  * Process inline text formatting into a DocumentFragment.
  *
  * Handles (in priority order):
+ *   - RST substitution references      |see_cpython_module|, etc.
  *   - RST double-backtick inline code  ``code``
  *   - RST interpreted roles            :func:`name`, :class:`Pin`, etc.
  *   - Markdown bold                    **text**
@@ -71,11 +185,12 @@ export function processInline(text) {
     if (!text) return fragment;
 
     // Combined pattern – order of alternatives matters.
-    // Groups: 1=rst-dbl-bt content, 2=rst-role content,
-    //         3=bold content, 4=italic content, 5=code content,
-    //         6=md-link text, 7=md-link url, 8=bare url
+    // Groups: 1=rst-substitution name, 2=rst-dbl-bt content, 3=rst-role content,
+    //         4=bold content, 5=italic content, 6=code content,
+    //         7=md-link text, 8=md-link url, 9=bare url
     // RST role syntax: :rolename:`content`  (colon after role name is required)
-    const pattern = /``([^`]+)``|:(?:func|class|meth|attr|mod|const|data|exc|obj|ref|doc):`([^`]+)`|\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|`([^`\n]+)`|\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s<>")\]]+)/g;
+    // RST substitution syntax: |name| where name contains word chars / hyphens only
+    const pattern = /\|([A-Za-z][A-Za-z0-9_]*)\||``([^`]+)``|:(?:func|class|meth|attr|mod|const|data|exc|obj|ref|doc):`([^`]+)`|\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|`([^`\n]+)`|\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s<>")\]]+)/g;
 
     let lastIndex = 0;
     let match;
@@ -86,44 +201,57 @@ export function processInline(text) {
         }
 
         if (match[1] !== undefined) {
+            // RST substitution reference: |name|
+            const name = match[1];
+            const label = RST_SUBSTITUTIONS[name];
+            if (label) {
+                const span = document.createElement('span');
+                span.className = 'cm-hover-cpython-ref';
+                span.textContent = label;
+                fragment.appendChild(span);
+            } else {
+                // Unknown substitution — render literally
+                fragment.appendChild(document.createTextNode(`|${name}|`));
+            }
+        } else if (match[2] !== undefined) {
             // RST double-backtick inline code: ``code``
             const code = document.createElement('code');
-            code.textContent = match[1];
-            fragment.appendChild(code);
-        } else if (match[2] !== undefined) {
-            // RST role :role:`text`
-            const code = document.createElement('code');
-            code.className = 'cm-hover-rst-ref';
             code.textContent = match[2];
             fragment.appendChild(code);
         } else if (match[3] !== undefined) {
+            // RST role :role:`text`
+            const code = document.createElement('code');
+            code.className = 'cm-hover-rst-ref';
+            code.textContent = match[3];
+            fragment.appendChild(code);
+        } else if (match[4] !== undefined) {
             // Bold **text**
             const strong = document.createElement('strong');
-            strong.textContent = match[3];
+            strong.textContent = match[4];
             fragment.appendChild(strong);
-        } else if (match[4] !== undefined) {
+        } else if (match[5] !== undefined) {
             // Italic *text*
             const em = document.createElement('em');
-            em.textContent = match[4];
+            em.textContent = match[5];
             fragment.appendChild(em);
-        } else if (match[5] !== undefined) {
+        } else if (match[6] !== undefined) {
             // Inline code `text`
             const code = document.createElement('code');
-            code.textContent = match[5];
+            code.textContent = match[6];
             fragment.appendChild(code);
-        } else if (match[6] !== undefined) {
+        } else if (match[7] !== undefined) {
             // Markdown link [label](url)
             const a = document.createElement('a');
-            a.href = match[7];
-            a.textContent = match[6];
+            a.href = match[8];
+            a.textContent = match[7];
             a.target = '_blank';
             a.rel = 'noopener noreferrer';
             fragment.appendChild(a);
-        } else if (match[8] !== undefined) {
+        } else if (match[9] !== undefined) {
             // Bare URL
             const a = document.createElement('a');
-            a.href = match[8];
-            a.textContent = match[8];
+            a.href = match[9];
+            a.textContent = match[9];
             a.target = '_blank';
             a.rel = 'noopener noreferrer';
             fragment.appendChild(a);
@@ -148,6 +276,7 @@ export function processInline(text) {
  *   - Horizontal rules     ---, ***, ___
  *   - Fenced code blocks   ```lang … ```  (handled by caller)
  *   - RST code blocks      paragraph ending with :: + indented block
+ *   - RST grid tables      +---+---+ separated rows with | cells |
  *   - RST field lists      :param name:, :returns:, :rtype:, :raises:
  *   - Bullet lists         -, *, +
  *   - Numbered lists       1. 2. …
@@ -198,6 +327,21 @@ export function renderBlocks(text, container) {
                 i += 2;
                 continue;
             }
+        }
+
+        // ── RST grid table: line is a +---+---+ separator ─────────────────────
+        if (isGridSeparator(trimmed.trim())) {
+            const tableLines = [];
+            while (i < lines.length) {
+                const tl = lines[i].trim();
+                if (!tl) break;
+                if (!isGridSeparator(tl) && !isGridTableRow(tl)) break;
+                tableLines.push(tl);
+                i++;
+            }
+            const tableEl = parseRstGridTable(tableLines);
+            if (tableEl) container.appendChild(tableEl);
+            continue;
         }
 
         // ── Horizontal rule: ---, ***, ___ ────────────────────────────────────
@@ -403,6 +547,7 @@ export function renderBlocks(text, container) {
             if (!pl.trim()) break;
             if (/^#{1,6}\s/.test(pl)) break;
             if (/^[-*_]{3,}$/.test(pl.trim())) break;
+            if (isGridSeparator(pl.trim())) break;
             if (/^[\-*+]\s+\S/.test(pl)) break;
             if (/^\d+\.\s+\S/.test(pl)) break;
             if (RST_FIELD_RE.test(pl)) break;

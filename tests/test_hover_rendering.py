@@ -615,8 +615,172 @@ def test_network_module_signature_and_body(render_page):
 
 
 # ---------------------------------------------------------------------------
-# Viewport containment: tooltip must not overflow when placed above cursor
+# RST substitution references: |name|
 # ---------------------------------------------------------------------------
+
+
+def test_see_cpython_module_substitution(render_page):
+    """|see_cpython_module| renders as a styled badge, not literal pipe-text."""
+    text = "|see_cpython_module| :mod:`python:array`.\n"
+    html = _render(render_page, text)
+    # Must not render the raw substitution syntax
+    assert "|see_cpython_module|" not in html, (
+        "|see_cpython_module| must not appear as raw text"
+    )
+    # Must produce a cm-hover-cpython-ref span
+    assert "cm-hover-cpython-ref" in html, (
+        "Expected cm-hover-cpython-ref class for |see_cpython_module|"
+    )
+    # The span text should be readable
+    spans = _query(render_page, text, ".cm-hover-cpython-ref")
+    assert any("CPython" in s for s in spans), f"Expected 'CPython' in span text; got: {spans}"
+
+
+def test_see_cpython_module_followed_by_role(render_page):
+    """|see_cpython_module| :mod:`python:array` — badge + RST ref in same paragraph."""
+    text = "|see_cpython_module| :mod:`python:array`.\n"
+    # The badge
+    spans = _query(render_page, text, ".cm-hover-cpython-ref")
+    assert len(spans) >= 1
+    # The :mod: role is also rendered as an RST ref
+    refs = _query(render_page, text, "code.cm-hover-rst-ref")
+    assert "python:array" in refs, f"Expected 'python:array' RST ref; got: {refs}"
+
+
+def test_unknown_rst_substitution_renders_literally(render_page):
+    """An unknown |substitution| is kept as-is (pipe chars preserved)."""
+    text = "Value: |unknown_sub| here.\n"
+    inner = _inner(render_page, text)
+    assert "|unknown_sub|" in inner, f"Unknown substitution should render literally; got: {inner!r}"
+
+
+# ---------------------------------------------------------------------------
+# RST grid tables
+# ---------------------------------------------------------------------------
+
+
+def test_rst_grid_table_renders_as_table(render_page):
+    """A simple RST grid table produces a <table> element."""
+    rst = (
+        "+-----------+----------+\n"
+        "| Type code | C Type   |\n"
+        "+===========+==========+\n"
+        "| ``'b'``   | signed char |\n"
+        "| ``'B'``   | unsigned char |\n"
+        "+-----------+----------+\n"
+    )
+    html = _render(render_page, rst)
+    assert "<table" in html, f"Expected <table>; got: {html[:300]}"
+
+
+def test_rst_grid_table_header_cells_are_th(render_page):
+    """Rows before +===+ separator become <th> elements (thead)."""
+    rst = (
+        "+-----------+----------+\n"
+        "| Type code | C Type   |\n"
+        "+===========+==========+\n"
+        "| ``'b'``   | signed char |\n"
+        "+-----------+----------+\n"
+    )
+    ths = _query(render_page, rst, "table thead th")
+    assert "Type code" in ths, f"Expected 'Type code' as <th>; got: {ths}"
+    assert "C Type" in ths, f"Expected 'C Type' as <th>; got: {ths}"
+
+
+def test_rst_grid_table_body_cells_are_td(render_page):
+    """Rows after +===+ separator become <td> elements (tbody)."""
+    rst = (
+        "+-----------+----------+\n"
+        "| Type code | C Type   |\n"
+        "+===========+==========+\n"
+        "| ``'b'``   | signed char |\n"
+        "+-----------+----------+\n"
+    )
+    tds = _query(render_page, rst, "table tbody td")
+    assert len(tds) == 2, f"Expected 2 <td> cells; got: {tds}"
+    assert any("signed char" in td for td in tds), f"Expected 'signed char' in <td>; got: {tds}"
+
+
+def test_rst_grid_table_cell_inline_markup(render_page):
+    """Cell content is passed through processInline — ``code`` becomes <code>."""
+    rst = (
+        "+-----------+----------+\n"
+        "| Code      | Type     |\n"
+        "+===========+==========+\n"
+        "| ``'b'``   | int      |\n"
+        "+-----------+----------+\n"
+    )
+    codes = _query(render_page, rst, "table tbody td code")
+    assert "'b'" in codes, f"Expected \"'b'\" as <code>; got: {codes}"
+
+
+def test_rst_grid_table_class(render_page):
+    """The rendered table carries the cm-hover-table CSS class."""
+    rst = (
+        "+-----------+----------+\n"
+        "| Type code | C Type   |\n"
+        "+===========+==========+\n"
+        "| ``'b'``   | signed   |\n"
+        "+-----------+----------+\n"
+    )
+    classes = _attr(render_page, rst, "table", "class")
+    assert any("cm-hover-table" in (c or "") for c in classes), (
+        f"Expected cm-hover-table class on <table>; got: {classes}"
+    )
+
+
+def test_array_array_docstring(render_page):
+    """Full array.array class docstring: substitution + RST ref + grid table."""
+    docstring = (
+        "|see_cpython_module| :mod:`python:array`.\n"
+        "\n"
+        "Supported format codes: ``b``, ``B``, ``h``, ``H``, ``i``, ``I``, ``l``,\n"
+        "``L``, ``q``, ``Q``, ``f``, ``d`` (the latter 2 depending on the\n"
+        "floating-point support).\n"
+        "\n"
+        "+-----------+--------------------+-------------------+-----------------------+\n"
+        "| Type code | C Type             | Python Type       | Minimum size in bytes |\n"
+        "+===========+====================+===================+=======================+\n"
+        "| ``'b'``   | signed char        | int               | 1                     |\n"
+        "+-----------+--------------------+-------------------+-----------------------+\n"
+        "| ``'B'``   | unsigned char      | int               | 1                     |\n"
+        "+-----------+--------------------+-------------------+-----------------------+\n"
+        "| ``'h'``   | signed short       | int               | 2                     |\n"
+        "+-----------+--------------------+-------------------+-----------------------+\n"
+        "| ``'f'``   | float              | float             | 4                     |\n"
+        "+-----------+--------------------+-------------------+-----------------------+\n"
+        "| ``'d'``   | double             | float             | 8                     |\n"
+        "+-----------+--------------------+-------------------+-----------------------+\n"
+    )
+    html = _render(render_page, docstring)
+
+    # |see_cpython_module| must be a badge, not raw text
+    assert "|see_cpython_module|" not in html
+    assert "cm-hover-cpython-ref" in html
+
+    # :mod:`python:array` rendered as RST ref
+    refs = _query(render_page, docstring, "code.cm-hover-rst-ref")
+    assert "python:array" in refs
+
+    # Grid table present
+    assert "<table" in html
+
+    # Header row
+    ths = _query(render_page, docstring, "table thead th")
+    assert "Type code" in ths
+    assert "C Type" in ths
+    assert "Python Type" in ths
+    assert "Minimum size in bytes" in ths
+
+    # At least one body row rendered
+    tds = _query(render_page, docstring, "table tbody td")
+    assert len(tds) >= 4, f"Expected at least one body row (4 cells); got {len(tds)}"
+
+    # Cell inline code: ``'b'`` → <code>'b'</code>
+    codes = _query(render_page, docstring, "table tbody td code")
+    assert any("'b'" in c for c in codes), f"Expected \"'b'\" code cell; got: {codes}"
+
+
 
 
 def test_hover_tooltip_stays_within_viewport(render_page, live_server):
