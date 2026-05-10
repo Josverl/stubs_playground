@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.10"
 # ///
-"""Pack MicroPython board stubs into zip files for browser use.
+"""Pack MicroPython board and extra stubs into zip files for browser use.
 
 For each board defined below:
   1. Install stubs via `uv pip install micropython-{board}-stubs --target ./tmp`
@@ -10,8 +10,8 @@ For each board defined below:
   3. Write to assets/stubs-{board}.zip
   4. Generate assets/stubs-manifest.json
 
-Usage: uv run scripts/pack-stubs.py [board...]
-  No args -> pack all boards.  Pass board IDs to pack specific ones.
+Usage: uv run scripts/pack-stubs.py [id...]
+    No args -> pack all boards and extras. Pass IDs to pack a specific subset.
 """
 
 from __future__ import annotations
@@ -29,11 +29,11 @@ ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "assets"
 TMP = ROOT / "tmp_stubs"
 
-
 @dataclass
-class Board:
+class StubPackage:
     id: str
     package: str
+    install_spec: str | None = None
     file: str | None = None
     package_version: str = ""
 
@@ -42,21 +42,40 @@ DEFAULT_BOARD_ID = "esp32"
 
 
 # Boards that have installable stub packages
-BOARDS: list[Board] = [
-    Board(id="stdlib",  package="micropython-stdlib-stubs"), # Used for stdlib only
-    Board(id="esp32", package="micropython-esp32-stubs"),
-    Board(id="rp2",   package="micropython-rp2-stubs"),
-    Board(id="stm32", package="micropython-stm32-stubs"),
-    Board(id="samd",  package="micropython-samd-stubs"),
-    Board(id="circuitpython",  package="circuitpython-stubs"),
+BOARDS: list[StubPackage] = [
+    StubPackage(id="stdlib",  package="micropython-stdlib-stubs"),  # Used for stdlib only
+    StubPackage(id="esp32", package="micropython-esp32-stubs"),
+    StubPackage(id="rp2",   package="micropython-rp2-stubs"),
+    StubPackage(id="stm32", package="micropython-stm32-stubs"),
+    StubPackage(id="samd",  package="micropython-samd-stubs"),
+    StubPackage(id="circuitpython", package="circuitpython-stubs"),
+]
+
+# Extra stub packages to bundle alongside board stubs.
+# Conventions for adding new extras:
+# - Use a stable, unique `id` (used in CLI selection and manifest keys).
+# - Keep `package` as the canonical distribution name for metadata/version lookup.
+# - Set `install_spec` when installation source differs from package name
+#   (for example local path, VCS URL, or pinned ref).
+# - Output zip name is derived as: assets/stubs-extra-<id>.zip
+EXTRA_STUBS: list[StubPackage] = [
+    StubPackage(
+        id="emlearn",
+        package="emlearn-micropython-stubs",
+        # local source (fast)
+        # install_spec=str(ROOT / "emlearn-micropython" / "stubs"),
+        # Original Git source: (slow - big clone)
+        install_spec="git+https://github.com/emlearn/emlearn-micropython.git@refs/pull/74/head#subdirectory=stubs"
+    ),
 ]
 
 # Virtual boards (no stub package, included in manifest only)
-VIRTUAL_BOARDS: list[Board] = [
-    Board(id="cpython", package="No Stubs"),
+VIRTUAL_BOARDS: list[StubPackage] = [
+    StubPackage(id="cpython", package="No Stubs"),
 ]
 
 BOARD_MAP = {b.id: b for b in BOARDS}
+EXTRA_MAP = {e.id: e for e in EXTRA_STUBS}
 
 
 def get_installed_version(target_dir: Path, package: str) -> str:
@@ -122,19 +141,20 @@ def get_zip_embedded_version(zip_path: Path) -> str:
         return ""
 
 
-def pack_board(board: Board) -> Board:
-    """Install stubs and pack them into a zip. Returns updated board."""
-    target = TMP / board.id
-    out_path = ASSETS / f"stubs-{board.id}.zip"
+def pack_stub_package(pkg: StubPackage, *, archive_prefix: str = "stubs") -> StubPackage:
+    """Install and pack one stub package. Returns updated package metadata."""
+    target = TMP / f"{archive_prefix}-{pkg.id}"
+    out_path = ASSETS / f"{archive_prefix}-{pkg.id}.zip"
 
     # Install stubs to a temp dir so we can read the exact version.
     if target.exists():
         shutil.rmtree(target)
     target.mkdir(parents=True)
 
-    print(f"  Installing {board.package}...")
+    install_spec = pkg.install_spec or pkg.package
+    print(f"  Installing {pkg.package}...")
     # hack for circuitpython-stubs that do not include stdlib
-    if board.id == "circuitpython":
+    if pkg.id == "circuitpython":
         # Add the micropython-stdlib-stubs as  circuitpython-stubs do not include stdlib stubs.
         subprocess.run(
             ["uv", "pip", "install", "micropython-stdlib-stubs", "--target", str(target), "--quiet"],
@@ -145,74 +165,94 @@ def pack_board(board: Board) -> Board:
         # Add (rp2) time.pyi, as this is not in micropython-stdlib-stubs
         shutil.copyfile( ASSETS / "time.pyi", target / "time.pyi" )
 
-    subprocess.run(
-        ["uv", "pip", "install", board.package, "--target", str(target), "--quiet"],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    install_cmd = ["uv", "pip", "install", install_spec, "--target", str(target)]
+    # Keep git installs verbose so users see progress (clone/build) rather than apparent hangs.
+    if isinstance(install_spec, str) and install_spec.startswith("git+"):
+        subprocess.run(
+            install_cmd,
+            check=True,
+            text=True,
+        )
+    else:
+        subprocess.run(
+            [*install_cmd, "--quiet"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
 
     # Capture exact installed version
-    board.package_version = get_installed_version(target, board.package)
-    if board.package_version:
-        print(f"  Version: {board.package_version}")
+    pkg.package_version = get_installed_version(target, pkg.package)
+    if pkg.package_version:
+        print(f"  Version: {pkg.package_version}")
 
     # Skip re-zipping when the existing zip already contains the same version.
     cached_version = get_zip_embedded_version(out_path)
-    if cached_version and cached_version == board.package_version and out_path.exists():
+    if cached_version and cached_version == pkg.package_version and out_path.exists():
         print(f"  Up-to-date, skipping zip  ({out_path.stat().st_size / 1024:.0f} KB)")
-        board.file = f"stubs-{board.id}.zip"
-        return board
+        pkg.file = f"{archive_prefix}-{pkg.id}.zip"
+        return pkg
 
     # Zip (embed provenance metadata inside the archive)
     pkg_metadata = {
-        "package": board.package,
-        "version": board.package_version,
+        "package": pkg.package,
+        "version": pkg.package_version,
     }
     size = zip_directory(target, out_path, metadata=pkg_metadata)
-    print(f"  → assets/stubs-{board.id}.zip  ({size / 1024:.0f} KB)")
+    print(f"  → assets/{archive_prefix}-{pkg.id}.zip  ({size / 1024:.0f} KB)")
 
-    board.file = f"stubs-{board.id}.zip"
-    return board
+    pkg.file = f"{archive_prefix}-{pkg.id}.zip"
+    return pkg
+
+
+def manifest_entry(pkg: StubPackage) -> dict[str, str | None]:
+    return {
+        "id": pkg.id,
+        "package": pkg.package,
+        "package_version": pkg.package_version,
+        "file": pkg.file,
+    }
 
 
 def main() -> None:
-    requested_ids = sys.argv[1:]
-    boards = (
-        [b for b in BOARDS if b.id in requested_ids] if requested_ids else list(BOARDS)
-    )
+    requested_ids = set(sys.argv[1:])
+    boards = [b for b in BOARDS if (not requested_ids or b.id in requested_ids)]
+    extras = [e for e in EXTRA_STUBS if (not requested_ids or e.id in requested_ids)]
 
-    if requested_ids and not boards:
-        available = ", ".join(b.id for b in BOARDS)
-        print(f"No matching boards. Available: {available}", file=sys.stderr)
+    if requested_ids and not boards and not extras:
+        available = ", ".join([*(b.id for b in BOARDS), *(e.id for e in EXTRA_STUBS)])
+        print(f"No matching stub IDs. Available: {available}", file=sys.stderr)
         sys.exit(1)
 
     ASSETS.mkdir(parents=True, exist_ok=True)
 
-    print(f"Packing stubs for {len(boards)} board(s)...")
-    results: list[Board] = []
+    print(f"Packing stubs for {len(boards)} board(s) and {len(extras)} extra package(s)...")
+    board_results: list[StubPackage] = []
     for board in boards:
         print(f"\n[{board.id}]")
-        results.append(pack_board(board))
+        board_results.append(pack_stub_package(board, archive_prefix="stubs"))
+
+    extra_results: list[StubPackage] = []
+    for extra in extras:
+        print(f"\n[extra:{extra.id}]")
+        extra_results.append(pack_stub_package(extra, archive_prefix="stubs-extra"))
 
     # Add virtual boards to the manifest
     for vb in VIRTUAL_BOARDS:
-        results.append(vb)
+        board_results.append(vb)
 
     # Generate manifest
-    default_id = DEFAULT_BOARD_ID if any(b.id == DEFAULT_BOARD_ID for b in BOARDS) else boards[0].id
+    default_id = ""
+    if any(b.id == DEFAULT_BOARD_ID for b in board_results):
+        default_id = DEFAULT_BOARD_ID
+    elif board_results:
+        default_id = board_results[0].id
+
     manifest = {
         "version": "1.0",
         "default": default_id,
-        "boards": [
-            {
-                "id": b.id,
-                "package": b.package,
-                "package_version": b.package_version,
-                "file": b.file,
-            }
-            for b in results
-        ],
+        "boards": [manifest_entry(b) for b in board_results],
+        "extras": [manifest_entry(e) for e in extra_results],
     }
 
     manifest_path = ASSETS / "stubs-manifest.json"

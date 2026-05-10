@@ -44,5 +44,13 @@
       "package_version": "",
       "file": null
     }
+  ],
+  "extras": [
+    {
+      "id": "emlearn",
+      "package": "emlearn-micropython-stubs",
+      "package_version": "0.11.1",
+      "file": "stubs-extra-emlearn.zip"
+    }
   ]
 }
