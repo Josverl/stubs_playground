@@ -1534,6 +1534,63 @@ body.dark-theme .cm-lsp-hover a:hover {
     color: #b4d0ff;
 }
 
+/* RST grid table inside hover tooltip */
+.cm-hover-table {
+    border-collapse: collapse;
+    font-size: 11px;
+    margin: 6px 0;
+    min-width: 100%;
+}
+
+.cm-hover-table th,
+.cm-hover-table td {
+    border: 1px solid #d0d7de;
+    padding: 3px 8px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.cm-hover-table thead th {
+    background-color: #eef0f3;
+    font-weight: 600;
+    color: #0550ae;
+}
+
+.cm-hover-table tbody tr:nth-child(even) td {
+    background-color: #f6f8fa;
+}
+
+body.dark-theme .cm-hover-table th,
+body.dark-theme .cm-hover-table td {
+    border-color: #313244;
+}
+
+body.dark-theme .cm-hover-table thead th {
+    background-color: #181825;
+    color: #89b4fa;
+}
+
+body.dark-theme .cm-hover-table tbody tr:nth-child(even) td {
+    background-color: #13131e;
+}
+
+/* RST substitution references e.g. |see_cpython_module| */
+.cm-hover-cpython-ref {
+    font-size: 10px;
+    font-weight: 600;
+    color: #0550ae;
+    background-color: #e8f0fe;
+    padding: 1px 5px;
+    border-radius: 3px;
+    border: 1px solid #c4d4f8;
+}
+
+body.dark-theme .cm-hover-cpython-ref {
+    color: #89b4fa;
+    background-color: #1e2030;
+    border-color: #313244;
+}
+
 /* Scrollbar styling for hover tooltips */
 .cm-lsp-hover::-webkit-scrollbar {
     width: 7px;
