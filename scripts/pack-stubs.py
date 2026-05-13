@@ -65,7 +65,7 @@ EXTRA_STUBS: list[StubPackage] = [
         # local source (fast)
         # install_spec=str(ROOT / "emlearn-micropython" / "stubs"),
         # Original Git source: (slow - big clone)
-        install_spec="git+https://github.com/emlearn/emlearn-micropython.git@refs/pull/74/head#subdirectory=stubs"
+        install_spec="git+https://github.com/emlearn/emlearn-micropython.git@master#subdirectory=stubs"
     ),
 ]
 
