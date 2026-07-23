@@ -6,6 +6,8 @@ on:
     workflows: ["Tests"]
     types: [completed]
     branches: [main]
+  schedule:
+    - cron: "0 0 * * 1"
   workflow_dispatch:
 
 permissions:
