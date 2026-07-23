@@ -11,8 +11,8 @@
   },
   "devDependencies": {
     "@zenfs/archives": "^0.1.0",
-    "@zenfs/core": "1.6.4",
-    "archiver": "^7.0.1",
+    "@zenfs/core": "1.11.4",
+    "archiver": "^8.0.0",
     "arraybuffer-loader": "^1.0.8",
     "assert": "^2.1.0",
     "browserify-zlib": "^0.2.0",
