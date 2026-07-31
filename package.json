@@ -10,7 +10,7 @@
     "test:unit:completion": "node --test tests/test_completion*.unit.mjs"
   },
   "devDependencies": {
-    "@zenfs/archives": "^0.1.0",
+    "@zenfs/archives": "1.0.5",
     "@zenfs/core": "1.11.4",
     "archiver": "^8.0.0",
     "arraybuffer-loader": "^1.0.8",
