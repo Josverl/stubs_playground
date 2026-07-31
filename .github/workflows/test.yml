@@ -131,4 +131,4 @@ jobs:
         run: uv run playwright install ${{ matrix.browser }} --with-deps
 
       - name: Run suite tests
-        run: uv run pytest -m "${{ matrix.suite }}" -v --browser-name "${{ matrix.browser }}"
+        run: uv run pytest -m "${{ matrix.suite }}" -v --browser "${{ matrix.browser }}"

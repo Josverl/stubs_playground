@@ -16,17 +16,6 @@ import pytest
 from playwright.sync_api import sync_playwright
 
 
-def pytest_addoption(parser):
-    """Allow selecting a Playwright browser while defaulting to chromium."""
-    parser.addoption(
-        "--browser-name",
-        action="store",
-        default="chromium",
-        choices=["chromium", "firefox", "webkit", "chrome", "msedge"],
-        help="Playwright browser to run UI tests with (default: chromium)",
-    )
-
-
 def _free_port() -> int:
     """Return an ephemeral TCP port that is free right now."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -89,12 +78,6 @@ def project_server(live_server):
         yield live_server.removesuffix("/src")
     else:
         yield live_server
-
-
-@pytest.fixture(scope="session")
-def browser_name(pytestconfig):
-    """Resolved browser target from CLI option or env var."""
-    return pytestconfig.getoption("browser_name")
 
 
 @pytest.fixture(scope="session")
