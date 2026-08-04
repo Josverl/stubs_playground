@@ -27,7 +27,7 @@
     </style>
 
     <!-- Peer dependencies for @mp-codemirror/lsp-client and the editor host.
-         Versions mirror src/index.html. The lsp-client module imports these
+         Versions mirror apps/playground/index.html. The lsp-client module imports these
          bare specifiers; the consumer supplies them via this import map. -->
     <script type="importmap">
     {
@@ -78,7 +78,7 @@
         // Resolve the LSP client module URL (local by default, CDN on request).
         const clientUrl = params.get('client') === 'cdn'
             ? cdn(params.get('clientTag') || 'lsp-client-v0.1.0', 'src/lsp/index.js')
-            : '../src/lsp/index.js';
+            : '../packages/lsp-client/src/index.js';
 
         // Resolve the worker URL. A cross-origin (CDN) worker must be wrapped in
         // a same-origin Blob that importScripts() the remote bundle.
@@ -88,7 +88,7 @@
         }
         const workerUrl = params.get('worker') === 'cdn'
             ? makeSameOriginWorkerUrl(cdn(params.get('workerTag') || 'pyright-worker-v0.1.0', 'dist/pyright_worker.js'))
-            : '../dist/pyright_worker.js';
+            : '../packages/pyright-worker/dist/pyright_worker.js';
 
         const sourceMode = {
             client: params.get('client') === 'cdn' ? 'cdn' : 'local',
@@ -105,7 +105,7 @@
 
             const base = sourceMode.worker === 'cdn'
                 ? cdn(params.get('workerTag') || 'pyright-worker-v0.1.0', 'assets')
-                : '../assets';
+                : '../packages/pyright-worker/assets';
             const response = await fetch(`${base}/stubs-${board}.zip`);
             if (!response.ok) {
                 throw new Error(`Failed to load ${board} stubs: HTTP ${response.status}`);

@@ -1,0 +1,14 @@
+{
+  "name": "@mp-codemirror/pyright-worker",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Worker-side protocol contract and packaging metadata",
+  "type": "module",
+  "types": "./src/messages.d.ts",
+  "exports": {
+    ".": "./src/messages.d.ts",
+    "./messages": "./src/messages.d.ts",
+    "./declarations": "./src/declarations.d.ts"
+  },
+  "workerBundle": "./dist/pyright_worker.js"
+}

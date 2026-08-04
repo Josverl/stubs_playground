@@ -62,7 +62,7 @@ jobs:
         run: npm audit --omit=dev || true
 
   worker-build:
-    # Build dist/pyright_worker.js once and share across browser matrix jobs.
+    # Build the worker once and share it across browser matrix jobs.
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -75,6 +75,11 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - uses: extractions/setup-just@v4
+
       - name: Install Node.js dependencies
         run: npm ci --ignore-scripts
 
@@ -84,11 +89,26 @@ jobs:
       - name: Build worker
         run: npx webpack --mode production
 
+      - name: Verify GitHub Pages staging
+        run: |
+          just stage-pages ci-deploy
+          for path in \
+            ci-deploy/index.html \
+            ci-deploy/apps/playground/index.html \
+            ci-deploy/apps/playground/component-source.js \
+            ci-deploy/packages/lsp-client/src/index.js \
+            ci-deploy/packages/pyright-worker/dist/pyright_worker.js \
+            ci-deploy/packages/pyright-worker/assets/stubs-manifest.json \
+            ci-deploy/packages/pyright-worker/assets/stubs-esp32.zip
+          do
+            test -s "$path" || { echo "::error::$path missing or empty"; exit 1; }
+          done
+
       - name: Upload worker artifact
         uses: actions/upload-artifact@v7
         with:
           name: pyright-worker-dist
-          path: dist/pyright_worker.js
+          path: packages/pyright-worker/dist/pyright_worker.js
           if-no-files-found: error
 
   browser-tests:
@@ -110,7 +130,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: pyright-worker-dist
-          path: dist
+          path: packages/pyright-worker/dist
 
       - name: Cache Playwright browsers
         uses: actions/cache@v5

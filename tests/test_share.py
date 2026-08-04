@@ -399,6 +399,29 @@ def test_url_params_cleaned_after_restore(page, live_server):
     assert "project=" not in current_url
 
 
+def test_component_source_survives_share_restore_and_refresh(page, live_server):
+    """Consuming share state does not silently switch CDN mode back to local."""
+    _goto_editor(page, live_server)
+    url = page.evaluate("""async () => {
+        window.history.replaceState({}, '', `${window.location.pathname}?components=cdn`);
+        const { buildShareableUrl } = await import('./share.js');
+        return await buildShareableUrl({ 'main.py': 'pass' }, '', 'standard');
+    }""")
+
+    page.goto(url, wait_until="domcontentloaded")
+    page.wait_for_selector(".cm-editor", timeout=CDN_TIMEOUT)
+    page.wait_for_function(
+        "() => !window.location.search.includes('project=')",
+        timeout=5000,
+    )
+    assert page.evaluate("() => window.location.search") == "?components=cdn"
+    assert page.evaluate("() => window.__componentSource.mode") == "cdn"
+
+    page.reload(wait_until="domcontentloaded")
+    page.wait_for_selector(".cm-editor", timeout=CDN_TIMEOUT)
+    assert page.evaluate("() => window.__componentSource.mode") == "cdn"
+
+
 def test_legacy_code_param_still_decodes(page, live_server):
     """Legacy `code` share links remain decodable for backward compatibility."""
     _goto_editor(page, live_server)

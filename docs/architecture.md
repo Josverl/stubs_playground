@@ -35,7 +35,14 @@ graph LR
     style Browser fill:#e8e0d0,stroke:#999,stroke-width:2px,color:#333
 ```
 
-For implementation details, see the source files: `src/lsp/` (client layer), `src/worker/pyright-worker.ts` (worker entry), and `src/app.js` (editor setup and board switching).
+For implementation details, see `packages/lsp-client/src/` (client layer),
+`packages/pyright-worker/src/pyright-worker.ts` (worker entry), and
+`apps/playground/app.js` (editor setup and board switching).
+
+The playground imports reusable APIs only through
+`apps/playground/component-source.js`. The `components=local|cdn` query parameter makes
+that boundary resolve either workspace package files or immutable jsDelivr tags, so both
+modes exercise the same application.
 
 ## LSP Communication Flow
 
@@ -149,7 +156,7 @@ flowchart LR
     subgraph Sources["Source Inputs"]
         PyrightSrc["Pyright source<br/>(node_modules/pyright)"]
         TypeshedSrc["typeshed-fallback/<br/>(bundled with Pyright)"]
-        WorkerTS["src/worker/<br/>pyright-worker.ts"]
+        WorkerTS["packages/pyright-worker/src/<br/>pyright-worker.ts"]
         StubPkgs["micropython-*-stubs<br/>(pip packages)"]
     end
 
@@ -160,18 +167,18 @@ flowchart LR
     end
 
     subgraph Intermediates["Intermediate Artifacts"]
-        TSZip["assets/<br/>typeshed-fallback.zip"]
-        ESP32Zip["assets/<br/>stubs-esp32.zip"]
-        RP2Zip["assets/<br/>stubs-rp2.zip"]
-        STM32Zip["assets/<br/>stubs-stm32.zip"]
-        ManifestOut["assets/<br/>stubs-manifest.json"]
+        TSZip["packages/pyright-worker/assets/<br/>typeshed-fallback.zip"]
+        ESP32Zip["packages/pyright-worker/assets/<br/>stubs-esp32.zip"]
+        RP2Zip["packages/pyright-worker/assets/<br/>stubs-rp2.zip"]
+        STM32Zip["packages/pyright-worker/assets/<br/>stubs-stm32.zip"]
+        ManifestOut["packages/pyright-worker/assets/<br/>stubs-manifest.json"]
     end
 
     subgraph Output["Deployable Output (Static Files)"]
-        WorkerJS["dist/pyright_worker.js<br/>(~8MB, includes Pyright<br/>+ typeshed zip + ESP32 stubs zip)"]
-        StubFiles["assets/stubs-*.zip<br/>(fetched on board switch)"]
-        StaticHTML["src/index.html<br/>+ styles.css + app.js"]
-        ExamplesPy["src/examples/*.py"]
+        WorkerJS["packages/pyright-worker/dist/<br/>pyright_worker.js"]
+        StubFiles["packages/pyright-worker/assets/<br/>stubs-*.zip"]
+        StaticHTML["apps/playground/<br/>index.html + styles.css + app.js"]
+        ExamplesPy["apps/playground/examples/*.py"]
     end
 
     TypeshedSrc -->|"zip -r"| PackTS

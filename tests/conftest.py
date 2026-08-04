@@ -9,7 +9,13 @@ import urllib.request
 from pathlib import Path
 
 # Build artifact detection
-WORKER_JS = Path(__file__).parent.parent / "dist" / "pyright_worker.js"
+WORKER_JS = (
+    Path(__file__).parent.parent
+    / "packages"
+    / "pyright-worker"
+    / "dist"
+    / "pyright_worker.js"
+)
 worker_available = WORKER_JS.exists()
 
 import pytest
@@ -40,8 +46,8 @@ def live_server():
     invocations (e.g. two terminals, CI matrix) never share or kill each
     other's server.
 
-    The server serves from the project root so both src/ and dist/ are
-    accessible; the yielded base URL is http://localhost:{port}/src.
+    The server serves from the project root so the app and packages are
+    accessible; the yielded base URL is http://localhost:{port}/apps/playground.
     """
     port = _free_port()
     project_root = Path(__file__).parent.parent
@@ -52,7 +58,7 @@ def live_server():
         stderr=subprocess.PIPE,
     )
 
-    base_url = f"http://localhost:{port}/src"
+    base_url = f"http://localhost:{port}/apps/playground"
     # Wait until the server actually responds (up to 5 s)
     for _ in range(25):
         if _server_responds(base_url):
@@ -69,13 +75,9 @@ def live_server():
 
 @pytest.fixture(scope="session")
 def project_server(live_server):
-    """Base URL serving the project root (for tests that need both src/ and dist/).
-
-    If live_server already points to root, returns it as-is.
-    If it points to /src, returns the parent.
-    """
-    if live_server.endswith("/src"):
-        yield live_server.removesuffix("/src")
+    """Base URL serving the project root."""
+    if live_server.endswith("/apps/playground"):
+        yield live_server.removesuffix("/apps/playground")
     else:
         yield live_server
 

@@ -69,17 +69,35 @@ The LSP bridge and the Pyright Web Worker are packaged as two independently
 versioned, reusable components for other CodeMirror 6 editors (e.g.
 [ViperIDE](https://github.com/Josverl/ViperIDE)):
 
-- `@mp-codemirror/lsp-client` — the LSP bridge (`src/lsp/index.js`)
-- `@mp-codemirror/pyright-worker` — the pre-built Pyright worker (`dist/pyright_worker.js`)
+- `@mp-codemirror/lsp-client` — the LSP bridge
+  (`packages/lsp-client/src/index.js`)
+- `@mp-codemirror/pyright-worker` — the pre-built Pyright worker
+  (`packages/pyright-worker/dist/pyright_worker.js`)
 
 Custom worker implementations can use the stable control-plane types published as
-`src/worker/messages.d.ts`.
+`packages/pyright-worker/src/messages.d.ts`.
 
 They are distributed **CDN-only** via jsDelivr from immutable git tags — no npm needed.
 See **[docs/cdn-consumption.md](docs/cdn-consumption.md)** for the import map, the
 cross-origin worker Blob shim, pinned peer-dependency versions, jsDelivr URL shapes, and
 a minimal end-to-end example. Releases are cut with the
 [`Release CDN component`](.github/workflows/release-cdn.yml) workflow.
+
+## Repository layout and local development
+
+This repository is an npm workspace containing one application and two independently
+versioned reusable packages:
+
+```text
+apps/playground/          Browser application
+packages/lsp-client/      Reusable CodeMirror LSP bridge
+packages/pyright-worker/  Worker source, built bundle, and board assets
+```
+
+Run `just serve` to use workspace packages, or `just serve cdn` to run the same
+application against the published immutable `v0.1.0` component tags. The source switch
+is isolated in `apps/playground/component-source.js`; application code uses the same
+public package API in both modes.
 
 ## License
 

@@ -5,7 +5,7 @@
 """Pack Pyright's typeshed-fallback into a zip file for browser use.
 
 Usage: uv run scripts/pack-typeshed.py
-Output: assets/typeshed-fallback.zip
+Output: packages/pyright-worker/assets/typeshed-fallback.zip
 """
 
 import os
@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TYPESHED_SRC = ROOT / "node_modules/pyright/packages/pyright-internal/typeshed-fallback"
-ASSETS_DIR = ROOT / "assets"
+ASSETS_DIR = ROOT / "packages" / "pyright-worker" / "assets"
 OUT_FILE = ASSETS_DIR / "typeshed-fallback.zip"
 
 INCLUDE_DIRS = ["stdlib", "stubs"]

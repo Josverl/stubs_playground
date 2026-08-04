@@ -4,8 +4,8 @@ This document analyses the current codebase from the perspective of re-use by ot
 projects, proposes a stable public API for the most portable components, explains the distribution
 strategy, and lists the refactoring work needed inside this repository to support it.
 
-The decision to actually publish is deferred until there is concrete external demand (see the issue), so
-this document covers the *what* and *how*, not a timeline.
+The first CDN releases are published. This document now records both the original analysis and the
+implemented workspace/package boundaries.
 
 > **Revision history:**
 > - *Initial version* — created after commit `7505f65`.
@@ -14,6 +14,9 @@ this document covers the *what* and *how*, not a timeline.
 >   `share.js` growth), revised API signatures (`createLSPPlugin` options, new diagnostic exports,
 >   `isDunderLabel`, `renderMarkdown`), added tasks 4.8 (share.js decomposition) and 4.9
 >   (extract markdown renderer from hover.js), and added status column to the summary checklist.
+> - *August 2026 update* — moved the application to `apps/playground`, moved reusable
+>   components to `packages/lsp-client` and `packages/pyright-worker`, and made the real
+>   application switch between workspace and immutable CDN sources.
 
 ---
 
@@ -29,39 +32,39 @@ They are the most attractive pieces for other editors.
 
 | Module | What it does | DOM deps | LSP-server-specific |
 |--------|-------------|----------|---------------------|
-| `src/lsp/simple-client.js` | JSON-RPC 2.0 LSP client, transport-agnostic | None | No |
-| `src/lsp/worker-transport.js` | Bridges a Web Worker behind a simple subscribe/send interface | None | Yes (Pyright handshake) |
-| `src/lsp/transport-factory.js` | One-liner factory for `WorkerTransport` | None | Yes |
-| `src/lsp/completion-core.mjs` | Pure LSP→CodeMirror completion conversion helpers (incl. `isDunderLabel`) | None | No |
-| `src/lsp/completion.js` | CodeMirror autocompletion source driven by LSP | None | No |
-| `src/lsp/hover.js` | CodeMirror hover-tooltip source driven by LSP | Render-only | No |
-| `src/lsp/markdown-renderer.js` | Markdown/RST→DOM renderer (`renderMarkdown`, `processInline`, `renderBlocks`) | Render-only | No |
+| `packages/lsp-client/src/simple-client.js` | JSON-RPC 2.0 LSP client, transport-agnostic | None | No |
+| `packages/lsp-client/src/worker-transport.js` | Bridges a Web Worker behind a simple subscribe/send interface | None | Yes (Pyright handshake) |
+| `packages/lsp-client/src/transport-factory.js` | One-liner factory for `WorkerTransport` | None | Yes |
+| `packages/lsp-client/src/completion-core.mjs` | Pure LSP→CodeMirror completion conversion helpers (incl. `isDunderLabel`) | None | No |
+| `packages/lsp-client/src/completion.js` | CodeMirror autocompletion source driven by LSP | None | No |
+| `packages/lsp-client/src/hover.js` | CodeMirror hover-tooltip source driven by LSP | Render-only | No |
+| `packages/lsp-client/src/markdown-renderer.js` | Markdown/RST→DOM renderer (`renderMarkdown`, `processInline`, `renderBlocks`) | Render-only | No |
 
 > **`hover.js` / `markdown-renderer.js` split:** `hover.js` grew to ~530 lines because it
 > contains both the CodeMirror tooltip integration *and* a full Markdown/RST renderer. These
 > are independent concerns — the renderer is reusable anywhere that needs to display
 > Markdown/RST content as DOM, while the tooltip source is CodeMirror-specific.
-> Task 4.9 tracks extracting the renderer into `src/lsp/markdown-renderer.js`.
+> Task 4.9 tracks extracting the renderer into `packages/lsp-client/src/markdown-renderer.js`.
 
 ### Tier 2 — Useful but have DOM coupling that needs refactoring
 
 | Module | DOM coupling | Path to re-use |
 |--------|-------------|----------------|
-| `src/lsp/diagnostics.js` | `updateDiagnosticsStatus` reads `#diagnostics-status` and `#boardSelect` DOM elements; `getSelectedStubsLabelFromDom` reads a specific `<select>`. Now also manages a module-level `workspaceDiagnosticsMap` cache with workspace-wide aggregation via `refreshWorkspaceDiagnosticsStatus`. | Split into (a) a **pure diagnostics data layer** (workspace cache, conversion, document lifecycle) and (b) an **app-specific status-bar writer**. The split is harder than originally scoped because workspace-level state and DOM writing are interleaved — see §4.1 for updated guidance. |
-| `src/lsp/client.js` (`createLSPPlugin`) | Writes to `window.lspClients` global map. Signature now includes a `stubsStatusSource` parameter. | Remove the global; return state from the factory instead |
-| `src/events.js` | Dispatches `CustomEvent` on `document` | Thin and easily reimplemented; low re-use value on its own |
+| `packages/lsp-client/src/diagnostics.js` | Formerly mixed reusable state with playground DOM updates. | Implemented as a reusable data layer; status rendering now lives in the application. |
+| `packages/lsp-client/src/client.js` (`createLSPPlugin`) | Formerly wrote to `window.lspClients`. | Global removed; callers own returned state. |
+| `apps/playground/events.js` | Dispatches `CustomEvent` on `document` | Thin application utility; low re-use value on its own |
 
 ### Tier 3 — Application-specific (low re-use value outside this app)
 
 | Module | Reason |
 |--------|--------|
-| `src/ui/file-tree.js` | Tightly coupled to `OPFSProject`; very specific UI decisions |
-| `src/ui/tab-bar.js` | App-level tab management; small and easy to copy |
-| `src/storage/opfs-project.js` | OPFS wrapper useful as a standalone library but not CodeMirror-specific |
-| `src/editor/document-manager.js` | Multi-doc state manager; re-usable in pattern but coupled to `OPFSProject` and `Events`. Positive note: `onActiveChange()` already returns an unsubscribe function, matching the CodeMirror convention. |
-| `src/share.js` | ~670 lines. Pure URL/compression helpers (`compressCode`, `decompressCode`, `buildShareableUrl`, `parseUrlParams`, `buildIssueUrl`, `resolveReportIssueLabels`, `resolveShareSettings`) are reusable in isolation, but the UI wiring (`initShareDropdown`, `initReportIssueButton`) and the report-issue modal are application-specific. Consider splitting into a pure `share-core.js` and an app-level `share-ui.js` if external consumers want the URL/compression logic. |
-| `src/app.js` | Application entry point; not re-usable |
-| `src/worker/pyright-worker.ts` | Pyright-specific; only changes with Pyright upstream |
+| `apps/playground/ui/file-tree.js` | Tightly coupled to `OPFSProject`; very specific UI decisions |
+| `apps/playground/ui/tab-bar.js` | App-level tab management; small and easy to copy |
+| `apps/playground/storage/opfs-project.js` | OPFS wrapper useful as a standalone library but not CodeMirror-specific |
+| `apps/playground/editor/document-manager.js` | Multi-doc state manager; re-usable in pattern but coupled to `OPFSProject` and `Events`. Positive note: `onActiveChange()` already returns an unsubscribe function, matching the CodeMirror convention. |
+| `apps/playground/share.js` | Compatibility facade over `share-core.js` and `share-ui.js`; remains application-specific. |
+| `apps/playground/app.js` | Application entry point; not re-usable |
+| `packages/pyright-worker/src/pyright-worker.ts` | Pyright-specific; only changes with Pyright upstream |
 
 ---
 
@@ -202,7 +205,7 @@ function createCompletionSource(
 
 #### Markdown/RST renderer (render-only DOM)
 
-Extracted into `src/lsp/markdown-renderer.js` (see task 4.9):
+Extracted into `packages/lsp-client/src/markdown-renderer.js` (see task 4.9):
 
 ```ts
 // Renders Markdown/RST text (with Pyright signature detection) to a DOM element.
@@ -229,7 +232,8 @@ CodeMirror tooltip lifecycle (LSP request, range mapping, tooltip creation).
 
 ### 2.3 `@mp-codemirror/pyright-worker` (built artifact)
 
-This is the compiled `dist/pyright_worker.js` published as an npm package with a `main`/`exports`
+This is the compiled `packages/pyright-worker/dist/pyright_worker.js` published through
+an immutable component tag:
 pointing at the `.js` file, so consumers can reference it from their bundler or CDN:
 
 ```js
@@ -241,7 +245,7 @@ const workerUrl = 'https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@x.
 ```
 
 The worker's internal control-plane protocol (`serverLoaded` / `initServer` / `serverInitialized`)
-is already documented in `src/worker/messages.ts`; that file becomes the public contract and should
+is documented in `packages/pyright-worker/src/messages.ts`; that file is the public contract and is
 be published as TypeScript declarations.
 
 ---
@@ -283,7 +287,7 @@ Publish `@mp-codemirror/lsp-client` and `@mp-codemirror/pyright-worker` to the p
 }
 ```
 
-A single `src/lsp/index.js` re-exporting the public surface (see §4) is all that is needed; no
+A single `packages/lsp-client/src/index.js` re-exporting the public surface (see §4) is all that is needed; no
 transpilation step is required since the code is already ES2020+ and uses only browser globals.
 
 ### Option B: CDN-only (zero-maintenance path)
@@ -294,7 +298,7 @@ Point consumers at `esm.sh` or `jsDelivr` directly from the GitHub repo (using a
 <script type="importmap">
 {
   "imports": {
-    "@mp-codemirror/lsp-client": "https://esm.sh/gh/Josverl/mp_codemirror@v0.1.0/src/lsp/index.js"
+    "@mp-codemirror/lsp-client": "https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.0/packages/lsp-client/src/index.js"
   }
 }
 </script>
@@ -305,7 +309,7 @@ Point consumers at `esm.sh` or `jsDelivr` directly from the GitHub repo (using a
 
 ### Option C: Copy-paste / vendoring (current implicit approach)
 
-Consumers copy the `src/lsp/` directory directly. Works today but offers no upgrade path and no
+Consumers copy the `packages/lsp-client/src/` directory directly. This works but offers no upgrade path and no
 formal contract.
 
 ### Recommendation
@@ -348,8 +352,10 @@ This is now a **medium** effort task (was small) because the workspace cache and
 interleaved and must be untangled.
 
 **Implementation progress (current branch):**
-- Done: DOM-coupled status rendering moved out of `src/lsp/diagnostics.js` into
-  `src/diagnostics-status.js` (`updateDiagnosticsStatus`, `refreshWorkspaceDiagnosticsStatus`).
+- Done: DOM-coupled status rendering moved out of
+  `packages/lsp-client/src/diagnostics.js` into
+  `apps/playground/diagnostics-status.js` (`updateDiagnosticsStatus`,
+  `refreshWorkspaceDiagnosticsStatus`).
 - Done: `createLSPDiagnostics` now emits app-level updates through an
   `onDiagnosticsChange` callback instead of touching DOM directly.
 - Done: workspace-cache shape bug fixed (report-ready snapshots are no longer overwritten by
@@ -401,12 +407,12 @@ prevents memory leaks when views are destroyed and recreated.
 - Done: unit coverage verifies delivery before unsubscribe, no delivery afterward, and
   idempotent repeated unsubscribe calls.
 
-### 4.4 Create a public entry point (`src/lsp/index.js`)
+### 4.4 Create a public entry point (`packages/lsp-client/src/index.js`)
 
 A single re-export file defines the published surface and makes tree-shaking trivial:
 
 ```js
-// src/lsp/index.js  — proposed public API surface
+// packages/lsp-client/src/index.js
 export { SimpleLSPClient } from './simple-client.js';
 export { WorkerTransport } from './worker-transport.js';
 export { createTransport as createWorkerTransport } from './transport-factory.js';
@@ -426,19 +432,22 @@ export {
 
 ### 4.5 Separate component metadata (optional but clean)
 
-Keep the root `package.json` as the application and worker-build manifest, and add
-component-local metadata for the two independently versioned CDN components:
+Keep the root `package.json` as the private workspace and worker-build manifest, with
+component-local metadata for the independently versioned CDN components:
 
 ```
 mp_codemirror/
-  src/
-    lsp/
-      package.json          ← NEW (library metadata + peerDeps)
-      index.js              ← NEW (re-export entry point)
-      ...existing files...
-    worker/
+  apps/
+    playground/             ← application
+  packages/
+    lsp-client/
+      package.json          ← library metadata + peerDeps
+      src/index.js          ← re-export entry point
+    pyright-worker/
       package.json          ← worker component metadata
-      ...existing files...
+      src/                  ← worker source and protocol
+      dist/                 ← built bundle
+      assets/               ← typeshed and board stubs
 ```
 
 The root manifest remains necessary for `npm ci`, webpack, and local development. The release
@@ -449,7 +458,8 @@ streams independent without duplicating the root build dependency graph.
 
 Public exports now document configuration/result objects, callback payloads, parameters, return
 values, and rejection/error behavior. The annotations have been validated by emitting declarations
-from `src/lsp/index.js` with `tsc --allowJs --declaration --emitDeclarationOnly`.
+from `packages/lsp-client/src/index.js` with
+`tsc --allowJs --declaration --emitDeclarationOnly`.
 
 For the CDN-only release, the annotated JavaScript remains the source of truth and generated client
 `.d.ts` files are not committed. They can be added to a future npm package without maintaining a
@@ -458,7 +468,7 @@ protocol itself is a TypeScript contract that still needs a consumer-facing decl
 
 ### 4.7 Document the worker control-plane protocol
 
-`src/worker/messages.ts` is already a good TypeScript definition. It should be:
+`packages/pyright-worker/src/messages.ts` is the TypeScript protocol definition. It is:
 1. Mentioned in the library README as the stable contract for custom worker implementations.
 2. Published alongside the `pyright-worker` package as `messages.d.ts`.
 
@@ -466,7 +476,8 @@ This lets a consumer write a custom worker (e.g., for a different language serve
 drop-in compatible with `WorkerTransport`.
 
 **Implementation progress (current branch):**
-- Done: `src/worker/messages.d.ts` is generated from and published alongside `messages.ts`.
+- Done: `packages/pyright-worker/src/messages.d.ts` is generated from and published
+  alongside `messages.ts`.
 - Done: worker package metadata exposes the declaration contract at `./messages`.
 - Done: CI and the CDN release workflow reject a stale declaration artifact.
 - Done: the CDN consumer guide links both the source protocol and published declaration.
@@ -495,7 +506,7 @@ wants the share/issue-URL logic — otherwise leave as-is.
 (`renderMarkdown`, `processInline`, `renderBlocks`, and the `PYRIGHT_SIG_RE` constant). The
 tooltip integration (`createHoverTooltip`, `createHoverContent`) is a separate concern.
 
-**Required change:** Create `src/lsp/markdown-renderer.js` containing:
+**Required change:** Create `packages/lsp-client/src/markdown-renderer.js` containing:
 - `processInline(text)` — inline formatting (bold, italic, code, RST roles, links)
 - `renderBlocks(text, container)` — block-level rendering (headers, lists, code blocks, field lists)
 - `PYRIGHT_SIG_RE` — signature detection regex
@@ -521,7 +532,7 @@ independently.
 | 4.1 | Decouple `diagnostics.js` from DOM (extract pure data layer) | Medium | No | ✅ Done |
 | 4.2 | Remove `window.lspClients` global; refactor to options object | Small | No | ✅ Done |
 | 4.3 | Add unsubscribe return to `onNotification` | Trivial | No | ✅ Done |
-| 4.4 | Create `src/lsp/index.js` entry point | Trivial | No | ✅ Done |
+| 4.4 | Create `packages/lsp-client/src/index.js` entry point | Trivial | No | ✅ Done |
 | 4.5 | Separate component metadata | Small | No | ✅ Done — component manifests own release versions; root manifest remains the application build manifest |
 | 4.6 | Complete JSDoc annotations | Medium | No | ✅ Done — all public exports documented; declaration emission validated |
 | 4.7 | Document and publish worker protocol declarations | Small | No | ✅ Done — generated `messages.d.ts` is exposed and drift-checked |
@@ -551,7 +562,8 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 
 ### Verified evidence
 
-- Production worker build: succeeded locally; `dist/pyright_worker.js` is 9,018,033 bytes.
+- Production worker build: succeeded locally;
+  `packages/pyright-worker/dist/pyright_worker.js` is 9,018,033 bytes.
 - JavaScript unit suite: 36/36 passed, including explicit worker URL contract coverage.
 - Worker protocol declaration: generated artifact matches `messages.ts`; root and `./messages`
   package imports resolve under TypeScript `NodeNext`.

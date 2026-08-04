@@ -29,7 +29,7 @@ We use [esm.sh](https://esm.sh/)'s `?deps=` parameter to explicitly pin all shar
 
 ### Implementation
 
-In `src/index.html`, we define an import map with explicit dependencies:
+In `apps/playground/index.html`, we define an import map with explicit dependencies:
 
 ```html
 <script type="importmap">
@@ -241,7 +241,8 @@ This project implements a **custom LSP (Language Server Protocol) client** for C
                    │
           ┌────────▼──────────┐
           │  Pyright Worker   │
-          │  (dist/pyright_worker.js) │
+          │ (packages/pyright-worker/ │
+          │  dist/pyright_worker.js)  │
           │  In-browser       │
           └───────────────────┘
 ```
@@ -249,7 +250,9 @@ This project implements a **custom LSP (Language Server Protocol) client** for C
 ### Transport Selection
 
 The transport is selected at runtime by `transport-factory.js`:
-- **Default (worker):** Pyright runs in a Web Worker (`dist/pyright_worker.js`). No server needed. Used in production and GitHub Pages.
+- **Default (worker):** Pyright runs in a Web Worker
+  (`packages/pyright-worker/dist/pyright_worker.js`). No server needed. Used in
+  production and GitHub Pages.
 - **WebSocket:** Available as a transport option but requires an external LSP server.
 
 ### Component Responsibilities
@@ -307,7 +310,7 @@ client.notify('textDocument/didChange', {
 **Example:**
 ```javascript
 const { client, transport } = await createLSPClient({
-  workerUrl: '../dist/pyright_worker.js'
+  workerUrl: '../../packages/pyright-worker/dist/pyright_worker.js'
 });
 ```
 
@@ -661,7 +664,7 @@ const completionExtension = autocompletion({
 ### File Structure
 
 ```
-src/lsp/
+packages/lsp-client/src/
 ├── completion.js          (159 lines)
 │   ├── CompletionItemKind enum
 │   ├── kindToType() converter
@@ -960,7 +963,7 @@ export function createHoverTooltip(lspClient, documentUri) {
 ### File Structure
 
 ```
-src/lsp/
+packages/lsp-client/src/
 ├── hover.js              (180 lines)
 │   ├── createHoverContent()    - Renders tooltip content
 │   ├── renderMarkdown()        - Parses markdown
@@ -971,7 +974,7 @@ src/lsp/
 └── simple-client.js      (existing)
     └── Handles LSP requests
 
-src/styles.css            (modified)
+apps/playground/styles.css (modified)
 └── LSP hover tooltip styles (90+ lines)
     ├── .cm-tooltip.cm-tooltip-hover
     ├── .cm-lsp-hover
@@ -1004,12 +1007,14 @@ Pyright runs entirely in the browser via a Web Worker. No server is required for
 
 ### Worker Entry Point
 
-The worker is defined in `src/worker/pyright-worker.ts` and bundled by webpack to `dist/pyright_worker.js`.
+The worker is defined in `packages/pyright-worker/src/pyright-worker.ts` and bundled by
+webpack to `packages/pyright-worker/dist/pyright_worker.js`.
 
 The build command (`just build` or `npm run build:worker`) runs:
-1. `pack-typeshed.mjs` — packs Pyright's typeshed-fallback into a zip
-2. `pack-stubs.mjs` — packs MicroPython board stubs (ESP32, RP2040, STM32) into per-board zips
-3. `webpack` — bundles everything into `dist/pyright_worker.js`
+1. `scripts/pack-typeshed.py` — packs Pyright's typeshed-fallback into a zip
+2. `scripts/pack-stubs.py` — packs MicroPython board stubs into per-board zips
+3. `webpack` — bundles everything into
+   `packages/pyright-worker/dist/pyright_worker.js`
 
 ### ZenFS Virtual Filesystem
 
@@ -1084,9 +1089,10 @@ When the user selects a different board (ESP32, RP2040, STM32) from the dropdown
 ### Static Deployment
 
 Because Pyright runs in the browser, the entire application deploys as static files to GitHub Pages:
-- `src/` — HTML, CSS, JS (CodeMirror, LSP client, transport)
-- `dist/pyright_worker.js` — bundled Pyright worker
-- `assets/` — typeshed and stubs zip files
+- `apps/playground/` — HTML, CSS, and application JavaScript
+- `packages/lsp-client/src/` — reusable LSP client source
+- `packages/pyright-worker/dist/` — bundled Pyright worker
+- `packages/pyright-worker/assets/` — typeshed and stubs zip files
 
 No backend server is needed for LSP features in production.
 

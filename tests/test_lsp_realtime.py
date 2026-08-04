@@ -7,7 +7,7 @@ diagnostics from the Pyright Web Worker as the user types, including:
   - version counter incrementing correctly
   - diagnostics being updated when code changes
 
-All tests require the Pyright worker bundle at dist/pyright_worker.js.
+All tests require the packaged Pyright worker bundle.
 """
 
 import re
@@ -20,11 +20,17 @@ import pytest
 # Module-level skip marker
 # ---------------------------------------------------------------------------
 
-_worker_available = (Path(__file__).parent.parent / "dist" / "pyright_worker.js").exists()
+_worker_available = (
+    Path(__file__).parent.parent
+    / "packages"
+    / "pyright-worker"
+    / "dist"
+    / "pyright_worker.js"
+).exists()
 
 requires_lsp = pytest.mark.skipif(
     not _worker_available,
-    reason="Worker bundle not found at dist/pyright_worker.js. Build it first.",
+    reason="Worker bundle not found. Build it first.",
 )
 
 pytestmark = pytest.mark.worker

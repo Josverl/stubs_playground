@@ -36,7 +36,7 @@ quote-style = "double"
 markers = [
     "unit: Pure Python unit tests, no browser (Tier 0)",
     "editor: Editor UI tests, needs HTTP + CDN (Tier 1)",
-    "worker: Worker tests, needs dist/pyright_worker.js (Tier 2)",
+    "worker: Worker tests, needs packages/pyright-worker/dist/pyright_worker.js (Tier 2)",
     "lsp: Full LSP integration, needs LSP bridge (Tier 3)",
     "slow: Tests that take >10s to complete",
 ]
@@ -47,8 +47,8 @@ testpaths = ["tests"]
 # ###################################################################
 [tool.pyright]
 # places to check
-include = ["src"]
-extraPaths = ["src/lib"]
+include = ["apps/playground", "packages"]
+extraPaths = ["apps/playground/lib"]
 # how to check
 typeCheckingMode = "standard"
 pythonPlatform = "Linux"

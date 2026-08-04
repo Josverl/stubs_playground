@@ -10,21 +10,26 @@ cd mp_codemirror
 just setup
 ```
 
-This initializes submodules, installs dependencies, and builds the Pyright Web Worker (`dist/pyright_worker.js`).
+This installs the Python and npm workspace dependencies and builds the Pyright Web
+Worker (`packages/pyright-worker/dist/pyright_worker.js`).
 
 ### Step 2: Start the HTTP Server
 
 ```bash
-just http
-# or:
-python -m http.server 8888
+just serve
 ```
 
 No LSP bridge server is needed — Pyright runs in the browser.
 
 ### Step 3: Open in Browser
 
-Navigate to: `http://localhost:8888/src/`
+`just serve` opens `http://localhost:8888/apps/playground/?components=local`.
+
+To prove the same application works with the published components, run:
+
+```bash
+just serve cdn
+```
 
 You get full LSP features (diagnostics, completions, hover, board switching) with no server-side components.
 
@@ -195,7 +200,7 @@ python -m http.server 8000
 
 1. Go to repository Settings
 2. Navigate to Pages section
-3. Select `main` branch and `/src` folder
+3. Deploy the site prepared by `.github/workflows/deploy.yml`
 4. Click Save
 5. Wait for deployment
 6. Visit the provided URL
@@ -208,7 +213,7 @@ Before committing changes:
 
 - [ ] LSP bridge starts without errors
 - [ ] HTTP server serves files
-- [ ] Editor loads at http://localhost:8888/src/
+- [ ] Editor loads at http://localhost:8888/apps/playground/
 - [ ] Real-time diagnostics working
 - [ ] Syntax highlighting works
 - [ ] All buttons functional

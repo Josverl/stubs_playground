@@ -45,11 +45,52 @@ rebuild:
     npm install --ignore-scripts
     npx webpack --mode production
 
-# request the first immutable LSP client CDN tag from the current commit
-release-cdn-lsp-client: (_release-cdn "lsp-client" "src/lsp/package.json")
+# stage the static GitHub Pages tree
+[script("uv", "run", "python")]
+stage-pages output="deploy":
+    from __future__ import annotations
 
-# request the first immutable Pyright worker CDN tag from the current commit
-release-cdn-pyright-worker: (_release-cdn "pyright-worker" "src/worker/package.json")
+    import shutil
+    from pathlib import Path
+
+    root = Path.cwd().resolve()
+    destination = (root / {{quote(output)}}).resolve()
+    if destination == root or root not in destination.parents:
+        raise SystemExit("Output directory must be a child of the repository root.")
+
+    sources = (
+        ("index.html", "index.html"),
+        ("apps/playground", "apps/playground"),
+        ("packages/lsp-client/package.json", "packages/lsp-client/package.json"),
+        ("packages/lsp-client/src", "packages/lsp-client/src"),
+        ("packages/pyright-worker/package.json", "packages/pyright-worker/package.json"),
+        ("packages/pyright-worker/src", "packages/pyright-worker/src"),
+        ("packages/pyright-worker/dist", "packages/pyright-worker/dist"),
+        ("packages/pyright-worker/assets", "packages/pyright-worker/assets"),
+    )
+
+    missing = [source for source, _ in sources if not (root / source).exists()]
+    if missing:
+        raise SystemExit(f"Cannot stage Pages; missing: {', '.join(missing)}")
+
+    if destination.exists():
+        shutil.rmtree(destination)
+    for source_name, target_name in sources:
+        source = root / source_name
+        target = destination / target_name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if source.is_dir():
+            shutil.copytree(source, target)
+        else:
+            shutil.copy2(source, target)
+
+    print(f"Staged GitHub Pages tree at {destination.relative_to(root)}")
+
+# request an immutable LSP client CDN tag from the current commit
+release-cdn-lsp-client: (_release-cdn "lsp-client" "packages/lsp-client/package.json")
+
+# request an immutable Pyright worker CDN tag from the current commit
+release-cdn-pyright-worker: (_release-cdn "pyright-worker" "packages/pyright-worker/package.json")
 
 [private]
 [script("uv", "run", "python")]
@@ -128,7 +169,7 @@ format:
 http:
     uv run tests/http_server.py 8888 .
 
-# start the HTTP server and open local sources or the published CDN harness
+# start the real playground with local or published CDN components
 [script("uv", "run", "python")]
 serve source="local":
     from __future__ import annotations
@@ -142,13 +183,8 @@ serve source="local":
 
     source = {{quote(source)}}
     urls = {
-        "local": "http://localhost:8888/src/",
-        "cdn": (
-            "http://localhost:8888/tests/cdn-harness.html"
-            "?client=cdn&clientTag=lsp-client-v0.1.0"
-            "&worker=cdn&workerTag=pyright-worker-v0.1.0"
-            "&board=esp32"
-        ),
+        "local": "http://localhost:8888/apps/playground/?components=local",
+        "cdn": "http://localhost:8888/apps/playground/?components=cdn",
     }
     if source not in urls:
         raise SystemExit("source must be either 'local' or 'cdn'")
@@ -157,7 +193,7 @@ serve source="local":
         [sys.executable, "tests/http_server.py", "8888", "."],
     )
     try:
-        server_url = "http://localhost:8888/src/index.html"
+        server_url = "http://localhost:8888/apps/playground/index.html"
         for _ in range(50):
             if process.poll() is not None:
                 raise SystemExit(
@@ -244,17 +280,17 @@ sizes:
     echo
     echo "@mp-codemirror/pyright-worker"
     worker_gzip=0
-    if [ -f dist/pyright_worker.js ]; then
-        worker_size=$(file_size dist/pyright_worker.js)
-        worker_gzip=$(gzip -c dist/pyright_worker.js | wc -c)
-        printf "%-28s %8s (%s gzipped)\n" "dist/pyright_worker.js" \
+    if [ -f packages/pyright-worker/dist/pyright_worker.js ]; then
+        worker_size=$(file_size packages/pyright-worker/dist/pyright_worker.js)
+        worker_gzip=$(gzip -c packages/pyright-worker/dist/pyright_worker.js | wc -c)
+        printf "%-28s %8s (%s gzipped)\n" "worker dist" \
             "$(human_size "$worker_size")" "$(human_size "$worker_gzip")"
     else
-        printf "%-28s %8s\n" "dist/pyright_worker.js" "not built"
+        printf "%-28s %8s\n" "worker dist" "not built"
         echo "  Run 'just build' to create the production worker."
     fi
-    print_file "src/worker/messages.d.ts" "src/worker/messages.d.ts"
-    print_file "src/worker/package.json" "src/worker/package.json"
+    print_file "worker messages.d.ts" "packages/pyright-worker/src/messages.d.ts"
+    print_file "worker package.json" "packages/pyright-worker/package.json"
 
     echo
     echo "@mp-codemirror/lsp-client (CDN source modules)"
@@ -267,25 +303,24 @@ sizes:
         lsp_size=$((lsp_size + size))
         lsp_gzip=$((lsp_gzip + gzip_size))
         lsp_count=$((lsp_count + 1))
-    done < <(find src/lsp -maxdepth 1 -type f \
-        \( -name '*.js' -o -name '*.mjs' -o -name 'package.json' \) \
-        ! -name 'worker-config.js' -print0)
-    printf "%-28s %8s (%s gzipped, %d files)\n" "src/lsp/" \
+    done < <(find packages/lsp-client/src -maxdepth 1 -type f \
+        \( -name '*.js' -o -name '*.mjs' \) -print0)
+    printf "%-28s %8s (%s gzipped, %d files)\n" "lsp-client src" \
         "$(human_size "$lsp_size")" "$(human_size "$lsp_gzip")" "$lsp_count"
 
     echo
     echo "Worker-embedded inputs (already included in pyright_worker.js)"
-    print_file "typeshed fallback" "assets/typeshed-fallback.zip"
-    print_file "MicroPython stdlib" "assets/stubs-stdlib.zip"
-    print_file "default RP2 board" "assets/stubs-rp2.zip"
+    print_file "typeshed fallback" "packages/pyright-worker/assets/typeshed-fallback.zip"
+    print_file "MicroPython stdlib" "packages/pyright-worker/assets/stubs-stdlib.zip"
+    print_file "default RP2 board" "packages/pyright-worker/assets/stubs-rp2.zip"
 
     echo
     echo "On-demand board assets"
     board_size=0
     board_count=0
-    for path in assets/stubs-*.zip; do
+    for path in packages/pyright-worker/assets/stubs-*.zip; do
         case "$path" in
-            assets/stubs-stdlib.zip|assets/stubs-rp2.zip) continue ;;
+            */stubs-stdlib.zip|*/stubs-rp2.zip) continue ;;
         esac
         print_file "$(basename "$path")" "$path"
         size=$(file_size "$path")
@@ -294,7 +329,7 @@ sizes:
     done
     printf "%-28s %8s (%d files)\n" "on-demand total" \
         "$(human_size "$board_size")" "$board_count"
-    print_file "stubs-manifest.json" "assets/stubs-manifest.json"
+    print_file "stubs-manifest.json" "packages/pyright-worker/assets/stubs-manifest.json"
 
     echo
     echo "Transfer summary"

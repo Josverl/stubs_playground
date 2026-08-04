@@ -1,12 +1,16 @@
 {
-  "name": "mp-codemirror-worker",
-  "version": "0.1.0",
+  "name": "mp-codemirror-monorepo",
+  "version": "0.2.0",
   "private": true,
-  "description": "Pyright LSP worker for mp_codemirror (browser-based)",
+  "description": "CodeMirror MicroPython playground and reusable browser LSP packages",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "build:worker": "webpack --mode production",
     "build:worker:dev": "webpack --mode development",
-    "build:typeshed": "node scripts/pack-typeshed.mjs",
+    "build:typeshed": "uv run scripts/pack-typeshed.py",
     "check:worker-protocol-types": "node scripts/check-worker-protocol-types.mjs",
     "test:unit:completion": "node --test tests/test_completion*.unit.mjs"
   },

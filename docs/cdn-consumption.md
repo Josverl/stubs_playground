@@ -7,8 +7,8 @@ Python/MicroPython type checking without npm, a bundler, or a server.
 
 | Component | What it is | Served from |
 |-----------|------------|-------------|
-| `@mp-codemirror/lsp-client` | Reusable LSP bridge for CodeMirror 6 (client, transport, diagnostics, completion, hover, markdown renderer) | `src/lsp/index.js` at tag `lsp-client-v<version>` |
-| `@mp-codemirror/pyright-worker` | Pre-built Pyright Web Worker bundle (~9 MB) with typeshed + default MicroPython stubs inlined | `dist/pyright_worker.js` at tag `pyright-worker-v<version>` |
+| `@mp-codemirror/lsp-client` | Reusable LSP bridge for CodeMirror 6 (client, transport, diagnostics, completion, hover, markdown renderer) | `packages/lsp-client/src/index.js` at tag `lsp-client-v<version>` |
+| `@mp-codemirror/pyright-worker` | Pre-built Pyright Web Worker bundle (~9 MB) with typeshed + default MicroPython stubs inlined | `packages/pyright-worker/dist/pyright_worker.js` at tag `pyright-worker-v<version>` |
 
 Distribution follows **Option B — CDN-only** from
 [`component-reusability-plan.md`](./component-reusability-plan.md): consumers pin an
@@ -31,17 +31,22 @@ The two components version **independently**:
 - `lsp-client-v0.1.0`, `lsp-client-v0.2.0`, … — pure source, tagged directly on the
   commit; no build step.
 - `pyright-worker-v0.1.0`, … — the tag's tree additionally carries the built
-  `dist/pyright_worker.js` (which is git-ignored on `main`).
+  `packages/pyright-worker/dist/pyright_worker.js` (which is git-ignored on `main`).
 
 Tags are **immutable** — a published version is never moved. Consumers should always
 pin an exact tag, never a branch:
 
 ```
-https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.1.0/src/lsp/index.js
-https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.1.0/dist/pyright_worker.js
+https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.0/packages/lsp-client/src/index.js
+https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/dist/pyright_worker.js
 ```
 
-### Cutting the first tags before merging
+> **Path compatibility:** the published `v0.1.0` tags predate the workspace layout and
+> permanently retain their original `src/lsp/`, `dist/`, and `assets/` URL paths. The
+> playground's CDN mode currently pins those verified tags. New releases starting with
+> `v0.2.0` use the `packages/...` paths shown above.
+
+### Cutting tags before merging
 
 GitHub only permits `workflow_dispatch` after a workflow exists on the default branch.
 For the first pre-merge release, check out the feature branch with a clean worktree and
@@ -55,7 +60,7 @@ just release-cdn-pyright-worker
 Each recipe reads the version from the component manifest and pushes the current commit
 directly as a temporary request tag without creating a local tag. Each request tag then
 runs the workflow from that exact commit. On success, the workflow
-creates `lsp-client-v0.1.0` or `pyright-worker-v0.1.0`, then deletes its temporary
+creates the immutable tag matching the component manifest, then deletes its temporary
 `cdn-release/...` request tag. If a run fails before cleanup, delete that request tag
 from the remote before retrying it:
 
@@ -74,7 +79,7 @@ component tags are permanent releases: do not delete or move them after verifica
 If verification fails, fix the branch, bump the affected component version, and cut a
 new immutable component tag.
 
-Verify the first tags before merging:
+For example, the first tags were verified before merging with:
 
 ```bash
 curl -fI \
@@ -89,7 +94,7 @@ uv run pytest \
   -v
 ```
 
-The `assets/*.zip` stub/typeshed files are already committed on every tag, so they are
+The worker package's `assets/*.zip` stub/typeshed files are committed on every tag, so they are
 CDN-servable from the same tag:
 
 ```
@@ -116,7 +121,7 @@ Pin the same CodeMirror versions the host editor uses to avoid duplicate singlet
 
 The library's runtime peers are `@codemirror/state`, `@codemirror/view`, and
 `@codemirror/lint`; `@codemirror/autocomplete` is used through the language-data facet.
-The versions below mirror those used by this app (`src/index.html`) and are known to
+The versions below mirror those used by this app (`apps/playground/index.html`) and are known to
 work together:
 
 ```html
@@ -135,19 +140,21 @@ work together:
 </script>
 ```
 
-Public exports (see [`src/lsp/index.js`](../src/lsp/index.js) for the full surface):
+Public exports (see
+[`packages/lsp-client/src/index.js`](../packages/lsp-client/src/index.js) for the full
+surface):
 
 - `SimpleLSPClient`, `WorkerTransport`, `createWorkerTransport`
 - `createLSPClient`, `createLSPPlugin`, `switchBoard`, `isLSPReady`
 - Diagnostics: `createLSPDiagnostics`, `notifyDocumentOpen`, `notifyDocumentChange`,
-  `removeWorkspaceDiagnosticsFor`, `getWorkspaceDiagnostics`, `requestDiagnostics`
+  `removeWorkspaceDiagnosticsFor`, `getWorkspaceDiagnostics`, `requestDiagnostics`,
+  `lintKeymapExtension`
 - Completion: `createCompletionSource`, plus pure helpers from `completion-core.mjs`
 - Hover: `createHoverTooltip`
 - Markdown/RST rendering: `renderMarkdown`, `processInline`, `renderBlocks`
 
-> `worker-config.js` is intentionally **not** part of the public module graph — its
-> worker URL auto-detection is specific to this app's directory layout. Consumers
-> must pass an explicit `workerUrl` (see §3).
+Consumers must pass an explicit `workerUrl` (see §3); package code does not infer an
+application-specific directory layout.
 
 ---
 
@@ -177,8 +184,10 @@ Remember to `URL.revokeObjectURL(workerUrl)` when you tear the editor down.
 The worker's main-thread ↔ worker control-plane protocol
 (`serverLoaded` / `initServer` / `serverInitialized`, file sync, debug messages) is the
 stable contract, defined in
-[`src/worker/messages.ts`](../src/worker/messages.ts) and published for consumers as
-[`src/worker/messages.d.ts`](../src/worker/messages.d.ts). Anyone implementing a custom
+[`packages/pyright-worker/src/messages.ts`](../packages/pyright-worker/src/messages.ts)
+and published for consumers as
+[`packages/pyright-worker/src/messages.d.ts`](../packages/pyright-worker/src/messages.d.ts).
+Anyone implementing a custom
 worker for a different language server can conform to that contract and remain
 drop-in compatible with `WorkerTransport`.
 
@@ -238,8 +247,10 @@ view.dispatch({
 });
 ```
 
-See [`src/app.js`](../src/app.js) for a complete integration (board switching, multi-file
-workspace, status bar) and [`tests/cdn-harness.html`](../tests/cdn-harness.html) for a
+See [`apps/playground/app.js`](../apps/playground/app.js) for a complete integration
+(board switching, multi-file workspace, status bar),
+[`apps/playground/component-source.js`](../apps/playground/component-source.js) for the
+local/CDN boundary, and [`tests/cdn-harness.html`](../tests/cdn-harness.html) for a
 minimal standalone harness that loads only the public API.
 
 ---
@@ -249,5 +260,6 @@ minimal standalone harness that loads only the public API.
 CDN-only is the zero-maintenance starting point. If external consumers later need
 semver resolution and bundler/toolchain integration, publish the same two packages to
 npm (**Option A** in [`component-reusability-plan.md`](./component-reusability-plan.md)).
-The public surface (`src/lsp/index.js`) and the worker protocol
-(`src/worker/messages.ts`) are designed to remain the contract in either model.
+The public surface (`packages/lsp-client/src/index.js`) and the worker protocol
+(`packages/pyright-worker/src/messages.ts`) are designed to remain the contract in
+either model.

@@ -5,13 +5,13 @@ import {
     normalizePackageName,
     parsePackageSpecifier,
     selectStubWheelRelease,
-} from '../src/stubs/pypi-client.js';
+} from '../apps/playground/stubs/pypi-client.js';
 
 import {
     upsertExtraStubEntry,
     buildAbsoluteExtraPaths,
     buildWorkerExtraStubPayload,
-} from '../src/stubs/extra-stubs-registry.js';
+} from '../apps/playground/stubs/extra-stubs-registry.js';
 
 test('normalizePackageName applies PEP-503 style normalization', () => {
     assert.equal(normalizePackageName('Types_Requests.Stubs'), 'types-requests-stubs');

@@ -25,7 +25,7 @@ def main():
         pass
 
     with ThreadingHTTPServer(("", port), Handler) as httpd:
-        print(f"Serving at http://localhost:{port}/src/", flush=True)
+        print(f"Serving at http://localhost:{port}/apps/playground/", flush=True)
         httpd.serve_forever()
 
 

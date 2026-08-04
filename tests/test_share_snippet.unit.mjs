@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
     MARKDOWN_CODE_SNIPPET_MAX_LINES,
     getCenteredCodeSnippet,
-} from '../src/share-ui.js';
+} from '../apps/playground/share-ui.js';
 
 function makeNumberedLines(count) {
     return Array.from({ length: count }, (_, i) => `line ${String(i + 1).padStart(2, '0')}`).join('\n');

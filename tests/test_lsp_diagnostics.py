@@ -1,7 +1,7 @@
 """
 LSP Diagnostics Integration Tests
 
-Architecture: Browser (CodeMirror) <-> Web Worker (Pyright via dist/pyright_worker.js)
+Architecture: Browser (CodeMirror) <-> packaged Pyright Web Worker
 
 Two modes:
   - Smoke tests  (no LSP required): verify graceful degradation.
@@ -17,11 +17,17 @@ import pytest
 # Module-level skip marker — evaluated at collection time
 # ---------------------------------------------------------------------------
 
-_worker_available = (Path(__file__).parent.parent / "dist" / "pyright_worker.js").exists()
+_worker_available = (
+    Path(__file__).parent.parent
+    / "packages"
+    / "pyright-worker"
+    / "dist"
+    / "pyright_worker.js"
+).exists()
 
 requires_lsp = pytest.mark.skipif(
     not _worker_available,
-    reason="Worker bundle not found at dist/pyright_worker.js. Build it first.",
+    reason="Worker bundle not found. Build it first.",
 )
 
 pytestmark = pytest.mark.worker

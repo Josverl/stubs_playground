@@ -7,8 +7,8 @@
 <body>
 <pre id="log"></pre>
 <script type="module">
-import { WorkerTransport } from '../lsp/worker-transport.js';
-import { SimpleLSPClient } from '../lsp/simple-client.js';
+import { WorkerTransport } from '../../../packages/lsp-client/src/worker-transport.js';
+import { SimpleLSPClient } from '../../../packages/lsp-client/src/simple-client.js';
 
 function log(msg) {
     document.getElementById('log').textContent += msg + '\n';
@@ -44,7 +44,7 @@ async function connectAndInit(transport) {
 
 const tests = {
     async connect() {
-        const t = new WorkerTransport('../../dist/pyright_worker.js');
+        const t = new WorkerTransport('../../../packages/pyright-worker/dist/pyright_worker.js');
         await t.connect();
         const result = { success: true, connected: t.isConnected() };
         t.close();
@@ -52,7 +52,7 @@ const tests = {
     },
 
     async 'lsp-init'() {
-        const t = new WorkerTransport('../../dist/pyright_worker.js');
+        const t = new WorkerTransport('../../../packages/pyright-worker/dist/pyright_worker.js');
         const { initResponse } = await connectAndInit(t);
         const caps = initResponse.result?.capabilities ? Object.keys(initResponse.result.capabilities) : [];
         t.close();
@@ -60,7 +60,7 @@ const tests = {
     },
 
     async diagnostics() {
-        const t = new WorkerTransport('../../dist/pyright_worker.js');
+        const t = new WorkerTransport('../../../packages/pyright-worker/dist/pyright_worker.js');
         await connectAndInit(t);
 
         const diagResult = await new Promise((resolve, reject) => {
@@ -92,14 +92,14 @@ const tests = {
     },
 
     async close() {
-        const t = new WorkerTransport('../../dist/pyright_worker.js');
+        const t = new WorkerTransport('../../../packages/pyright-worker/dist/pyright_worker.js');
         await t.connect();
         t.close();
         return { success: true, connectedAfterClose: t.isConnected() };
     },
 
     async 'string-messages'() {
-        const t = new WorkerTransport('../../dist/pyright_worker.js');
+        const t = new WorkerTransport('../../../packages/pyright-worker/dist/pyright_worker.js');
         await t.connect();
 
         const received = [];
@@ -129,7 +129,7 @@ const tests = {
     },
 
     async 'simple-client'() {
-        const t = new WorkerTransport('../../dist/pyright_worker.js');
+        const t = new WorkerTransport('../../../packages/pyright-worker/dist/pyright_worker.js');
         await t.connect();
 
         const client = new SimpleLSPClient({ rootUri: 'file:///workspace', timeout: 10000 });
@@ -165,7 +165,7 @@ const tests = {
     },
 
     async 'generated-config'() {
-        const t = new WorkerTransport('../../dist/pyright_worker.js');
+        const t = new WorkerTransport('../../../packages/pyright-worker/dist/pyright_worker.js');
         await t.connect();
         const content = await t.readGeneratedConfig();
         t.close();

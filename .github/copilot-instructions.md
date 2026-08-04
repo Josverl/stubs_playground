@@ -63,25 +63,15 @@ mp_codemirror/
 │   └── workflows/
 │       ├── test.yml             # CI test workflow
 │       └── deploy.yml           # GitHub Pages deployment
-├── src/
-│   ├── index.html      # Main HTML page
-│   ├── styles.css      # Custom styling
-│   ├── app.js          # Application logic and CodeMirror setup
-│   ├── lsp/            # LSP client implementation
-│   │   ├── client.js              # LSP client factory
-│   │   ├── simple-client.js       # LSP protocol (JSON-RPC)
-│   │   ├── worker-transport.js    # Web Worker transport
-│   │   ├── transport-factory.js   # Transport factory
-│   │   ├── diagnostics.js         # Diagnostics → CodeMirror
-│   │   ├── completion.js          # Autocompletion
-│   │   └── hover.js               # Hover tooltips
-│   ├── worker/         # Pyright Web Worker source
-│   │   └── pyright-worker.ts      # Worker entry (bundled to dist/)
-│   └── examples/       # Python example files
-├── dist/
-│   └── worker.js       # Built Pyright worker (webpack output)
-├── assets/
-│   └── stubs-manifest.json  # Board stubs manifest
+├── apps/
+│   └── playground/     # Main browser application and examples
+├── packages/
+│   ├── lsp-client/
+│   │   └── src/        # Public CodeMirror LSP bridge
+│   └── pyright-worker/
+│       ├── src/        # Pyright worker and protocol declarations
+│       ├── dist/       # Built worker bundle
+│       └── assets/     # Typeshed and board stub archives
 ├── scripts/
 │   ├── pack-typeshed.mjs    # Pack typeshed for browser
 │   └── pack-stubs.mjs       # Pack stubs per board
@@ -102,9 +92,9 @@ mp_codemirror/
 - Static HTML5 page with CodeMirror 6 loaded via CDN (esm.sh),
 - Python syntax highlighting, line numbers, dark/light theme toggle, bracket matching, code folding, auto-indentation.
 - Deploys to GitHub Pages as static files.
-- **Web Worker transport** (`src/lsp/worker-transport.js`) — runs Pyright in-browser
-- **Transport factory** (`src/lsp/transport-factory.js`) — creates the worker transport
-- **LSP client** (`src/lsp/simple-client.js`) — JSON-RPC 2.0, transport-agnostic
+- **Web Worker transport** (`packages/lsp-client/src/worker-transport.js`) — runs Pyright in-browser
+- **Transport factory** (`packages/lsp-client/src/transport-factory.js`) — creates the worker transport
+- **LSP client** (`packages/lsp-client/src/simple-client.js`) — JSON-RPC 2.0, transport-agnostic
 - **Real-time diagnostics** — errors/warnings as you type (300ms debounce)
 - **Autocompletion** — context-aware completions from Pyright
 - **Hover tooltips** — type info, docstrings, MicroPython docs

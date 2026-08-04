@@ -2,13 +2,15 @@
 
 A CodeMirror 6 editor with Pyright-powered LSP running entirely in the browser. Board-specific MicroPython type stubs. No server required. Deploys to GitHub Pages as static files.
 
-**Live demo:** [https://josverl.github.io/mp_codemirror/src/](https://josverl.github.io/mp_codemirror/src/)
+**Live demo:** [https://josverl.github.io/stubs_playground/](https://josverl.github.io/stubs_playground/)
 
 ---
 
 ## 1. Demo Walkthrough
 
-1. **Open the editor** — Navigate to the GitHub Pages URL (or `http://localhost:8888/src/` locally). The page loads CodeMirror 6 from esm.sh CDN and boots a Pyright Web Worker. No install, no server.
+1. **Open the editor** — Navigate to the GitHub Pages URL (or run `just serve`
+   locally). The page loads CodeMirror 6 from esm.sh CDN and boots a Pyright Web
+   Worker. No backend server is required.
 
 2. **Select a board** — Use the "Board" dropdown in the header. Choose between ESP32 (Generic), Raspberry Pi Pico (RP2040), or STM32. Switching boards destroys and recreates the Pyright worker with the correct stubs — completions and diagnostics change immediately. A loading indicator appears during the switch.
 
@@ -98,7 +100,7 @@ Browser (static HTML page served from GitHub Pages)
 │   ├── Lint extension for diagnostic display
 │   └── Autocomplete + hover tooltip extensions
 │
-├── LSP Client (src/lsp/)
+├── LSP Client (packages/lsp-client/src/)
 │   ├── simple-client.js — JSON-RPC 2.0 protocol (transport-agnostic)
 │   ├── worker-transport.js — Web Worker transport
 │   ├── transport-factory.js — Creates the worker transport
@@ -106,7 +108,7 @@ Browser (static HTML page served from GitHub Pages)
 │   ├── completion.js — Maps LSP completions → CodeMirror autocomplete
 │   └── hover.js — Maps LSP hover → CodeMirror tooltips
 │
-├── Pyright Web Worker (dist/pyright_worker.js, ~8MB)
+├── Pyright Web Worker (packages/pyright-worker/dist/pyright_worker.js, ~9MB)
 │   ├── Pyright language server (bundled via webpack)
 │   ├── ZenFS virtual filesystem (in-memory)
 │   ├── Typeshed (Python stdlib types, packed as zip at build time)
@@ -117,15 +119,21 @@ Browser (static HTML page served from GitHub Pages)
 │   ├── On switch: destroys worker, creates new one with selected stubs
 │   └── Selection persisted in localStorage
 │
-└── Stubs Manifest (assets/stubs-manifest.json)
+└── Stubs Manifest (packages/pyright-worker/assets/stubs-manifest.json)
     └── Lists available boards, stub zip files, sizes, descriptions
 ```
 
 ### Key architectural decisions
 
 - **Everything runs in the browser.** No backend server needed for any LSP feature. The page can be served from any static file host (GitHub Pages, S3, a local `python -m http.server`).
-- **Pyright is bundled via webpack** into a single Web Worker JS file (`dist/pyright_worker.js`). The webpack config stubs out Node-only dependencies (`fs` → ZenFS, `@yarnpkg/fslib` → stub) and polyfills (`assert`, `crypto`, `stream`, `url`, `zlib`).
-- **Typeshed and stubs are packed as zip files** at build time (`scripts/pack-typeshed.mjs`, `scripts/pack-stubs.mjs`). The worker unpacks them into a ZenFS virtual filesystem on startup.
+- **Pyright is bundled via webpack** into a single Web Worker JS file
+  (`packages/pyright-worker/dist/pyright_worker.js`). The webpack config stubs out
+  Node-only dependencies and supplies browser polyfills.
+- **Typeshed and stubs are packed as zip files** at build time
+  (`scripts/pack-typeshed.py`, `scripts/pack-stubs.py`). The worker unpacks them into a
+  ZenFS virtual filesystem on startup.
+- **The real playground can switch component sources.** `just serve` uses workspace
+  packages; `just serve cdn` runs the same app against immutable published tags.
 - **Board switching destroys and recreates the worker.** This ensures a clean Pyright state — no stale type caches from the previous board. The trade-off is a multi-second reload. The LSP client rebinds CodeMirror extensions after the new worker initializes.
 - **CDN dependencies are pinned via import map.** esm.sh's `?deps=` parameter forces all CodeMirror packages to share the same `@codemirror/state` and `@codemirror/view` versions, avoiding the duplicate-instance bug that breaks `instanceof` checks.
 - **Diagnostics are debounced at 300ms.** After the user stops typing, a `textDocument/didChange` notification is sent to Pyright. This balances responsiveness with performance.
@@ -145,7 +153,8 @@ This is table stakes, code mirror does the heavy lifting.
 ### Step 2: LSP Integration
 
 Add Pyright as a language server. 
-Started with a WebSocket bridge prototype, then migrated to a Web Worker (`src/worker/pyright-worker.ts`) — Pyright runs entirely in the browser.
+Started with a WebSocket bridge prototype, then migrated to a Web Worker
+(`packages/pyright-worker/src/pyright-worker.ts`) — Pyright runs entirely in the browser.
 Implemented three LSP features: 
  - real-time diagnostics (errors/warnings as you type),
  - autocompletion (context-aware suggestions with type-based icons),
@@ -161,7 +170,8 @@ he transport-agnostic client design meant the migration from WebSocket to Web Wo
 ### Phase 3: MicroPython Stubs
 
 Added board-specific MicroPython type stubs including a simple port/board selector UI (ESP32, RP2040, STM32). 
-Created packing scripts (`scripts/pack-stubs.mjs`) that zip per-board stubs from the installed `micropython-*-stubs` packages. 
+Created `scripts/pack-stubs.py` to zip per-board stubs from the installed
+`micropython-*-stubs` packages.
 The worker loads these stubs into a ZenFS virtual filesystem alongside typeshed.
 
 **Key challenge:** Stub loading and board switching. 
@@ -202,7 +212,8 @@ const lspCompartment = new Compartment();
 
 ### Step 2: Add the LSP Client
 
-You need a JSON-RPC 2.0 client that speaks LSP over `postMessage` to a Web Worker. This project's client is in `src/lsp/`:
+You need a JSON-RPC 2.0 client that speaks LSP over `postMessage` to a Web Worker.
+This project's client is in `packages/lsp-client/src/`:
 
 | File | Purpose |
 |------|---------|
@@ -221,7 +232,8 @@ Pyright doesn't run in a browser out of the box. It needs to be bundled with web
 - **Stub out:** `child_process`, `worker_threads`, `@yarnpkg/fslib`, `tmp`
 - **Typeshed:** Pack the `typeshed-fallback/` directory (bundled with Pyright) as a zip, inline it via `arraybuffer-loader`
 
-See `webpack.config.cjs` and `src/worker/pyright-worker.ts` for the full configuration. The output is a single `~8MB` JS file.
+See `webpack.config.cjs` and `packages/pyright-worker/src/pyright-worker.ts` for the
+full configuration. The output is a single `~9MB` JS file.
 
 ### Step 4: Wire CodeMirror to the LSP Client
 

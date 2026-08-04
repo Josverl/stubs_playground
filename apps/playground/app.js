@@ -37,12 +37,20 @@ import {
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { lintKeymap, setDiagnostics } from '@codemirror/lint';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
-import { createLSPClient, createLSPPlugin, switchBoard } from './lsp/client.js';
-import { getWorkerUrlCached } from './lsp/worker-config.js';
 import { restoreFromUrl } from './share-core.js';
 import { initShareDropdown, initReportIssueButton } from './share-ui.js';
-//import { notifyDocumentChange, notifyDocumentOpen, updateDiagnosticsStatus, lintKeymapExtension, getWorkspaceDiagnostics } from './lsp/diagnostics.js';
-import { notifyDocumentChange, notifyDocumentOpen, lintKeymapExtension, removeWorkspaceDiagnosticsFor, getWorkspaceDiagnostics } from './lsp/diagnostics.js';
+import {
+    componentAssetsBase,
+    createLSPClient,
+    createLSPPlugin,
+    getWorkerUrl,
+    notifyDocumentChange,
+    notifyDocumentOpen,
+    lintKeymapExtension,
+    removeWorkspaceDiagnosticsFor,
+    getWorkspaceDiagnostics,
+    switchBoard,
+} from './component-source.js';
 import { updateDiagnosticsStatus, refreshWorkspaceDiagnosticsStatus } from './diagnostics-status.js';
 import { OPFSProject } from './storage/opfs-project.js';
 import { DocumentManager } from './editor/document-manager.js';
@@ -267,36 +275,45 @@ function setLSPControlsDisabled(disabled) {
 async function restartLSPWithCurrentSettings(boardId) {
     if (!lspClient || !lspTransport) return;
 
-    const stubs = await fetchBoardStubs(boardId);
-    const activePath = docManager?.activeFile || documentUri.replace('file:///workspace/', '');
-    const activeContent = view ? view.state.doc.toString() : null;
-    const workspaceFiles = await collectWorkspaceFiles(activePath, activeContent);
+    window.__lspReady = false;
+    try {
+        const stubs = await fetchBoardStubs(boardId);
+        const activePath = docManager?.activeFile || documentUri.replace('file:///workspace/', '');
+        const activeContent = view ? view.state.doc.toString() : null;
+        const workspaceFiles = await collectWorkspaceFiles(activePath, activeContent);
 
-    const result = await switchBoard(
-        { client: lspClient, transport: lspTransport },
-        {
-            workerUrl: getWorkerUrlCached(),
-            timeout: 15000,
-            boardStubs: stubs,
-            workspaceFiles,
-            typeCheckingMode: currentTypeCheckMode,
-            typeshedPath: currentTypeshedPath,
-            pythonVersion: currentPythonVersion,
-            verboseOutput: currentVerboseOutput,
-            extraStubPackages: getExtraStubPackagesPayload(),
-            extraPaths: getExtraPaths(),
+        const result = await switchBoard(
+            { client: lspClient, transport: lspTransport },
+            {
+                workerUrl: getWorkerUrl(),
+                timeout: 15000,
+                boardStubs: stubs,
+                workspaceFiles,
+                typeCheckingMode: currentTypeCheckMode,
+                typeshedPath: currentTypeshedPath,
+                pythonVersion: currentPythonVersion,
+                verboseOutput: currentVerboseOutput,
+                extraStubPackages: getExtraStubPackagesPayload(),
+                extraPaths: getExtraPaths(),
+            }
+        );
+
+        lspClient = result.client;
+        lspTransport = result.transport;
+
+        if (docManager) {
+            updateDiagnosticsStatus([], pyrightVersion, getSelectedStubsStatusLabel());
+            documentVersions.clear();
+            const activeUri = `file:///workspace/${docManager.activeFile}`;
+            await syncWorkspaceToLSP({ openDocuments: false, activeUri, workspaceFiles });
+            rebindLSPAllViews();
         }
-    );
-
-    lspClient = result.client;
-    lspTransport = result.transport;
-
-    if (docManager) {
-        updateDiagnosticsStatus([], pyrightVersion, getSelectedStubsStatusLabel());
-        documentVersions.clear();
-        const activeUri = `file:///workspace/${docManager.activeFile}`;
-        await syncWorkspaceToLSP({ openDocuments: false, activeUri, workspaceFiles });
-        rebindLSPAllViews();
+        window.__activeLspBoard = boardId;
+        window.__lspFailed = false;
+        window.__lspReady = true;
+    } catch (error) {
+        window.__lspFailed = true;
+        throw error;
     }
 }
 
@@ -606,17 +623,11 @@ function scheduleActiveDocumentRefresh(activeUri, content) {
     }, STARTUP_REANALYZE_DELAY_MS);
 }
 
-// Resolve base path for assets (stubs, manifest)
-function getAssetsBase() {
-    return window.location.pathname.includes('/src/') ? '../assets' : './assets';
-}
-
 // Fetch board stubs manifest and populate the board selector
 async function initBoardSelector() {
     const select = document.getElementById('boardSelect');
     try {
-        const base = getAssetsBase();
-        const resp = await fetch(`${base}/stubs-manifest.json`);
+        const resp = await fetch(`${componentAssetsBase}/stubs-manifest.json`);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         boardManifest = await resp.json();
         const selectableBoards = (boardManifest.boards || []).filter((b) => b.id !== 'stdlib');
@@ -669,8 +680,7 @@ async function fetchBoardStubs(boardId) {
         return false;
     }
 
-    const base = getAssetsBase();
-    const resp = await fetch(`${base}/${board.file}`);
+    const resp = await fetch(`${componentAssetsBase}/${board.file}`);
     if (!resp.ok) throw new Error(`Failed to fetch stubs for ${boardId}: HTTP ${resp.status}`);
     const data = await resp.arrayBuffer();
     stubsCache.set(boardId, data);
@@ -1496,10 +1506,24 @@ async function initializeEditor() {
     // Wire Export / Import buttons
     initExportImport();
 
-    // If loaded from a shareable link, clear URL params
+    // Remove consumed share state while retaining unrelated runtime options.
     if (hasSharedPayload) {
-        const cleanUrl = window.location.pathname + window.location.hash;
-        window.history.replaceState(null, '', cleanUrl);
+        const cleanUrl = new URL(window.location.href);
+        for (const name of [
+            'project',
+            'code',
+            'board',
+            'typeCheckMode',
+            'stdlib',
+            'pythonVersion',
+        ]) {
+            cleanUrl.searchParams.delete(name);
+        }
+        window.history.replaceState(
+            null,
+            '',
+            `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`,
+        );
     }
 
     console.log('CodeMirror Python Editor initialized successfully!');
@@ -1533,7 +1557,7 @@ function startEarlyLSPInit() {
             console.log('Creating LSP client in background...');
 
             const lspResult = await createLSPClient({
-                workerUrl: getWorkerUrlCached(),
+                workerUrl: getWorkerUrl(),
                 timeout: 15000,
                 boardStubs: undefined, // Use bundled stubs initially
                 // Start with an empty workspace so worker creation is not
@@ -1860,10 +1884,10 @@ document.body.classList.add('light-theme');
 initOptionsPanel();
 installWorkerDebugHelpers();
 
-// Set header icon src using the correct assets base path
+// Set header icon from application-owned assets.
 const headerIcon = document.getElementById('headerIcon');
 if (headerIcon) {
-    const base = getAssetsBase();
+    const base = './assets';
     const iconCandidates = [
         `${base}/stubs_playground_s.png`,
         `${base}/stubs_playground_w.png`,
