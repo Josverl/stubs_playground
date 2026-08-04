@@ -45,6 +45,79 @@ rebuild:
     npm install --ignore-scripts
     npx webpack --mode production
 
+# request the first immutable LSP client CDN tag from the current commit
+release-cdn-lsp-client: (_release-cdn "lsp-client" "src/lsp/package.json")
+
+# request the first immutable Pyright worker CDN tag from the current commit
+release-cdn-pyright-worker: (_release-cdn "pyright-worker" "src/worker/package.json")
+
+[private]
+[script("uv", "run", "python")]
+_release-cdn component package_json:
+    from __future__ import annotations
+
+    import json
+    import re
+    import subprocess
+    from pathlib import Path
+
+    component = "{{component}}"
+    manifest_name = "{{package_json}}"
+    if component not in {"lsp-client", "pyright-worker"}:
+        raise SystemExit(f"Invalid CDN component: {component}")
+
+    manifest = Path(manifest_name)
+    if not manifest.is_file():
+        raise SystemExit(f"Component manifest not found: {manifest}")
+
+    def git(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", *args],
+            check=check,
+            text=True,
+            capture_output=True,
+        )
+
+    if git("status", "--short").stdout:
+        raise SystemExit("Refusing to release with uncommitted changes.")
+
+    branch = git("branch", "--show-current").stdout.strip()
+    if not branch:
+        raise SystemExit("Refusing to release from a detached HEAD.")
+
+    version = json.loads(manifest.read_text(encoding="utf-8"))["version"]
+    if not isinstance(version, str) or not re.fullmatch(
+        r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", version
+    ):
+        raise SystemExit(f"Invalid version {version!r} in {manifest}.")
+
+    final_tag = f"{component}-v{version}"
+    request_tag = f"cdn-release/{component}/{version}"
+    for tag, message in (
+        (final_tag, f"Final tag {final_tag} already exists and is immutable."),
+        (request_tag, f"Request tag {request_tag} already exists."),
+    ):
+        result = git(
+            "ls-remote",
+            "--exit-code",
+            "--tags",
+            "origin",
+            f"refs/tags/{tag}",
+            check=False,
+        )
+        if result.returncode == 0:
+            raise SystemExit(message)
+        if result.returncode != 2:
+            raise SystemExit(result.stderr.strip() or f"Unable to query remote tag {tag}.")
+
+    short_sha = git("rev-parse", "--short", "HEAD").stdout.strip()
+    print(f"Requesting {final_tag} from {branch} at {short_sha}...", flush=True)
+    subprocess.run(
+        ["git", "push", "origin", f"HEAD:refs/tags/{request_tag}"],
+        check=True,
+    )
+    print("Release requested. Follow the 'Release CDN component' workflow in GitHub Actions.")
+
 # format Python code with ruff
 format:
     ruff format tests/

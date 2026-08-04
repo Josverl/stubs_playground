@@ -44,29 +44,23 @@ https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.1.0/dist/
 ### Cutting the first tags before merging
 
 GitHub only permits `workflow_dispatch` after a workflow exists on the default branch.
-For the first pre-merge release, push the workflow's bootstrap request tags from the
-feature branch:
+For the first pre-merge release, check out the feature branch with a clean worktree and
+run:
 
 ```bash
-git fetch origin
-
-git tag cdn-release/lsp-client/0.1.0 \
-  origin/copilot/publish-tier-1-components
-git push origin cdn-release/lsp-client/0.1.0
-
-git tag cdn-release/pyright-worker/0.1.0 \
-  origin/copilot/publish-tier-1-components
-git push origin cdn-release/pyright-worker/0.1.0
+just release-cdn-lsp-client
+just release-cdn-pyright-worker
 ```
 
-Each request tag runs the workflow from that exact PR commit. On success, the workflow
+Each recipe reads the version from the component manifest and pushes the current commit
+directly as a temporary request tag without creating a local tag. Each request tag then
+runs the workflow from that exact commit. On success, the workflow
 creates `lsp-client-v0.1.0` or `pyright-worker-v0.1.0`, then deletes its temporary
 `cdn-release/...` request tag. If a run fails before cleanup, delete that request tag
-locally and remotely before retrying it:
+from the remote before retrying it:
 
 ```bash
 git push origin --delete cdn-release/<component>/<version>
-git tag -d cdn-release/<component>/<version>
 ```
 
 Request-tag deletion events are ignored by the release job.
