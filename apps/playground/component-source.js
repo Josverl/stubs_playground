@@ -1,6 +1,6 @@
 const CDN_REPOSITORY = 'Josverl/stubs_playground';
-const CDN_CLIENT_TAG = 'lsp-client-v0.1.0';
-const CDN_WORKER_TAG = 'pyright-worker-v0.1.0';
+const CDN_CLIENT_TAG = 'lsp-client-v0.2.0';
+const CDN_WORKER_TAG = 'pyright-worker-v0.2.0';
 
 const params = new URLSearchParams(window.location.search);
 const requestedSource = params.get('components') || 'local';
@@ -13,9 +13,12 @@ const cdnUrl = (tag, path) =>
 
 const sourceConfig = requestedSource === 'cdn'
     ? {
-        clientUrl: cdnUrl(CDN_CLIENT_TAG, 'src/lsp/index.js'),
-        workerUrl: cdnUrl(CDN_WORKER_TAG, 'dist/pyright_worker.js'),
-        assetsBase: cdnUrl(CDN_WORKER_TAG, 'assets'),
+        clientUrl: cdnUrl(CDN_CLIENT_TAG, 'packages/lsp-client/src/index.js'),
+        workerUrl: cdnUrl(
+            CDN_WORKER_TAG,
+            'packages/pyright-worker/dist/pyright_worker.js',
+        ),
+        assetsBase: cdnUrl(CDN_WORKER_TAG, 'packages/pyright-worker/assets'),
         clientVersion: CDN_CLIENT_TAG,
         workerVersion: CDN_WORKER_TAG,
     }
@@ -57,8 +60,7 @@ export const {
     getWorkspaceDiagnostics,
 } = lsp;
 
-// v0.1.0 did not yet expose this optional keymap from its public entry point.
-export const lintKeymapExtension = lsp.lintKeymapExtension ?? [];
+export const { lintKeymapExtension } = lsp;
 
 export const componentSource = Object.freeze({
     mode: requestedSource,

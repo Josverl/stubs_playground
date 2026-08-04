@@ -539,7 +539,7 @@ independently.
 | 4.8 | Decompose `share.js` utility/UI layers | Small | No | ✅ Done — no further `share-core.js` split planned |
 | 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | ✅ Done — direct renderer browser coverage |
 | — | Prepare CDN publication (Option B) | Workflow + docs + harness | n/a | ✅ Implemented and locally validated |
-| — | Cut and verify first immutable CDN tags | Release operation | n/a | ✅ Done — both `v0.1.0` tags are live and the tagged-CDN harness passes |
+| — | Cut and verify immutable CDN tags | Release operation | n/a | ✅ Done — both coherent `v0.2.0` package-layout tags are live and the tagged-CDN harness passes |
 | — | Publish to npm (Option A, when ready) | One-off CI setup | n/a | Deferred |
 
 The completed refactors are additive or internal cleanups. Remaining downstream integration
@@ -553,12 +553,12 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 
 | Phase | Implementation state | Verification state |
 |---|---|---|
-| 1. Artifact delivery and immutable tags | Release workflow creates independent tags and a tag-only worker artifact commit. Manual dispatch supports explicitly selected branches after the workflow reaches the default branch. Temporary `cdn-release/<component>/<version>` request tags bootstrap pre-merge releases directly from a PR commit and are removed after success. | Both bootstrap workflows succeeded. `lsp-client-v0.1.0` points to source commit `794939c`; `pyright-worker-v0.1.0` points to its tag-only artifact commit. Both immutable tags are live through jsDelivr. |
+| 1. Artifact delivery and immutable tags | Release workflow creates independent tags and a tag-only worker artifact commit. Manual dispatch supports explicitly selected branches after the workflow reaches the default branch. Temporary `cdn-release/<component>/<version>` request tags bootstrap pre-merge releases directly from a PR commit and are removed after success. | `lsp-client-v0.2.0` and `pyright-worker-v0.2.0` are live through jsDelivr with the workspace package paths. |
 | 2. Public `lsp-client` surface | Public entry point exists; app-specific worker URL detection has been removed from the reusable import graph; consumers must pass `workerUrl`; all public exports have complete JSDoc contracts. | JavaScript unit coverage verifies explicit URL validation and preservation. TypeScript declaration emission from the JSDoc succeeds. |
 | 3. Consumer contract | Import map, Blob worker shim, explicit board-stub loading, protocol declarations, and executable editor wiring are documented. | Local standalone harness exercises public exports, diagnostics, completion, hover, and explicit ESP32/RP2 bundles. TypeScript resolves the worker protocol from both package root and `./messages`. The same public contract passes against the immutable CDN tags. |
 | 4. Release automation | Manual workflow validates semver/package versions and worker protocol declaration freshness, builds and verifies the worker, commits artifacts only into the tagged tree, pushes an immutable tag, and warms jsDelivr. | Both first-release workflow runs succeeded and removed their temporary request tags. |
 | 5. Documentation | README links to a detailed CDN consumer guide and this plan. Publication status now distinguishes release-ready code from live tags. `Josverl/stubs_playground` is the canonical CDN repository. | Examples are covered indirectly by the standalone harness. |
-| 6. Real consumer validation | Harness supports local and tagged-CDN modes and detects local component fallback requests. | Chromium tagged mode passed against `lsp-client-v0.1.0` and `pyright-worker-v0.1.0`: diagnostics, completion, hover, ESP32 stubs, and zero local component fallbacks. |
+| 6. Real consumer validation | The real playground and standalone harness support local and tagged-CDN modes and detect local component fallback requests. | Chromium CDN mode passed against `lsp-client-v0.2.0` and `pyright-worker-v0.2.0` using only `packages/...` paths. |
 
 ### Verified evidence
 
@@ -572,7 +572,7 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 - Share utility/UI split: 7/7 JavaScript unit tests and 22/22 Chromium tests passed.
 - Python unit suite: 14/14 passed.
 - Standalone Chromium harness: diagnostics, completion, hover, ESP32 stubs, and RP2 stubs passed.
-- Immutable tagged-CDN Chromium harness: passed against both `v0.1.0` tags with diagnostics,
+- Immutable tagged-CDN Chromium harness: passed against both `v0.2.0` tags with diagnostics,
   completion, hover, ESP32 stubs, and zero local component fallbacks.
 - jsDelivr responses for the client entry point and worker bundle return HTTP 200 with
   cross-origin access and immutable one-year caching.

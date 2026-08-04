@@ -95,7 +95,7 @@ packages/pyright-worker/  Worker source, built bundle, and board assets
 ```
 
 Run `just serve` to use workspace packages, or `just serve cdn` to run the same
-application against the published immutable `v0.1.0` component tags. The source switch
+application against the published immutable `v0.2.0` component tags. The source switch
 is isolated in `apps/playground/component-source.js`; application code uses the same
 public package API in both modes.
 
