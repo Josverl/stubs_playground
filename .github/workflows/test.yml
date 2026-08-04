@@ -39,6 +39,9 @@ jobs:
       - name: Run Python unit tests
         run: uv run pytest -m unit -v || test $? -eq 5
 
+      - name: Verify generated component config
+        run: node scripts/generate-component-config.mjs --check
+
       - name: Run JavaScript unit tests
         run: node --test tests/*.unit.mjs
 
@@ -95,6 +98,7 @@ jobs:
           for path in \
             ci-deploy/index.html \
             ci-deploy/apps/playground/index.html \
+            ci-deploy/apps/playground/component-config.generated.js \
             ci-deploy/apps/playground/component-source.js \
             ci-deploy/packages/lsp-client/src/index.js \
             ci-deploy/packages/pyright-worker/dist/pyright_worker.js \

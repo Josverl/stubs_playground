@@ -246,7 +246,10 @@ See [`apps/playground/app.js`](../apps/playground/app.js) for a complete integra
 (board switching, multi-file workspace, status bar),
 [`apps/playground/component-source.js`](../apps/playground/component-source.js) for the
 local/CDN boundary, and [`tests/cdn-harness.html`](../tests/cdn-harness.html) for a
-minimal standalone harness that loads only the public API.
+minimal standalone harness that loads only the public API. The playground pins both
+component versions as exact dependencies in `apps/playground/package.json`. Run
+`npm run generate:component-config` after changing those dependencies; CI rejects a
+stale generated browser configuration.
 
 ---
 

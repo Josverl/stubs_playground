@@ -61,7 +61,7 @@ For me that was a hill to climb - and I failed in earlier (manual) attempts due 
 
 So that is where I "hired some AI Agents" to do that part of the work for me.
 
-As for the limited UX design - that is proably me tough.
+As for the limited UX design - that is probably me though.
 
 ## Reusing the LSP components (CDN)
 
@@ -95,9 +95,11 @@ packages/pyright-worker/  Worker source, built bundle, and board assets
 ```
 
 Run `just serve` to use workspace packages, or `just serve cdn` to run the same
-application against the published immutable `v0.2.0` component tags. The source switch
-is isolated in `apps/playground/component-source.js`; application code uses the same
-public package API in both modes.
+application against the published immutable component tags. The playground owns its exact
+component versions in `apps/playground/package.json`; `npm run generate:component-config`
+turns that package metadata into the browser configuration. The local/CDN switch remains
+isolated in `apps/playground/component-source.js`, so application code uses the same public
+package API in both modes.
 
 ## License
 

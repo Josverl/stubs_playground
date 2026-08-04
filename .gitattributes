@@ -3,3 +3,6 @@
 .squad/agents/*/history.md merge=union
 .squad/log/** merge=union
 .squad/orchestration-log/** merge=union
+
+# Generated config must compare byte-for-byte on every development platform.
+apps/playground/component-config.generated.js text eol=lf

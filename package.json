@@ -11,6 +11,8 @@
     "build:worker": "webpack --mode production",
     "build:worker:dev": "webpack --mode development",
     "build:typeshed": "uv run scripts/pack-typeshed.py",
+    "generate:component-config": "node scripts/generate-component-config.mjs",
+    "check:component-config": "node scripts/generate-component-config.mjs --check",
     "check:worker-protocol-types": "node scripts/check-worker-protocol-types.mjs",
     "test:unit:completion": "node --test tests/test_completion*.unit.mjs"
   },

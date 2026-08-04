@@ -1,6 +1,4 @@
-const CDN_REPOSITORY = 'Josverl/stubs_playground';
-const CDN_CLIENT_TAG = 'lsp-client-v0.2.0';
-const CDN_WORKER_TAG = 'pyright-worker-v0.2.0';
+import { componentConfig } from './component-config.generated.js';
 
 const params = new URLSearchParams(window.location.search);
 const requestedSource = params.get('components') || 'local';
@@ -9,18 +7,21 @@ if (!['local', 'cdn'].includes(requestedSource)) {
 }
 
 const cdnUrl = (tag, path) =>
-    `https://cdn.jsdelivr.net/gh/${CDN_REPOSITORY}@${tag}/${path}`;
+    `https://cdn.jsdelivr.net/gh/${componentConfig.repository}@${tag}/${path}`;
 
 const sourceConfig = requestedSource === 'cdn'
     ? {
-        clientUrl: cdnUrl(CDN_CLIENT_TAG, 'packages/lsp-client/src/index.js'),
+        clientUrl: cdnUrl(componentConfig.lspClient.tag, componentConfig.lspClient.entry),
         workerUrl: cdnUrl(
-            CDN_WORKER_TAG,
-            'packages/pyright-worker/dist/pyright_worker.js',
+            componentConfig.pyrightWorker.tag,
+            componentConfig.pyrightWorker.worker,
         ),
-        assetsBase: cdnUrl(CDN_WORKER_TAG, 'packages/pyright-worker/assets'),
-        clientVersion: CDN_CLIENT_TAG,
-        workerVersion: CDN_WORKER_TAG,
+        assetsBase: cdnUrl(
+            componentConfig.pyrightWorker.tag,
+            componentConfig.pyrightWorker.assets,
+        ),
+        clientVersion: componentConfig.lspClient.tag,
+        workerVersion: componentConfig.pyrightWorker.tag,
     }
     : {
         clientUrl: new URL('../../packages/lsp-client/src/index.js', import.meta.url).href,
