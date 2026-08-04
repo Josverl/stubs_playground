@@ -175,6 +175,7 @@ serve source="local":
     from __future__ import annotations
 
     import subprocess
+    import socket
     import sys
     import time
     import urllib.error
@@ -182,23 +183,35 @@ serve source="local":
     import webbrowser
 
     source = {{quote(source)}}
-    urls = {
-        "local": "http://localhost:8888/apps/playground/?components=local",
-        "cdn": "http://localhost:8888/apps/playground/?components=cdn",
-    }
-    if source not in urls:
+    if source not in {"local", "cdn"}:
         raise SystemExit("source must be either 'local' or 'cdn'")
 
+    port = None
+    for candidate in range(8888, 8988):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            try:
+                probe.bind(("", candidate))
+            except OSError:
+                continue
+            port = candidate
+            break
+    if port is None:
+        raise SystemExit("No free HTTP port found in range 8888-8987.")
+
+    base_url = f"http://localhost:{port}/apps/playground/"
+    url = f"{base_url}?components={source}"
     process = subprocess.Popen(
-        [sys.executable, "tests/http_server.py", "8888", "."],
+        [sys.executable, "tests/http_server.py", str(port), "."],
+        stderr=subprocess.PIPE,
+        text=True,
     )
     try:
-        server_url = "http://localhost:8888/apps/playground/index.html"
+        server_url = f"{base_url}index.html"
         for _ in range(50):
             if process.poll() is not None:
-                raise SystemExit(
-                    f"HTTP server exited before startup with code {process.returncode}"
-                )
+                error = process.stderr.read().strip() if process.stderr else ""
+                detail = error.rsplitlines()[-1] if error else "no error details"
+                raise SystemExit(f"HTTP server failed to start on port {port}: {detail}")
             try:
                 with urllib.request.urlopen(server_url, timeout=0.2) as response:
                     if response.status == 200:
@@ -208,7 +221,6 @@ serve source="local":
         else:
             raise SystemExit("HTTP server did not become ready within 5 seconds")
 
-        url = urls[source]
         print(f"Opening {source} source: {url}", flush=True)
         if not webbrowser.open(url):
             print(f"Open this URL in your browser: {url}", flush=True)
