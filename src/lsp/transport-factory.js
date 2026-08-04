@@ -5,12 +5,11 @@
  */
 
 import { WorkerTransport } from './worker-transport.js';
-import { getWorkerUrlCached } from './worker-config.js';
 
 /**
  * Create an LSP transport.
  * @param {Object} options
- * @param {string} [options.workerUrl] - Worker script URL (auto-detected if omitted)
+ * @param {string} options.workerUrl - Worker script URL
  * @param {ArrayBuffer} [options.boardStubs] - Board-specific stubs data
  * @param {Object.<string, string>} [options.workspaceFiles] - Project files to preload into /workspace
  * @param {string} [options.typeCheckingMode] - Pyright type checking mode
@@ -22,7 +21,10 @@ import { getWorkerUrlCached } from './worker-config.js';
  * @returns {WorkerTransport}
  */
 export function createTransport(options = {}) {
-    const url = options.workerUrl || getWorkerUrlCached();
+    const url = options.workerUrl;
+    if (!url) {
+        throw new TypeError('createTransport requires options.workerUrl');
+    }
     console.log(`Creating Worker transport → ${url}`);
     return new WorkerTransport(url, {
         boardStubs: options.boardStubs,

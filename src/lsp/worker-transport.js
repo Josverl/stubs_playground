@@ -6,12 +6,11 @@
  * internally so SimpleLSPClient only sees LSP JSON-RPC messages.
  */
 
-import { getWorkerUrlCached } from './worker-config.js';
-
 export class WorkerTransport {
-    constructor(workerUrl = null, options = {}) {
-        // Use centralized worker URL resolution if not explicitly provided
-        this.workerUrl = workerUrl || getWorkerUrlCached();
+    constructor(workerUrl, options = {}) {
+        if (!workerUrl) {
+            throw new TypeError('WorkerTransport requires a workerUrl');
+        }
         this.workerUrl = workerUrl;
         this.worker = null;
         this.messageHandlers = [];

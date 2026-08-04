@@ -47,6 +47,23 @@
     <div id="status">initializing…</div>
     <div id="editor"></div>
 
+    <script>
+        window.__lspReady = false;
+        window.__lspFailed = false;
+        window.__diagnostics = [];
+        window.__completionLabels = [];
+        window.__hover = null;
+
+        function recordStartupFailure(error) {
+            if (window.__lspReady) return;
+            window.__lspFailed = true;
+            window.__lspError = String(error?.stack || error?.message || error);
+        }
+
+        window.addEventListener('error', (event) => recordStartupFailure(event.error || event.message));
+        window.addEventListener('unhandledrejection', (event) => recordStartupFailure(event.reason));
+    </script>
+
     <script type="module">
         import { EditorView, basicSetup } from 'codemirror';
         import { Compartment } from '@codemirror/state';
@@ -73,20 +90,48 @@
             ? makeSameOriginWorkerUrl(cdn(params.get('workerTag') || 'pyright-worker-v0.1.0', 'dist/pyright_worker.js'))
             : '../dist/pyright_worker.js';
 
-        // Deterministic type error so diagnostics are guaranteed to appear.
-        const INITIAL = 'x: int = "not an int"\n';
+        const sourceMode = {
+            client: params.get('client') === 'cdn' ? 'cdn' : 'local',
+            worker: params.get('worker') === 'cdn' ? 'cdn' : 'local',
+        };
+
+        async function loadBoardStubs(board) {
+            if (!board || board === 'default') {
+                return undefined;
+            }
+            if (board === 'cpython') {
+                return false;
+            }
+
+            const base = sourceMode.worker === 'cdn'
+                ? cdn(params.get('workerTag') || 'pyright-worker-v0.1.0', 'assets')
+                : '../assets';
+            const response = await fetch(`${base}/stubs-${board}.zip`);
+            if (!response.ok) {
+                throw new Error(`Failed to load ${board} stubs: HTTP ${response.status}`);
+            }
+            return response.arrayBuffer();
+        }
+
+        // Includes a deterministic type error plus MicroPython symbols for
+        // completion and hover probes.
+        const INITIAL = [
+            'import machine',
+            'pin = machine.Pin(2, machine.Pin.OUT)',
+            'x: int = "not an int"',
+            '',
+        ].join('\n');
         const FILE_URI = 'file:///workspace/main.py';
 
         // Signals consumed by the Playwright test.
-        window.__lspReady = false;
-        window.__lspFailed = false;
-        window.__diagnostics = [];
+        window.__board = params.get('board') || 'default';
 
         try {
             const lsp = await import(clientUrl);
             window.__publicExports = Object.keys(lsp).sort();
 
-            const { client, pyrightVersion } = await lsp.createLSPClient({ workerUrl });
+            const boardStubs = await loadBoardStubs(window.__board);
+            const { client, pyrightVersion } = await lsp.createLSPClient({ workerUrl, boardStubs });
 
             const lspCompartment = new Compartment();
             const view = new EditorView({
@@ -100,16 +145,35 @@
                     lsp.createLSPPlugin(client, view, {
                         fileUri: FILE_URI,
                         initialContent: INITIAL,
-                        onDiagnosticsChange: (diags) => {
+                        onDiagnosticsChange: async (diags) => {
                             window.__diagnostics = diags || [];
                             setStatus(`Pyright ${pyrightVersion || '?'} — ${window.__diagnostics.length} diagnostic(s)`);
+
+                            if (window.__probesStarted || window.__diagnostics.length === 0) {
+                                return;
+                            }
+                            window.__probesStarted = true;
+
+                            const completion = await client.request('textDocument/completion', {
+                                textDocument: { uri: FILE_URI },
+                                position: { line: 1, character: 14 },
+                                context: { triggerKind: 2, triggerCharacter: '.' },
+                            });
+                            const completionItems = completion?.items || completion || [];
+                            window.__completionLabels = completionItems.map((item) => item.label);
+
+                            window.__hover = await client.request('textDocument/hover', {
+                                textDocument: { uri: FILE_URI },
+                                position: { line: 1, character: 15 },
+                            });
+                            window.__probesComplete = true;
                         },
                     }),
                 ),
             });
 
             window.__lspReady = true;
-            setStatus(`LSP ready — Pyright ${pyrightVersion || '?'} (client: ${clientUrl.startsWith('http') ? 'CDN' : 'local'}, worker: ${params.get('worker') === 'cdn' ? 'CDN' : 'local'})`);
+            setStatus(`LSP ready — Pyright ${pyrightVersion || '?'} (client: ${sourceMode.client}, worker: ${sourceMode.worker}, board: ${window.__board})`);
         } catch (err) {
             window.__lspFailed = true;
             window.__lspError = String(err && err.stack ? err.stack : err);

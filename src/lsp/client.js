@@ -15,7 +15,7 @@ import { createTransport } from './transport-factory.js';
 /**
  * Create and initialize an LSP client
  * @param {Object} config - Configuration options
- * @param {string} [config.workerUrl] - Worker script URL
+ * @param {string} config.workerUrl - Worker script URL
  * @param {number} [config.timeout=5000] - Request timeout in ms
  * @param {ArrayBuffer} [config.boardStubs] - Board stubs zip (undefined = use bundled default)
  * @param {Object.<string, string>} [config.workspaceFiles] - Project files to preload into /workspace

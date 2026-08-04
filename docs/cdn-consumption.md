@@ -1,7 +1,7 @@
 # Reusing these components (CDN)
 
-This repository publishes two independently versioned, framework-agnostic building
-blocks so other CodeMirror 6 editors — starting with
+This repository prepares two independently versioned, framework-agnostic building
+blocks for publication so other CodeMirror 6 editors — starting with
 [Josverl/ViperIDE](https://github.com/Josverl/ViperIDE) — can embed in-browser
 Python/MicroPython type checking without npm, a bundler, or a server.
 
@@ -14,6 +14,10 @@ Distribution follows **Option B — CDN-only** from
 [`component-reusability-plan.md`](./component-reusability-plan.md): consumers pin an
 **immutable git tag** and load files through [jsDelivr](https://www.jsdelivr.com/).
 No npm publishing is involved.
+
+> **Publication status:** the release workflow and consumer contract are implemented,
+> but the first `lsp-client-v0.1.0` and `pyright-worker-v0.1.0` tags have not yet been
+> cut. The versioned URLs below become live after those immutable tags are published.
 
 > **TODO — repository rename.** The CDN URLs below use `Josverl/stubs_playground`.
 > This repository will be renamed to **`mp_codemirror`** in the future; when that
@@ -97,9 +101,9 @@ Public exports (see [`src/lsp/index.js`](../src/lsp/index.js) for the full surfa
 - Hover: `createHoverTooltip`
 - Markdown/RST rendering: `renderMarkdown`, `processInline`, `renderBlocks`
 
-> `worker-config.js` is intentionally **not** part of the public surface — its worker
-> URL auto-detection is specific to this app's directory layout. Consumers pass an
-> explicit `workerUrl` (see §3).
+> `worker-config.js` is intentionally **not** part of the public module graph — its
+> worker URL auto-detection is specific to this app's directory layout. Consumers
+> must pass an explicit `workerUrl` (see §3).
 
 ---
 
@@ -163,6 +167,7 @@ Pass `boardStubs: false` for a CPython-only (no MicroPython stubs) configuration
 
 ```js
 import { EditorView, basicSetup } from 'https://esm.sh/codemirror@6.0.1';
+import { Compartment } from '@codemirror/state';
 import { python } from '@codemirror/lang-python'; // add to the import map too
 import { createLSPClient, createLSPPlugin } from '@mp-codemirror/lsp-client';
 
@@ -170,14 +175,15 @@ const workerUrl = makeSameOriginWorkerUrl(WORKER_CDN_URL); // from §3
 
 const { client, pyrightVersion } = await createLSPClient({ workerUrl });
 
+const lspCompartment = new Compartment();
 const view = new EditorView({
   doc: 'import machine\nled = machine.Pin(2, machine.Pin.OUT)\n',
   parent: document.querySelector('#editor'),
-  extensions: [basicSetup, python()],
+  extensions: [basicSetup, python(), lspCompartment.of([])],
 });
 
 view.dispatch({
-  effects: /* your LSP compartment */ .reconfigure(
+  effects: lspCompartment.reconfigure(
     createLSPPlugin(client, view, {
       fileUri: 'file:///workspace/main.py',
       initialContent: view.state.doc.toString(),
