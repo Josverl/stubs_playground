@@ -2,5 +2,12 @@
   "name": "@mp-codemirror/playground",
   "version": "0.2.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@mp-codemirror/lsp-client": "0.2.0",
+    "@mp-codemirror/pyright-worker": "0.2.0"
+  },
+  "componentCdn": {
+    "repository": "Josverl/stubs_playground"
+  }
 }

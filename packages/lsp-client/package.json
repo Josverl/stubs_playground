@@ -9,6 +9,10 @@
       "import": "./src/index.js"
     }
   },
+  "cdn": {
+    "tagPrefix": "lsp-client-v",
+    "entry": "packages/lsp-client/src/index.js"
+  },
   "sideEffects": false,
   "peerDependencies": {
     "@codemirror/autocomplete": "^6.0.0",

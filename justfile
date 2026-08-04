@@ -20,11 +20,13 @@ setup:
 
 # build the Pyright web worker (production)
 build:
+    npm run generate:component-config
     just pack
     npx webpack --mode production
 
 # build the Pyright web worker (development, with source maps)
 build-dev:
+    npm run generate:component-config
     npx webpack --mode development
 
 # pack Pyright's typeshed-fallback into a zip for browser use
@@ -43,6 +45,7 @@ pack:
 # rebuild everything from scratch
 rebuild:
     npm install --ignore-scripts
+    npm run generate:component-config
     npx webpack --mode production
 
 # stage the static GitHub Pages tree
@@ -51,12 +54,18 @@ stage-pages output="deploy":
     from __future__ import annotations
 
     import shutil
+    import subprocess
     from pathlib import Path
 
     root = Path.cwd().resolve()
     destination = (root / {{quote(output)}}).resolve()
     if destination == root or root not in destination.parents:
         raise SystemExit("Output directory must be a child of the repository root.")
+
+    subprocess.run(
+        ["node", "scripts/generate-component-config.mjs", "--check"],
+        check=True,
+    )
 
     sources = (
         ("index.html", "index.html"),
@@ -185,6 +194,11 @@ serve source="local":
     source = {{quote(source)}}
     if source not in {"local", "cdn"}:
         raise SystemExit("source must be either 'local' or 'cdn'")
+
+    subprocess.run(
+        ["node", "scripts/generate-component-config.mjs"],
+        check=True,
+    )
 
     port = None
     for candidate in range(8888, 8988):

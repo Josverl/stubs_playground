@@ -438,7 +438,10 @@ component-local metadata for the independently versioned CDN components:
 ```
 mp_codemirror/
   apps/
-    playground/             ← application
+    playground/
+      package.json          ← application dependency versions + CDN repository
+      component-source.js   ← runtime local/CDN selector
+      component-config.generated.js
   packages/
     lsp-client/
       package.json          ← library metadata + peerDeps
@@ -452,7 +455,10 @@ mp_codemirror/
 
 The root manifest remains necessary for `npm ci`, webpack, and local development. The release
 workflow validates the version from each component manifest, keeping the client and worker version
-streams independent without duplicating the root build dependency graph.
+streams independent without duplicating the root build dependency graph. The playground declares
+exact component versions in its own manifest. `scripts/generate-component-config.mjs` combines
+those dependencies with component-owned CDN paths into a checked browser configuration, leaving
+the runtime source selector free of manually maintained release versions.
 
 ### 4.6 Add JSDoc type annotations to public API functions
 
@@ -558,7 +564,7 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 | 3. Consumer contract | Import map, Blob worker shim, explicit board-stub loading, protocol declarations, and executable editor wiring are documented. | Local standalone harness exercises public exports, diagnostics, completion, hover, and explicit ESP32/RP2 bundles. TypeScript resolves the worker protocol from both package root and `./messages`. The same public contract passes against the immutable CDN tags. |
 | 4. Release automation | Manual workflow validates semver/package versions and worker protocol declaration freshness, builds and verifies the worker, commits artifacts only into the tagged tree, pushes an immutable tag, and warms jsDelivr. | Both first-release workflow runs succeeded and removed their temporary request tags. |
 | 5. Documentation | README links to a detailed CDN consumer guide and this plan. Publication status now distinguishes release-ready code from live tags. `Josverl/stubs_playground` is the canonical CDN repository. | Examples are covered indirectly by the standalone harness. |
-| 6. Real consumer validation | The real playground and standalone harness support local and tagged-CDN modes and detect local component fallback requests. | Chromium CDN mode passed against `lsp-client-v0.2.0` and `pyright-worker-v0.2.0` using only `packages/...` paths. |
+| 6. Real consumer validation | The real playground and standalone harness support local and tagged-CDN modes and detect local component fallback requests. Playground dependency versions are manifest-owned and its browser CDN configuration is generated and checked for drift. | Chromium CDN mode passed against `lsp-client-v0.2.0` and `pyright-worker-v0.2.0` using only `packages/...` paths. |
 
 ### Verified evidence
 

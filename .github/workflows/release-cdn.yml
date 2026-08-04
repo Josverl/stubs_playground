@@ -126,6 +126,9 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Verify generated playground component config
+        run: node scripts/generate-component-config.mjs --check
+
       - name: Verify LSP client release tree
         if: steps.meta.outputs.component == 'lsp-client'
         run: |

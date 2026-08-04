@@ -70,6 +70,7 @@ jobs:
           for path in \
             deploy/index.html \
             deploy/apps/playground/index.html \
+            deploy/apps/playground/component-config.generated.js \
             deploy/apps/playground/component-source.js \
             deploy/packages/lsp-client/src/index.js \
             deploy/packages/pyright-worker/dist/pyright_worker.js \
