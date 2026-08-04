@@ -15,7 +15,7 @@ Distribution follows **Option B — CDN-only** from
 **immutable git tag** and load files through [jsDelivr](https://www.jsdelivr.com/).
 No npm publishing is involved.
 
-> **Publication status:** `lsp-client-v0.1.0` and `pyright-worker-v0.1.0` are published
+> **Publication status:** `lsp-client-v0.2.0` and `pyright-worker-v0.2.0` are published
 > and verified through jsDelivr. The tagged-CDN browser harness passes without local
 > component fallbacks.
 
@@ -28,9 +28,9 @@ continue to use that owner/repository segment.
 
 The two components version **independently**:
 
-- `lsp-client-v0.1.0`, `lsp-client-v0.2.0`, … — pure source, tagged directly on the
+- `lsp-client-v0.2.0`, `lsp-client-v0.3.0`, … — pure source, tagged directly on the
   commit; no build step.
-- `pyright-worker-v0.1.0`, … — the tag's tree additionally carries the built
+- `pyright-worker-v0.2.0`, … — the tag's tree additionally carries the built
   `packages/pyright-worker/dist/pyright_worker.js` (which is git-ignored on `main`).
 
 Tags are **immutable** — a published version is never moved. Consumers should always
@@ -40,11 +40,6 @@ pin an exact tag, never a branch:
 https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.0/packages/lsp-client/src/index.js
 https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/dist/pyright_worker.js
 ```
-
-> **Path compatibility:** the published `v0.1.0` tags predate the workspace layout and
-> permanently retain their original `src/lsp/`, `dist/`, and `assets/` URL paths. The
-> playground's CDN mode currently pins those verified tags. New releases starting with
-> `v0.2.0` use the `packages/...` paths shown above.
 
 ### Cutting tags before merging
 
@@ -79,16 +74,16 @@ component tags are permanent releases: do not delete or move them after verifica
 If verification fails, fix the branch, bump the affected component version, and cut a
 new immutable component tag.
 
-For example, the first tags were verified before merging with:
+Verify the current tags before merging with:
 
 ```bash
 curl -fI \
-  https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.1.0/src/lsp/index.js
+  https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.0/packages/lsp-client/src/index.js
 curl -fI \
-  https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.1.0/dist/pyright_worker.js
+  https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/dist/pyright_worker.js
 
-MP_CODEMIRROR_CDN_CLIENT_TAG=lsp-client-v0.1.0 \
-MP_CODEMIRROR_CDN_WORKER_TAG=pyright-worker-v0.1.0 \
+MP_CODEMIRROR_CDN_CLIENT_TAG=lsp-client-v0.2.0 \
+MP_CODEMIRROR_CDN_WORKER_TAG=pyright-worker-v0.2.0 \
 uv run pytest \
   tests/test_cdn_harness.py::test_tagged_cdn_consumer_has_no_local_component_fallbacks \
   -v
@@ -98,8 +93,8 @@ The worker package's `assets/*.zip` stub/typeshed files are committed on every t
 CDN-servable from the same tag:
 
 ```
-https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.1.0/assets/stubs-manifest.json
-https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.1.0/assets/stubs-esp32.zip
+https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-manifest.json
+https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-esp32.zip
 ```
 
 ### Why not GitHub Release assets?
@@ -128,7 +123,7 @@ work together:
 <script type="importmap">
 {
   "imports": {
-    "@mp-codemirror/lsp-client": "https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.1.0/src/lsp/index.js",
+    "@mp-codemirror/lsp-client": "https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.0/packages/lsp-client/src/index.js",
 
     "@codemirror/state": "https://esm.sh/@codemirror/state@6.6.0",
     "@codemirror/view": "https://esm.sh/@codemirror/view@6.41.1?deps=@codemirror/state@6.6.0",
@@ -168,7 +163,7 @@ the real CDN URL, then pass the resulting object URL to `createTransport`/`creat
 
 ```js
 const WORKER_CDN_URL =
-  'https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.1.0/dist/pyright_worker.js';
+  'https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/dist/pyright_worker.js';
 
 // Same-origin shim so the browser allows constructing the Worker.
 function makeSameOriginWorkerUrl(remoteUrl) {
@@ -203,11 +198,11 @@ To offer board switching (ESP32, STM32, CircuitPython, SAMD, …):
 
 1. Fetch the manifest to discover available boards and their zip filenames:
    ```
-   https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.1.0/assets/stubs-manifest.json
+   https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-manifest.json
    ```
 2. Fetch the selected board's zip as an `ArrayBuffer`:
    ```
-   https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.1.0/assets/stubs-<board>.zip
+   https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-<board>.zip
    ```
 3. Supply it via `createTransport({ boardStubs })` / `createLSPClient({ boardStubs })`,
    or call `switchBoard(current, { …, boardStubs })` to rebuild the worker with the new

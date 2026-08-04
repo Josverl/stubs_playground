@@ -93,28 +93,31 @@ def test_full_playground_cdn_mode_uses_published_components(
     assert state["failed"] is False
     assert state["activeBoard"] == "esp32"
     assert state["source"]["mode"] == "cdn"
-    assert state["source"]["clientVersion"] == "lsp-client-v0.1.0"
-    assert state["source"]["workerVersion"] == "pyright-worker-v0.1.0"
+    assert state["source"]["clientVersion"] == "lsp-client-v0.2.0"
+    assert state["source"]["workerVersion"] == "pyright-worker-v0.2.0"
     assert "Pyright" in state["status"]
     assert any("/apps/playground/app.js" in url for url in requests)
     assert any(
-        "@lsp-client-v0.1.0/src/lsp/index.js" in url for url in requests
-    )
-    assert any(
-        "@pyright-worker-v0.1.0/dist/pyright_worker.js" in url for url in requests
-    )
-    assert any(
-        "@pyright-worker-v0.1.0/assets/stubs-manifest.json" in url
+        "@lsp-client-v0.2.0/packages/lsp-client/src/index.js" in url
         for url in requests
     )
     assert any(
-        "@pyright-worker-v0.1.0/assets/stubs-esp32.zip" in url for url in requests
+        "@pyright-worker-v0.2.0/packages/pyright-worker/dist/pyright_worker.js" in url
+        for url in requests
+    )
+    assert any(
+        "@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-manifest.json" in url
+        for url in requests
+    )
+    assert any(
+        "@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-esp32.zip" in url
+        for url in requests
     )
     for suffix in (
-        "@lsp-client-v0.1.0/src/lsp/index.js",
-        "@pyright-worker-v0.1.0/dist/pyright_worker.js",
-        "@pyright-worker-v0.1.0/assets/stubs-manifest.json",
-        "@pyright-worker-v0.1.0/assets/stubs-esp32.zip",
+        "@lsp-client-v0.2.0/packages/lsp-client/src/index.js",
+        "@pyright-worker-v0.2.0/packages/pyright-worker/dist/pyright_worker.js",
+        "@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-manifest.json",
+        "@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-esp32.zip",
     ):
         matching = [status for url, status in responses.items() if suffix in url]
         assert matching and all(status == 200 for status in matching), (
