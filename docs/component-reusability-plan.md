@@ -543,7 +543,7 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 
 | Phase | Implementation state | Verification state |
 |---|---|---|
-| 1. Artifact delivery and immutable tags | Release workflow creates independent tags and a tag-only worker artifact commit. Dispatch input is passed through environment variables and releases are restricted to the default branch. | Workflow build commands match the deployed production path. No real release run or tag exists yet, so tag immutability and jsDelivr propagation remain unverified in production. |
+| 1. Artifact delivery and immutable tags | Release workflow creates independent tags and a tag-only worker artifact commit. Manual dispatch supports explicitly selected branches after the workflow reaches the default branch. Temporary `cdn-release/<component>/<version>` request tags bootstrap pre-merge releases directly from a PR commit and are removed after success. | Workflow build commands match the deployed production path. No real release run or tag exists yet, so tag immutability and jsDelivr propagation remain unverified in production. |
 | 2. Public `lsp-client` surface | Public entry point exists; app-specific worker URL detection has been removed from the reusable import graph; consumers must pass `workerUrl`; all public exports have complete JSDoc contracts. | JavaScript unit coverage verifies explicit URL validation and preservation. TypeScript declaration emission from the JSDoc succeeds. |
 | 3. Consumer contract | Import map, Blob worker shim, explicit board-stub loading, protocol declarations, and executable editor wiring are documented. | Local standalone harness exercises public exports, diagnostics, completion, hover, and explicit ESP32/RP2 bundles. TypeScript resolves the worker protocol from both package root and `./messages`. Real CDN URLs remain untestable until tags exist. |
 | 4. Release automation | Manual workflow validates semver/package versions and worker protocol declaration freshness, builds and verifies the worker, commits artifacts only into the tagged tree, pushes an immutable tag, and warms jsDelivr. | Production webpack build and declaration/package-resolution checks succeed locally. The workflow itself has not been dispatched because doing so publishes a tag. |
@@ -575,9 +575,11 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 
 ### Remaining tasks and gaps
 
-1. Merge PR #64, then dispatch both `0.1.0` releases from `main`.
-2. Verify jsDelivr response bodies, CORS behavior, Blob worker startup, two board bundles, and
+1. Push both `cdn-release/<component>/0.1.0` bootstrap request tags from the PR branch,
+   then verify jsDelivr response bodies,
+   CORS behavior, Blob worker startup, two board bundles, and
    absence of local fallbacks using the immutable tags.
+2. Merge PR #64 after the tagged-CDN verification passes.
 3. Wire the tagged-CDN harness into a scheduled/manual post-release CI job; the current test is
    present but skipped unless tag environment variables are supplied.
 4. Integrate the verified pinned URLs into ViperIDE.
