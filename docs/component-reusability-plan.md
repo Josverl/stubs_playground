@@ -313,6 +313,12 @@ formal contract.
 Start with **Option B** (CDN-only from a tagged release) to collect feedback with zero overhead.
 Move to **Option A** (npm) only when there are real consumers who need semver + toolchain integration.
 
+> **Implemented:** Option B is now realized. Two independently versioned components are
+> served from jsDelivr at immutable tags (`lsp-client-v*`, `pyright-worker-v*`), cut by the
+> [`Release CDN component`](../.github/workflows/release-cdn.yml) workflow. The consumer
+> integration contract (import map, cross-origin worker Blob shim, pinned peer-dep versions,
+> stub loading) lives in [`cdn-consumption.md`](./cdn-consumption.md).
+
 ---
 
 ## 4. Changes required to this project
@@ -486,12 +492,13 @@ independently.
 | 4.2 | Remove `window.lspClients` global; refactor to options object | Small | No | ✅ Done |
 | 4.3 | Add unsubscribe return to `onNotification` | Trivial | No | ✅ Done |
 | 4.4 | Create `src/lsp/index.js` entry point | Trivial | No | ✅ Done |
-| 4.5 | Separate `package.json` files | Small | No | Not started |
-| 4.6 | Complete JSDoc annotations | Medium | No | Not started |
-| 4.7 | Document worker protocol in README | Small | No | Not started |
+| 4.5 | Separate `package.json` files | Small | No | Partial — `src/lsp/package.json` + `src/worker/package.json` exist; root webpack `package.json` not relocated |
+| 4.6 | Complete JSDoc annotations | Medium | No | ✅ Done |
+| 4.7 | Document worker protocol in README | Small | No | ✅ Done |
 | 4.8 | Decompose `share.js` (optional) | Small | No | Not started |
 | 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | ✅ Done |
-| — | Publish to npm (when ready) | One-off CI setup | n/a | Deferred |
+| — | Publish via CDN (Option B) | Workflow + docs | n/a | ✅ Done |
+| — | Publish to npm (Option A, when ready) | One-off CI setup | n/a | Deferred |
 
 None of the required changes alter existing behaviour; they are purely additive or internal
 cleanups. The app can be refactored incrementally — each item above can be merged independently.

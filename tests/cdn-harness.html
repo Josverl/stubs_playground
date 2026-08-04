@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mp-codemirror — CDN consumer harness</title>
+    <!--
+      Minimal standalone harness that embeds the reusable LSP components using
+      ONLY the public API (@mp-codemirror/lsp-client + the Pyright worker).
+      It deliberately does not import app.js, ui/, storage/, or share.js.
+
+      Sources are switchable via query params so the same page validates both
+      local files (default, used by CI before a tag exists) and the published
+      CDN tags:
+
+        ?client=cdn&clientTag=lsp-client-v0.1.0
+        ?worker=cdn&workerTag=pyright-worker-v0.1.0
+        ?repo=Josverl/stubs_playground   (override owner/repo, e.g. after rename)
+
+      See docs/cdn-consumption.md for the full integration contract.
+    -->
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 0; }
+        #status { padding: 6px 10px; font: 13px/1.4 monospace; background: #f3f3f3; border-bottom: 1px solid #ddd; }
+        #editor { height: 60vh; }
+        .cm-editor { height: 100%; }
+    </style>
+
+    <!-- Peer dependencies for @mp-codemirror/lsp-client and the editor host.
+         Versions mirror src/index.html. The lsp-client module imports these
+         bare specifiers; the consumer supplies them via this import map. -->
+    <script type="importmap">
+    {
+        "imports": {
+            "codemirror": "https://esm.sh/codemirror@6.0.1?deps=@codemirror/state@6.6.0,@codemirror/view@6.41.1",
+            "@codemirror/lang-python": "https://esm.sh/@codemirror/lang-python@6.2.1?deps=@codemirror/autocomplete@6.20.1,@codemirror/language@6.12.3,@codemirror/state@6.6.0,@codemirror/view@6.41.1,@lezer/common@1.5.2,@lezer/python@1.1.18",
+            "@codemirror/autocomplete": "https://esm.sh/@codemirror/autocomplete@6.20.1?deps=@codemirror/language@6.12.3,@codemirror/state@6.6.0,@codemirror/view@6.41.1,@lezer/common@1.5.2",
+            "@codemirror/language": "https://esm.sh/@codemirror/language@6.12.3?deps=@codemirror/state@6.6.0,@codemirror/view@6.41.1,@lezer/common@1.5.2",
+            "@codemirror/lint": "https://esm.sh/@codemirror/lint@6.9.5?deps=@codemirror/state@6.6.0,@codemirror/view@6.41.1",
+            "@codemirror/state": "https://esm.sh/@codemirror/state@6.6.0",
+            "@codemirror/view": "https://esm.sh/@codemirror/view@6.41.1?deps=@codemirror/state@6.6.0"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="status">initializing…</div>
+    <div id="editor"></div>
+
+    <script type="module">
+        import { EditorView, basicSetup } from 'codemirror';
+        import { Compartment } from '@codemirror/state';
+        import { python } from '@codemirror/lang-python';
+
+        const params = new URLSearchParams(location.search);
+        const repo = params.get('repo') || 'Josverl/stubs_playground';
+        const cdn = (tag, path) => `https://cdn.jsdelivr.net/gh/${repo}@${tag}/${path}`;
+        const statusEl = document.getElementById('status');
+        const setStatus = (msg) => { statusEl.textContent = msg; };
+
+        // Resolve the LSP client module URL (local by default, CDN on request).
+        const clientUrl = params.get('client') === 'cdn'
+            ? cdn(params.get('clientTag') || 'lsp-client-v0.1.0', 'src/lsp/index.js')
+            : '../src/lsp/index.js';
+
+        // Resolve the worker URL. A cross-origin (CDN) worker must be wrapped in
+        // a same-origin Blob that importScripts() the remote bundle.
+        function makeSameOriginWorkerUrl(remoteUrl) {
+            const shim = `importScripts(${JSON.stringify(remoteUrl)});`;
+            return URL.createObjectURL(new Blob([shim], { type: 'application/javascript' }));
+        }
+        const workerUrl = params.get('worker') === 'cdn'
+            ? makeSameOriginWorkerUrl(cdn(params.get('workerTag') || 'pyright-worker-v0.1.0', 'dist/pyright_worker.js'))
+            : '../dist/pyright_worker.js';
+
+        // Deterministic type error so diagnostics are guaranteed to appear.
+        const INITIAL = 'x: int = "not an int"\n';
+        const FILE_URI = 'file:///workspace/main.py';
+
+        // Signals consumed by the Playwright test.
+        window.__lspReady = false;
+        window.__lspFailed = false;
+        window.__diagnostics = [];
+
+        try {
+            const lsp = await import(clientUrl);
+            window.__publicExports = Object.keys(lsp).sort();
+
+            const { client, pyrightVersion } = await lsp.createLSPClient({ workerUrl });
+
+            const lspCompartment = new Compartment();
+            const view = new EditorView({
+                doc: INITIAL,
+                parent: document.getElementById('editor'),
+                extensions: [basicSetup, python(), lspCompartment.of([])],
+            });
+
+            view.dispatch({
+                effects: lspCompartment.reconfigure(
+                    lsp.createLSPPlugin(client, view, {
+                        fileUri: FILE_URI,
+                        initialContent: INITIAL,
+                        onDiagnosticsChange: (diags) => {
+                            window.__diagnostics = diags || [];
+                            setStatus(`Pyright ${pyrightVersion || '?'} — ${window.__diagnostics.length} diagnostic(s)`);
+                        },
+                    }),
+                ),
+            });
+
+            window.__lspReady = true;
+            setStatus(`LSP ready — Pyright ${pyrightVersion || '?'} (client: ${clientUrl.startsWith('http') ? 'CDN' : 'local'}, worker: ${params.get('worker') === 'cdn' ? 'CDN' : 'local'})`);
+        } catch (err) {
+            window.__lspFailed = true;
+            window.__lspError = String(err && err.stack ? err.stack : err);
+            setStatus(`LSP failed: ${err}`);
+            console.error('Harness LSP init failed:', err);
+        }
+    </script>
+</body>
+</html>
