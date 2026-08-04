@@ -2,6 +2,31 @@
  * Pure completion helpers shared by runtime code and unit tests.
  */
 
+/**
+ * @typedef {Object} LSPCompletionItem
+ * @property {string} label - Display label.
+ * @property {number} [kind] - LSP `CompletionItemKind`.
+ * @property {string} [detail] - Additional signature/type detail.
+ * @property {string|{value: string}} [documentation] - Plain or markup documentation.
+ * @property {string} [insertText] - Text inserted when selected.
+ * @property {boolean} [preselect] - Whether the server prefers this item.
+ */
+
+/**
+ * @typedef {Object} CodeMirrorCompletionOption
+ * @property {string} label - Display label.
+ * @property {string} type - CodeMirror completion icon/type name.
+ * @property {string} detail - Additional signature/type detail.
+ * @property {string} info - Documentation text.
+ * @property {string} apply - Text inserted when selected.
+ * @property {number} boost - Relative ranking boost.
+ */
+
+/**
+ * LSP `CompletionItemKind` numeric constants.
+ *
+ * @type {Readonly<Record<string, number>>}
+ */
 export const CompletionItemKind = {
     Text: 1,
     Method: 2,
@@ -36,6 +61,9 @@ const DUNDER_PENALTY = 120;
 
 /**
  * Convert LSP CompletionItemKind to CodeMirror completion type.
+ *
+ * @param {number|undefined} kind - LSP completion kind.
+ * @returns {string} CodeMirror completion type name.
  */
 export function kindToType(kind) {
     switch (kind) {
@@ -67,6 +95,12 @@ export function kindToType(kind) {
     }
 }
 
+/**
+ * Check whether a completion label is a Python dunder name.
+ *
+ * @param {unknown} label - Completion label candidate.
+ * @returns {boolean} Whether the label starts and ends with two underscores.
+ */
 export function isDunderLabel(label) {
     return typeof label === 'string' && /^__.+__$/.test(label);
 }
@@ -79,6 +113,9 @@ function docToInfo(documentation) {
 
 /**
  * Convert LSP CompletionItem to CodeMirror completion option.
+ *
+ * @param {LSPCompletionItem} item - LSP completion item.
+ * @returns {CodeMirrorCompletionOption} Normalized CodeMirror option.
  */
 export function convertCompletionItem(item) {
     const base = LSP_BASE_BOOST + (item.preselect ? PRESELECT_BONUS : 0);
@@ -94,6 +131,14 @@ export function convertCompletionItem(item) {
     };
 }
 
+/**
+ * Compute the CodeMirror replacement start for a matched completion token.
+ *
+ * For dotted access, only the suffix after the final dot is replaced.
+ *
+ * @param {{text: string, from: number}} word - CodeMirror token match.
+ * @returns {number} Absolute document offset at which replacement begins.
+ */
 export function computeCompletionFrom(word) {
     const dotIndex = word.text.lastIndexOf('.');
     return dotIndex >= 0 ? word.from + dotIndex + 1 : word.from;
@@ -126,6 +171,9 @@ function compareOptions(a, b) {
 
 /**
  * Deduplicate completion options and return them sorted by relevance.
+ *
+ * @param {CodeMirrorCompletionOption[]} options - Completion options to normalize.
+ * @returns {CodeMirrorCompletionOption[]} New deduplicated, ranked array.
  */
 export function dedupeAndSortCompletionOptions(options) {
     const bestByKey = new Map();

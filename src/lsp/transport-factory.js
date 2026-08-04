@@ -8,20 +8,25 @@ import { WorkerTransport } from './worker-transport.js';
 
 /**
  * Create an LSP transport.
- * @param {Object} options
- * @param {string} options.workerUrl - Worker script URL
- * @param {ArrayBuffer} [options.boardStubs] - Board-specific stubs data
- * @param {Object.<string, string>} [options.workspaceFiles] - Project files to preload into /workspace
- * @param {string} [options.typeCheckingMode] - Pyright type checking mode
- * @param {string} [options.typeshedPath] - Pyright typeshedPath
- * @param {string} [options.pythonVersion] - Pyright pythonVersion
- * @param {boolean} [options.verboseOutput] - Pyright verboseOutput
- * @param {Array<{packageName: string, files: Object.<string, string>}>} [options.extraStubPackages]
- * @param {string[]} [options.extraPaths]
- * @returns {WorkerTransport}
+ *
+ * @param {Object} options - Worker initialization options.
+ * @param {string} options.workerUrl - Worker script or Blob URL.
+ * @param {ArrayBuffer|false} [options.boardStubs] - Board-specific stubs zip,
+ *   `false` to disable board stubs, or `undefined` for the bundled default.
+ * @param {Object.<string, string>} [options.workspaceFiles] - Project files to
+ *   preload into `/workspace`, keyed by workspace-relative path.
+ * @param {string} [options.typeCheckingMode] - Pyright type-checking mode.
+ * @param {string} [options.typeshedPath] - Absolute worker-VFS typeshed path.
+ * @param {string} [options.pythonVersion] - Python version in `X.Y` format.
+ * @param {boolean} [options.verboseOutput] - Enable verbose Pyright output.
+ * @param {Array<{packageName: string, files: Object.<string, string>}>}
+ *   [options.extraStubPackages] - Additional type-only stub packages.
+ * @param {string[]} [options.extraPaths] - Absolute extra import search paths.
+ * @returns {WorkerTransport} Unconnected worker transport.
+ * @throws {TypeError} If `options.workerUrl` is missing.
  */
-export function createTransport(options = {}) {
-    const url = options.workerUrl;
+export function createTransport(options) {
+    const url = options?.workerUrl;
     if (!url) {
         throw new TypeError('createTransport requires options.workerUrl');
     }

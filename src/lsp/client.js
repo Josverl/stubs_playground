@@ -13,22 +13,54 @@ import { SimpleLSPClient } from './simple-client.js';
 import { createTransport } from './transport-factory.js';
 
 /**
- * Create and initialize an LSP client
- * @param {Object} config - Configuration options
- * @param {string} config.workerUrl - Worker script URL
- * @param {number} [config.timeout=5000] - Request timeout in ms
- * @param {ArrayBuffer} [config.boardStubs] - Board stubs zip (undefined = use bundled default)
- * @param {Object.<string, string>} [config.workspaceFiles] - Project files to preload into /workspace
- * @param {string} [config.typeCheckingMode] - Pyright type checking mode
- * @param {string} [config.typeshedPath] - Pyright typeshedPath
- * @param {string} [config.pythonVersion] - Pyright pythonVersion
- * @param {boolean} [config.verboseOutput] - Pyright verboseOutput
- * @param {Array<{packageName: string, files: Object.<string, string>}>} [config.extraStubPackages]
- * @param {string[]} [config.extraPaths] - Absolute extra import search paths
- * @returns {Promise<{client: SimpleLSPClient, transport: WorkerTransport, pyrightVersion: string}>}
- *   The connected client, its transport, and the detected Pyright version.
+ * @typedef {Object} LSPClientConfig
+ * @property {string} workerUrl - Worker script URL.
+ * @property {number} [timeout=5000] - Request timeout in milliseconds.
+ * @property {ArrayBuffer|false} [boardStubs] - Board stubs zip; `false` disables
+ *   board stubs and `undefined` uses the worker's bundled default.
+ * @property {Object.<string, string>} [workspaceFiles] - Project files to preload
+ *   into `/workspace`, keyed by workspace-relative path.
+ * @property {string} [typeCheckingMode] - Pyright type-checking mode.
+ * @property {string} [typeshedPath] - Absolute worker-VFS typeshed path.
+ * @property {string} [pythonVersion] - Python version in `X.Y` format.
+ * @property {boolean} [verboseOutput] - Enable verbose Pyright output.
+ * @property {Array<{packageName: string, files: Object.<string, string>}>}
+ *   [extraStubPackages] - Additional type-only stub packages.
+ * @property {string[]} [extraPaths] - Absolute extra import search paths.
  */
-export async function createLSPClient(config = {}) {
+
+/**
+ * @typedef {Object} LSPClientResult
+ * @property {SimpleLSPClient} client - Initialized LSP client.
+ * @property {import('./worker-transport.js').WorkerTransport} transport -
+ *   Connected worker transport.
+ * @property {string} pyrightVersion - Detected Pyright version, or an empty
+ *   string when the worker does not report one.
+ */
+
+/**
+ * @typedef {Object} LSPPluginOptions
+ * @property {string} [fileUri='file:///workspace/document.py'] - Document URI.
+ * @property {string} [languageId='python'] - LSP language identifier.
+ * @property {string} [initialContent=''] - Initial document text.
+ * @property {(diagnostics: Array<{uri: string, fileName: string, line: number,
+ *   character: number, message: string, severity: string}>) => void}
+ *   [onDiagnosticsChange] - Receives a snapshot of workspace diagnostics.
+ */
+
+/**
+ * Create and initialize an LSP client.
+ *
+ * @param {LSPClientConfig} config - Worker and Pyright configuration.
+ * @returns {Promise<LSPClientResult>} Connected client, transport, and version.
+ * @throws {TypeError} If `config.workerUrl` is missing.
+ * @throws {Error} If worker creation, worker initialization, or the LSP
+ *   initialization handshake fails.
+ */
+export async function createLSPClient(config) {
+    if (!config?.workerUrl) {
+        throw new TypeError('createLSPClient requires config.workerUrl');
+    }
     const transport = createTransport({
         workerUrl: config.workerUrl,
         boardStubs: config.boardStubs,
@@ -62,15 +94,17 @@ export async function createLSPClient(config = {}) {
 }
 
 /**
- * Create an LSP plugin extension for an editor
- * @param {SimpleLSPClient} client - LSP client instance
- * @param {EditorView} view - CodeMirror editor view
- * @param {Object} [options={}] - Configuration options
- * @param {string} [options.fileUri='file:///workspace/document.py'] - Document URI
- * @param {string} [options.languageId='python'] - Document language ID
- * @param {string} [options.initialContent=''] - Initial document content
- * @param {(diagnostics: Array) => void} [options.onDiagnosticsChange] - Callback for diagnostics updates
- * @returns {Extension[]} CodeMirror extension array
+ * Create CodeMirror extensions that connect an editor document to an LSP client.
+ *
+ * Calling this function sends `textDocument/didOpen` immediately. The caller is
+ * responsible for installing the returned extensions and for managing their
+ * lifecycle when a document or editor is replaced.
+ *
+ * @param {SimpleLSPClient} client - Connected LSP client.
+ * @param {import('@codemirror/view').EditorView} view - Target editor view.
+ * @param {LSPPluginOptions} [options={}] - Document and callback options.
+ * @returns {import('@codemirror/state').Extension[]} CodeMirror extensions for
+ *   diagnostics, completion, and hover.
  */
 export function createLSPPlugin(client, view, options = {}) {
     const {
@@ -108,12 +142,21 @@ export function createLSPPlugin(client, view, options = {}) {
 }
 
 /**
- * Switch board stubs by tearing down and rebuilding the LSP worker.
- * Re-opens all tracked documents with fresh diagnostics.
+ * Switch board stubs by tearing down the current worker and creating a new one.
  *
- * @param {Object} current - Current { client, transport } from createLSPClient
- * @param {Object} config - Same config as createLSPClient, with new boardStubs
- * @returns {Object} New { client, transport }
+ * The caller must reconfigure each editor's LSP extension after this resolves
+ * so its documents are reopened with their current content.
+ *
+ * @param {{client: SimpleLSPClient,
+ *   transport: import('./worker-transport.js').WorkerTransport}} current -
+ *   Current client and transport.
+ * @param {LSPClientConfig} config - New worker configuration, including the
+ *   replacement `boardStubs`.
+ * @returns {Promise<{client: SimpleLSPClient,
+ *   transport: import('./worker-transport.js').WorkerTransport}>} Replacement
+ *   client and transport.
+ * @throws {TypeError} If `config.workerUrl` is missing.
+ * @throws {Error} If the replacement worker or LSP handshake fails.
  */
 export async function switchBoard(current, config) {
     // Tear down old client and transport
@@ -135,11 +178,11 @@ export async function switchBoard(current, config) {
 }
 
 /**
- * Helper to check if LSP is available and initialized.
+ * Check whether an LSP client is connected and initialized.
  *
- * @param {SimpleLSPClient} client - LSP client instance (may be null/undefined).
- * @returns {boolean} True when the client is connected and has server capabilities.
+ * @param {SimpleLSPClient|null|undefined} client - Client to inspect.
+ * @returns {boolean} Whether server capabilities are available on a connected client.
  */
 export function isLSPReady(client) {
-    return client && client.connected && client.serverCapabilities !== null;
+    return Boolean(client && client.connected && client.serverCapabilities !== null);
 }

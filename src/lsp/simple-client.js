@@ -7,6 +7,15 @@
  */
 
 /**
+ * @typedef {Object} LSPTransport
+ * @property {(message: string) => void} send - Send a serialized JSON-RPC message.
+ * @property {(handler: (message: string) => void) => void} subscribe - Add a message handler.
+ * @property {(handler: (message: string) => void) => void} unsubscribe - Remove a message handler.
+ * @property {() => void} close - Close the underlying connection.
+ * @property {() => boolean} isConnected - Report connection state.
+ */
+
+/**
  * Simple LSP Client that handles the protocol.
  *
  * Transport-agnostic JSON-RPC 2.0 client. Pair it with any object that
@@ -31,6 +40,7 @@ export class SimpleLSPClient {
      */
     constructor(config = {}) {
         this.config = config;
+        /** @type {LSPTransport|null} */
         this.transport = null;
         this.messageId = 0;
         this.pendingRequests = new Map();
@@ -93,10 +103,10 @@ export class SimpleLSPClient {
      * Connect to the LSP server via a transport and run the `initialize`
      * handshake. The transport must already be connected.
      *
-     * @param {{ send: Function, subscribe: Function }} transport - Transport
-     *   satisfying the LSP transport interface.
+     * @param {LSPTransport} transport - Already-connected transport.
      * @returns {Promise<SimpleLSPClient>} Resolves with this client once the
      *   server has been initialized.
+     * @throws {Error} If initialization fails or times out.
      */
     async connect(transport) {
         this.transport = transport;
@@ -113,7 +123,11 @@ export class SimpleLSPClient {
     }
 
     /**
-     * Send initialize request to server
+     * Send the LSP `initialize` request and publish client configuration.
+     *
+     * @returns {Promise<void>} Resolves after capabilities are stored and the
+     *   `initialized` and configuration notifications are sent.
+     * @throws {Error} If the initialize request fails or times out.
      */
     async initialize() {
         const rootUri = this.config.rootUri || 'file:///workspace';
@@ -193,6 +207,8 @@ export class SimpleLSPClient {
      * @param {unknown} params - Method parameters.
      * @returns {Promise<unknown>} Resolves with the server result, or rejects
      *   on server error or timeout.
+     * @throws {Error} If the server returns an error, the timeout expires, or
+     *   the client is disconnected while the request is pending.
      */
     request(method, params) {
         return new Promise((resolve, reject) => {
@@ -227,6 +243,7 @@ export class SimpleLSPClient {
      * @param {string} method - LSP method name (e.g. `textDocument/didChange`).
      * @param {unknown} params - Method parameters.
      * @returns {void}
+     * @throws {TypeError} If no transport is attached.
      */
     notify(method, params) {
         const message = {
@@ -238,7 +255,12 @@ export class SimpleLSPClient {
     }
 
     /**
-     * Handle incoming messages from transport
+     * Handle an incoming JSON-RPC message from the transport.
+     *
+     * Parse and handler errors are logged rather than propagated.
+     *
+     * @param {string} messageStr - Serialized JSON-RPC message.
+     * @returns {void}
      */
     handleMessage(messageStr) {
         try {
@@ -273,7 +295,11 @@ export class SimpleLSPClient {
     }
 
     /**
-     * Handle requests from the server (e.g., workspace/configuration)
+     * Handle a request from the server, such as `workspace/configuration`.
+     *
+     * @param {{id: string|number, method: string, params: unknown}} message -
+     *   Parsed JSON-RPC request.
+     * @returns {void}
      */
     handleServerRequest(message) {
         const handler = this.requestHandlers.get(message.method);
@@ -318,7 +344,13 @@ export class SimpleLSPClient {
     }
 
     /**
-     * Handle notifications from server
+     * Dispatch a server notification to subscribers and built-in log handlers.
+     *
+     * Subscriber errors are logged rather than propagated.
+     *
+     * @param {string} method - LSP notification method.
+     * @param {unknown} params - Notification parameters.
+     * @returns {void}
      */
     handleNotification(method, params) {
         console.log(`LSP notification: ${method}`, params);
@@ -349,9 +381,10 @@ export class SimpleLSPClient {
     }
 
     /**
-     * Register a message handler
-     * @param {Function} handler - Notification handler function
-     * @returns {Function} Unsubscribe function that removes this handler
+     * Register a server-notification handler.
+     *
+     * @param {(method: string, params: unknown) => void} handler - Notification handler.
+     * @returns {() => void} Idempotent unsubscribe callback.
      */
     onNotification(handler) {
         this.messageHandlers.push(handler);
@@ -362,7 +395,12 @@ export class SimpleLSPClient {
     }
 
     /**
-     * Disconnect from server
+     * Disconnect from the server and reject all pending requests.
+     *
+     * Shutdown transport errors are logged and suppressed. This method does not
+     * close the transport; callers that own it should call `transport.close()`.
+     *
+     * @returns {void}
      */
     disconnect() {
         if (this.connected) {

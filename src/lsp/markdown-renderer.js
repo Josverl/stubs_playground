@@ -284,6 +284,7 @@ export function processInline(text) {
  *
  * @param {string} text
  * @param {HTMLElement} container
+ * @returns {void}
  */
 export function renderBlocks(text, container) {
     const lines = text.split('\n');

@@ -23,6 +23,16 @@ import {
 const _workspaceDiagnostics = new Map();
 
 /**
+ * @typedef {Object} WorkspaceDiagnostic
+ * @property {string} uri - Source document URI.
+ * @property {string} fileName - Workspace-relative file name.
+ * @property {number} line - One-based start line.
+ * @property {number} character - One-based start character.
+ * @property {string} message - Diagnostic message.
+ * @property {string} severity - CodeMirror severity name.
+ */
+
+/**
  * Lint keyboard navigation extension (F8 / Shift-F8).
  * Opens the lint panel and navigates to next/previous diagnostic.
  * Uses high precedence to override basicSetup's default lintKeymap
@@ -44,22 +54,15 @@ export const lintKeymapExtension = Prec.high(keymap.of([
 ]));
 
 /**
- * Remove diagnostics for a URI from the workspace cache and optionally refresh
- * the status bar. Call this when a file is closed.
- * @param {string} fileUri
+ * Remove diagnostics for a URI from the workspace cache.
+ *
+ * @param {string} fileUri - URI whose cached diagnostics should be removed.
+ * @returns {void}
  */
 export function removeWorkspaceDiagnosticsFor(fileUri) {
     _workspaceDiagnostics.delete(fileUri);
 }
 
-/**
- * Re-render the status bar using the current workspace-level diagnostics
- * totals. Call this whenever the active document changes so the counts
- * reflect all open files rather than just the file that last triggered an
- * LSP notification.
- * @param {string} [pyrightVersion]
- * @param {string} [stubsLabel]
- */
 /**
  * Return a flat snapshot of all currently-known workspace diagnostics,
  * suitable for embedding in a GitHub issue report.
@@ -67,7 +70,7 @@ export function removeWorkspaceDiagnosticsFor(fileUri) {
  * Each entry: `{ uri, fileName, line, character, message, severity }`
  * Line and character are 1-based.
  *
- * @returns {Array<{uri: string, fileName: string, line: number, character: number, message: string, severity: string}>}
+ * @returns {WorkspaceDiagnostic[]} New array containing cached diagnostics.
  */
 export function getWorkspaceDiagnostics() {
     const result = [];
@@ -78,11 +81,14 @@ export function getWorkspaceDiagnostics() {
 }
 
 /**
- * Create a diagnostic linter that receives diagnostics from LSP
- * @param {Object} client - LSP client
- * @param {string} fileUri - Document URI
- * @param {Object} view - CodeMirror view
- * @param {(diagnostics: Array) => void} [onDiagnosticsChange] - Optional callback for app-level UI updates
+ * Create CodeMirror diagnostics integration for one LSP document.
+ *
+ * @param {import('./simple-client.js').SimpleLSPClient} client - Connected LSP client.
+ * @param {string} fileUri - Document URI.
+ * @param {import('@codemirror/view').EditorView} view - Target editor view.
+ * @param {(diagnostics: WorkspaceDiagnostic[]) => void} [onDiagnosticsChange] -
+ *   Receives a fresh workspace-level snapshot after matching publications.
+ * @returns {import('@codemirror/state').Extension[]} CodeMirror lint extensions.
  */
 export function createLSPDiagnostics(client, fileUri, view, onDiagnosticsChange = null) {
     // Listen for diagnostic notifications from the server
@@ -133,7 +139,16 @@ export function createLSPDiagnostics(client, fileUri, view, onDiagnosticsChange 
 }
 
 /**
- * Request diagnostics from the server (pull diagnostics)
+ * Request pull diagnostics when supported by the server.
+ *
+ * Request errors are logged and converted to an empty result.
+ *
+ * @param {import('./simple-client.js').SimpleLSPClient} client - Connected LSP client.
+ * @param {string} fileUri - Document URI.
+ * @param {string} documentText - Current document text, reserved for servers
+ *   that require content in future pull-diagnostic implementations.
+ * @returns {Promise<Object[]>} LSP diagnostics, or an empty array when pull
+ *   diagnostics are unsupported or fail.
  */
 export async function requestDiagnostics(client, fileUri, documentText) {
     try {
@@ -157,7 +172,14 @@ export async function requestDiagnostics(client, fileUri, documentText) {
 }
 
 /**
- * Send document change notification to trigger diagnostics
+ * Send a full-document `textDocument/didChange` notification.
+ *
+ * @param {import('./simple-client.js').SimpleLSPClient} client - Connected LSP client.
+ * @param {string} fileUri - Document URI.
+ * @param {string} content - Complete current document text.
+ * @param {number} [version=1] - Monotonically increasing document version.
+ * @returns {void}
+ * @throws {TypeError} If the client has no attached transport.
  */
 export function notifyDocumentChange(client, fileUri, content, version = 1) {
     client.notify('textDocument/didChange', {
@@ -172,7 +194,15 @@ export function notifyDocumentChange(client, fileUri, content, version = 1) {
 }
 
 /**
- * Send document open notification
+ * Send a `textDocument/didOpen` notification.
+ *
+ * @param {import('./simple-client.js').SimpleLSPClient} client - Connected LSP client.
+ * @param {string} fileUri - Document URI.
+ * @param {string} languageId - LSP language identifier.
+ * @param {string} content - Initial document text.
+ * @param {number} [version=1] - Initial document version.
+ * @returns {void}
+ * @throws {TypeError} If the client has no attached transport.
  */
 export function notifyDocumentOpen(client, fileUri, languageId, content, version = 1) {
     client.notify('textDocument/didOpen', {

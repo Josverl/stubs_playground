@@ -61,9 +61,10 @@ function createHoverContent(hover) {
 /**
  * Create LSP hover tooltip source for CodeMirror
  * 
- * @param {SimpleLSPClient} lspClient - The LSP client instance
+ * @param {import('./simple-client.js').SimpleLSPClient} lspClient - Connected LSP client.
  * @param {string} documentUri - The document URI
- * @returns {Function} CodeMirror hover tooltip source function
+ * @returns {import('@codemirror/state').Extension} CodeMirror hover extension.
+ *   LSP request and stale-position errors are logged and produce no tooltip.
  */
 export function createHoverTooltip(lspClient, documentUri) {
     return hoverTooltip(async (view, pos, side) => {
