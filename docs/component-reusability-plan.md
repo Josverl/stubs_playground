@@ -313,11 +313,13 @@ formal contract.
 Start with **Option B** (CDN-only from a tagged release) to collect feedback with zero overhead.
 Move to **Option A** (npm) only when there are real consumers who need semver + toolchain integration.
 
-> **Implemented:** Option B is now realized. Two independently versioned components are
-> served from jsDelivr at immutable tags (`lsp-client-v*`, `pyright-worker-v*`), cut by the
+> **Release-ready:** Option B is implemented in the repository. Two independently versioned
+> components will be served from jsDelivr at immutable tags (`lsp-client-v*`,
+> `pyright-worker-v*`), cut by the
 > [`Release CDN component`](../.github/workflows/release-cdn.yml) workflow. The consumer
 > integration contract (import map, cross-origin worker Blob shim, pinned peer-dep versions,
-> stub loading) lives in [`cdn-consumption.md`](./cdn-consumption.md).
+> stub loading) lives in [`cdn-consumption.md`](./cdn-consumption.md). The first public tags
+> still need to be cut before CDN publication is complete.
 
 ---
 
@@ -353,8 +355,7 @@ interleaved and must be untangled.
   `onDiagnosticsChange` callback instead of touching DOM directly.
 - Done: workspace-cache shape bug fixed (report-ready snapshots are no longer overwritten by
   CodeMirror diagnostic objects).
-- Remaining: `createLSPPlugin` still uses positional params; fold diagnostics callback into
-  the planned `LSPPluginOptions` object when task 4.2 is implemented.
+- Done: `createLSPPlugin` accepts `onDiagnosticsChange` through its options object.
 
 ### 4.2 Remove `window.lspClients` global from `client.js`
 
@@ -494,12 +495,62 @@ independently.
 | 4.3 | Add unsubscribe return to `onNotification` | Trivial | No | ✅ Done |
 | 4.4 | Create `src/lsp/index.js` entry point | Trivial | No | ✅ Done |
 | 4.5 | Separate component metadata | Small | No | ✅ Done — component manifests own release versions; root manifest remains the application build manifest |
-| 4.6 | Complete JSDoc annotations | Medium | No | ✅ Done |
-| 4.7 | Document worker protocol in README | Small | No | ✅ Done |
-| 4.8 | Decompose `share.js` (optional) | Small | No | Not started |
+| 4.6 | Complete JSDoc annotations | Medium | No | 🟡 Partial — client/simple-client improved; several exported diagnostics, completion-core, and transport methods still lack complete parameter/return/throw annotations |
+| 4.7 | Document and publish worker protocol declarations | Small | No | 🟡 Partial — `messages.ts` is documented and tagged with source, but a consumer-facing `messages.d.ts` is not generated/published |
+| 4.8 | Decompose `share.js` (optional) | Small | No | ✅ Done — `share-core.js`, `share-ui.js`, and compatibility facade exist |
 | 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | ✅ Done |
-| — | Publish via CDN (Option B) | Workflow + docs | n/a | ✅ Done |
+| — | Prepare CDN publication (Option B) | Workflow + docs + harness | n/a | ✅ Implemented and locally validated |
+| — | Cut and verify first immutable CDN tags | Release operation | n/a | Pending |
 | — | Publish to npm (Option A, when ready) | One-off CI setup | n/a | Deferred |
 
-None of the required changes alter existing behaviour; they are purely additive or internal
-cleanups. The app can be refactored incrementally — each item above can be merged independently.
+The completed refactors are additive or internal cleanups. The remaining declaration,
+documentation, release, and validation tasks can be completed independently.
+
+---
+
+## 6. CDN publication implementation and test status
+
+Status reviewed against the live `copilot/publish-tier-1-components` branch on 2026-08-04.
+
+| Phase | Implementation state | Verification state |
+|---|---|---|
+| 1. Artifact delivery and immutable tags | Release workflow creates independent tags and a tag-only worker artifact commit. Dispatch input is passed through environment variables and releases are restricted to the default branch. | Workflow build commands match the deployed production path. No real release run or tag exists yet, so tag immutability and jsDelivr propagation remain unverified in production. |
+| 2. Public `lsp-client` surface | Public entry point exists; app-specific worker URL detection has been removed from the reusable import graph; consumers must pass `workerUrl`. | JavaScript unit coverage verifies explicit URL validation and preservation. Full JSDoc coverage remains incomplete (task 4.6). |
+| 3. Consumer contract | Import map, Blob worker shim, explicit board-stub loading, protocol source, and executable editor wiring are documented. | Local standalone harness exercises public exports, diagnostics, completion, hover, and explicit ESP32/RP2 bundles. Real CDN URLs remain untestable until tags exist. |
+| 4. Release automation | Manual workflow validates semver/package versions, builds and verifies the worker, commits artifacts only into the tagged tree, pushes an immutable tag, and warms jsDelivr. | Production webpack build succeeds locally. The workflow itself has not been dispatched because doing so publishes a tag. |
+| 5. Documentation | README links to a detailed CDN consumer guide and this plan. Publication status now distinguishes release-ready code from live tags. | Examples are covered indirectly by the standalone harness; repository rename remains an explicit decision before consumers pin URLs. |
+| 6. Real consumer validation | Harness supports local and tagged-CDN modes and detects local component fallback requests. | Tagged mode is opt-in through `MP_CODEMIRROR_CDN_CLIENT_TAG` and `MP_CODEMIRROR_CDN_WORKER_TAG`; no CI job supplies them yet, and no tags exist. |
+
+### Verified evidence
+
+- Production worker build: succeeded locally; `dist/pyright_worker.js` is 9,018,033 bytes.
+- JavaScript unit suite: 35/35 passed, including explicit worker URL contract coverage.
+- Python unit suite: 14/14 passed.
+- Standalone Chromium harness: diagnostics, completion, hover, ESP32 stubs, and RP2 stubs passed;
+  the tagged-CDN case is correctly skipped until immutable tags exist.
+- Full Chromium worker tier: 38 passed and 3 skipped. Two fresh-page tests initially timed out
+  while loading esm.sh before the editor mounted, then both passed when rerun in isolation.
+- PR #64 checks: unit tests, worker build, all worker browser jobs, Chromium/Firefox editor jobs,
+  security audit, CodeQL, and all CodeQL language analyses passed.
+- PR #64 has one unrelated editor/WebKit failure:
+  `FileSystemDirectoryHandle` is unavailable in
+  `test_rename_rollback_preserves_existing_destination`; 154 other editor tests passed.
+- Exploratory Playwright MCP verification was attempted during the final audit, but the configured
+  MCP server could not start locally (process exit 127). Pytest + Playwright browser coverage above
+  completed against the same built worker.
+
+### Remaining tasks and gaps
+
+1. Complete JSDoc for every exported API and decide whether declaration generation is required
+   for the CDN-only release.
+2. Generate and publish a stable `messages.d.ts` (or explicitly revise task 4.7 to define
+   `messages.ts` as the supported TypeScript contract).
+3. Merge PR #64, then dispatch both `0.1.0` releases from `main`.
+4. Verify jsDelivr response bodies, CORS behavior, Blob worker startup, two board bundles, and
+   absence of local fallbacks using the immutable tags.
+5. Wire the tagged-CDN harness into a scheduled/manual post-release CI job; the current test is
+   present but skipped unless tag environment variables are supplied.
+6. Decide whether the repository rename to `mp_codemirror` happens before the first consumer pins
+   URLs; renaming afterward requires coordinated downstream URL changes.
+7. Integrate the verified pinned URLs into ViperIDE.
+8. Resolve or explicitly waive the unrelated WebKit OPFS test failure before merging the PR.
