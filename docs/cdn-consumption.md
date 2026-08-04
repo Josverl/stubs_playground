@@ -41,6 +41,60 @@ https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.1.0/src/lsp/i
 https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.1.0/dist/pyright_worker.js
 ```
 
+### Cutting the first tags before merging
+
+GitHub only permits `workflow_dispatch` after a workflow exists on the default branch.
+For the first pre-merge release, push the workflow's bootstrap request tags from the
+feature branch:
+
+```bash
+git fetch origin
+
+git tag cdn-release/lsp-client/0.1.0 \
+  origin/copilot/publish-tier-1-components
+git push origin cdn-release/lsp-client/0.1.0
+
+git tag cdn-release/pyright-worker/0.1.0 \
+  origin/copilot/publish-tier-1-components
+git push origin cdn-release/pyright-worker/0.1.0
+```
+
+Each request tag runs the workflow from that exact PR commit. On success, the workflow
+creates `lsp-client-v0.1.0` or `pyright-worker-v0.1.0`, then deletes its temporary
+`cdn-release/...` request tag. If a run fails before cleanup, delete that request tag
+locally and remotely before retrying it:
+
+```bash
+git push origin --delete cdn-release/<component>/<version>
+git tag -d cdn-release/<component>/<version>
+```
+
+Request-tag deletion events are ignored by the release job.
+
+After this workflow reaches the default branch, future releases can instead use
+**Actions → Release CDN component → Run workflow** and select any branch explicitly.
+
+Both paths verify that the requested version matches the selected commit's component
+manifest and record the source ref and commit in the run summary. The resulting
+component tags are permanent releases: do not delete or move them after verification.
+If verification fails, fix the branch, bump the affected component version, and cut a
+new immutable component tag.
+
+Verify the first tags before merging:
+
+```bash
+curl -fI \
+  https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.1.0/src/lsp/index.js
+curl -fI \
+  https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.1.0/dist/pyright_worker.js
+
+MP_CODEMIRROR_CDN_CLIENT_TAG=lsp-client-v0.1.0 \
+MP_CODEMIRROR_CDN_WORKER_TAG=pyright-worker-v0.1.0 \
+uv run pytest \
+  tests/test_cdn_harness.py::test_tagged_cdn_consumer_has_no_local_component_fallbacks \
+  --browser-name chromium -v
+```
+
 The `assets/*.zip` stub/typeshed files are already committed on every tag, so they are
 CDN-servable from the same tag:
 

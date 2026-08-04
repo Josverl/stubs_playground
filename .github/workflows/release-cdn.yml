@@ -8,6 +8,8 @@ name: Release CDN component
 #   - pyright-worker → tag `pyright-worker-v<version>` (carries built dist/pyright_worker.js)
 #
 # Tags are immutable: a version that already exists is never moved — cut a new one.
+# Manual dispatches may target a feature branch so a release candidate can be
+# exercised through jsDelivr before its PR is merged.
 
 on:
   workflow_dispatch:
@@ -23,16 +25,23 @@ on:
         description: Semver without prefix, e.g. 0.1.0 (must match the component package.json)
         type: string
         required: true
+  push:
+    tags:
+      # Bootstrap releases before this workflow has reached the default branch.
+      - cdn-release/lsp-client/*
+      - cdn-release/pyright-worker/*
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-cdn-${{ github.event.inputs.component }}
+  group: release-cdn-${{ github.event.inputs.component || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   release:
+    # Deleting a failed or successfully consumed request tag must not publish.
+    if: github.event_name != 'push' || github.event.deleted == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -44,18 +53,39 @@ jobs:
       - name: Resolve tag and validate inputs
         id: meta
         env:
-          COMPONENT: ${{ github.event.inputs.component }}
-          VERSION: ${{ github.event.inputs.version }}
+          EVENT_NAME: ${{ github.event_name }}
+          COMPONENT_INPUT: ${{ github.event.inputs.component }}
+          VERSION_INPUT: ${{ github.event.inputs.version }}
           RELEASE_REF: ${{ github.ref_name }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RELEASE_REF_TYPE: ${{ github.ref_type }}
+          RELEASE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          component="$COMPONENT"
-          version="$VERSION"
 
-          if [ "$RELEASE_REF" != "$DEFAULT_BRANCH" ]; then
-            echo "::error::Releases must be dispatched from the default branch ($DEFAULT_BRANCH), not $RELEASE_REF."
-            exit 1
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$RELEASE_REF_TYPE" != "branch" ]; then
+              echo "::error::Manual releases must be dispatched from a branch, not $RELEASE_REF_TYPE '$RELEASE_REF'."
+              exit 1
+            fi
+            component="$COMPONENT_INPUT"
+            version="$VERSION_INPUT"
+            source_ref="$RELEASE_REF"
+          else
+            case "$RELEASE_REF" in
+              cdn-release/lsp-client/*)
+                component='lsp-client'
+                version="${RELEASE_REF#cdn-release/lsp-client/}"
+                ;;
+              cdn-release/pyright-worker/*)
+                component='pyright-worker'
+                version="${RELEASE_REF#cdn-release/pyright-worker/}"
+                ;;
+              *)
+                echo "::error::Unsupported release request tag '$RELEASE_REF'."
+                exit 1
+                ;;
+            esac
+            source_ref="$RELEASE_REF"
           fi
 
           # Basic semver shape check (X.Y.Z with optional -prerelease).
@@ -70,8 +100,8 @@ jobs:
             *) echo "::error::Unknown component '$component'"; exit 1 ;;
           esac
 
-          # Enforce that package.json was bumped in a normal PR before tagging,
-          # so main stays the single source of truth for the version.
+          # Enforce that package.json on the selected source branch owns the
+          # version being tagged.
           pkg_version=$(node -p "require('./$pkg').version")
           if [ "$pkg_version" != "$version" ]; then
             echo "::error::$pkg version ($pkg_version) does not match input version ($version). Bump it in a PR first."
@@ -87,6 +117,8 @@ jobs:
           echo "component=$component" >> "$GITHUB_OUTPUT"
           echo "version=$version"     >> "$GITHUB_OUTPUT"
           echo "tag=$tag"             >> "$GITHUB_OUTPUT"
+          echo "source_ref=$source_ref" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node.js
         if: steps.meta.outputs.component == 'pyright-worker'
@@ -175,12 +207,20 @@ jobs:
             curl -fsSL "$url" >/dev/null || echo "::warning::jsDelivr warm failed for $p (non-fatal)"
           done
 
+      - name: Remove bootstrap request tag
+        if: github.event_name == 'push'
+        env:
+          REQUEST_TAG: ${{ github.ref_name }}
+        run: git push origin ":refs/tags/${REQUEST_TAG}"
+
       - name: Summary
         env:
           COMPONENT: ${{ steps.meta.outputs.component }}
         run: |
           {
             echo "### Released \`${{ steps.meta.outputs.tag }}\`"
+            echo ""
+            echo "Source: \`${{ steps.meta.outputs.source_ref }}\` at \`${{ steps.meta.outputs.source_sha }}\`"
             echo ""
             echo "Consumers can pin:"
             echo ""
