@@ -6,14 +6,49 @@
  * internally so SimpleLSPClient only sees LSP JSON-RPC messages.
  */
 
+/**
+ * @typedef {Object} WorkerTransportOptions
+ * @property {ArrayBuffer|false} [boardStubs] - Board stubs zip, `false` to
+ *   disable board stubs, or `undefined` to use the bundled default.
+ * @property {Object.<string, string>} [workspaceFiles] - Files to preload into
+ *   `/workspace`, keyed by workspace-relative path.
+ * @property {string} [typeCheckingMode] - Pyright type-checking mode.
+ * @property {string} [typeshedPath] - Absolute worker-VFS typeshed path.
+ * @property {string} [pythonVersion] - Python version in `X.Y` format.
+ * @property {boolean} [verboseOutput] - Enable verbose Pyright output.
+ * @property {Array<{packageName: string, files: Object.<string, string>}>}
+ *   [extraStubPackages] - Additional type-only stub packages.
+ * @property {string[]} [extraPaths] - Absolute extra import search paths.
+ */
+
+/**
+ * @typedef {Object} WorkerFsEntry
+ * @property {string} path - Absolute worker-VFS path.
+ * @property {'file'|'dir'} kind - Entry kind.
+ * @property {number} depth - Depth relative to the requested root.
+ * @property {number} [size] - File size in bytes.
+ */
+
+/**
+ * Transport that adapts a classic Web Worker to the string-based interface
+ * expected by {@link SimpleLSPClient}.
+ */
 export class WorkerTransport {
+    /**
+     * @param {string} workerUrl - Worker script or same-origin Blob URL.
+     * @param {WorkerTransportOptions} [options={}] - Worker initialization options.
+     * @throws {TypeError} If `workerUrl` is missing.
+     */
     constructor(workerUrl, options = {}) {
         if (!workerUrl) {
             throw new TypeError('WorkerTransport requires a workerUrl');
         }
         this.workerUrl = workerUrl;
+        /** @type {Worker|null} */
         this.worker = null;
+        /** @type {Array<(message: string) => void>} */
         this.messageHandlers = [];
+        /** @type {Array<(error: Error|ErrorEvent) => void>} */
         this.errorHandlers = [];
         this.connected = false;
         this._messageQueue = [];
@@ -84,6 +119,10 @@ export class WorkerTransport {
 
     /**
      * Create the worker, run the handshake, resolve when ready for LSP.
+     *
+     * @returns {Promise<void>} Resolves after `serverInitialized`.
+     * @throws {Error} If worker creation fails, initialization times out, or the
+     *   worker reports a server error.
      */
     async connect() {
         return new Promise((resolve, reject) => {
@@ -226,6 +265,11 @@ export class WorkerTransport {
 
     /**
      * Send a JSON-RPC string to the worker (parsed to object first).
+     *
+     * Invalid JSON and sends attempted while disconnected are logged and ignored.
+     *
+     * @param {string|Object} message - JSON-RPC message string or object.
+     * @returns {void}
      */
     send(message) {
         if (!this.connected || !this.worker) {
@@ -246,6 +290,9 @@ export class WorkerTransport {
 
     /**
      * Subscribe to LSP messages (matches WebSocketTransport interface).
+     *
+     * @param {(message: string) => void} handler - Receives JSON-RPC strings.
+     * @returns {void}
      */
     subscribe(handler) {
         this.messageHandlers.push(handler);
@@ -253,6 +300,9 @@ export class WorkerTransport {
 
     /**
      * Unsubscribe from messages.
+     *
+     * @param {(message: string) => void} handler - Previously subscribed handler.
+     * @returns {void}
      */
     unsubscribe(handler) {
         const idx = this.messageHandlers.indexOf(handler);
@@ -261,6 +311,9 @@ export class WorkerTransport {
 
     /**
      * Register a message handler (legacy interface).
+     *
+     * @param {(message: string) => void} handler - Receives JSON-RPC strings.
+     * @returns {void}
      */
     onMessage(handler) {
         this.messageHandlers.push(handler);
@@ -268,6 +321,9 @@ export class WorkerTransport {
 
     /**
      * Register an error handler.
+     *
+     * @param {(error: Error|ErrorEvent) => void} handler - Worker error callback.
+     * @returns {void}
      */
     onError(handler) {
         this.errorHandlers.push(handler);
@@ -275,6 +331,10 @@ export class WorkerTransport {
 
     /**
      * Terminate the worker and reset state.
+     *
+     * Pending debug/config requests reject with an `Error`.
+     *
+     * @returns {void}
      */
     close() {
         this._cleanup();
@@ -310,6 +370,8 @@ export class WorkerTransport {
 
     /**
      * Check if connected.
+     *
+     * @returns {boolean} Whether a worker exists and completed initialization.
      */
     isConnected() {
         return this.connected && this.worker !== null;
@@ -317,7 +379,12 @@ export class WorkerTransport {
 
     /**
      * Debug helper: list worker virtual filesystem entries from a root path.
-     * Returns { root, entries } where each entry has path/kind/depth/size.
+     *
+     * @param {string} [root='/typings'] - Absolute worker-VFS root to inspect.
+     * @param {number} [depth=2] - Maximum traversal depth.
+     * @returns {Promise<{root: string, entries: WorkerFsEntry[]}>} Filesystem snapshot.
+     * @throws {Error} If disconnected, the worker rejects the request, or the
+     *   request exceeds its five-second timeout.
      */
     debugListFs(root = '/typings', depth = 2) {
         if (!this.connected || !this.worker) {
@@ -341,6 +408,10 @@ export class WorkerTransport {
 
     /**
      * Read generated pyproject.toml content from worker VFS.
+     *
+     * @returns {Promise<string>} Generated configuration text.
+     * @throws {Error} If disconnected, the worker rejects the request, or the
+     *   request exceeds its five-second timeout.
      */
     readGeneratedConfig() {
         if (!this.connected || !this.worker) {

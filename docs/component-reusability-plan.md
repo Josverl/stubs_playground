@@ -442,10 +442,14 @@ streams independent without duplicating the root build dependency graph.
 
 ### 4.6 Add JSDoc type annotations to public API functions
 
-The existing JSDoc is good but incomplete (missing `@returns` on several functions, no `@throws`
-where relevant). Full JSDoc enables automatic TypeScript `.d.ts` generation via `tsc --declaration
---emitDeclarationOnly`, so consumers of the library get IDE type hints without a TypeScript build
-step in *their* project.
+Public exports now document configuration/result objects, callback payloads, parameters, return
+values, and rejection/error behavior. The annotations have been validated by emitting declarations
+from `src/lsp/index.js` with `tsc --allowJs --declaration --emitDeclarationOnly`.
+
+For the CDN-only release, the annotated JavaScript remains the source of truth and generated client
+`.d.ts` files are not committed. They can be added to a future npm package without maintaining a
+second hand-written contract. This decision is separate from task 4.7, where the worker control-plane
+protocol itself is a TypeScript contract that still needs a consumer-facing declaration artifact.
 
 ### 4.7 Document the worker control-plane protocol
 
@@ -495,7 +499,7 @@ independently.
 | 4.3 | Add unsubscribe return to `onNotification` | Trivial | No | ✅ Done |
 | 4.4 | Create `src/lsp/index.js` entry point | Trivial | No | ✅ Done |
 | 4.5 | Separate component metadata | Small | No | ✅ Done — component manifests own release versions; root manifest remains the application build manifest |
-| 4.6 | Complete JSDoc annotations | Medium | No | 🟡 Partial — client/simple-client improved; several exported diagnostics, completion-core, and transport methods still lack complete parameter/return/throw annotations |
+| 4.6 | Complete JSDoc annotations | Medium | No | ✅ Done — all public exports documented; declaration emission validated |
 | 4.7 | Document and publish worker protocol declarations | Small | No | 🟡 Partial — `messages.ts` is documented and tagged with source, but a consumer-facing `messages.d.ts` is not generated/published |
 | 4.8 | Decompose `share.js` (optional) | Small | No | ✅ Done — `share-core.js`, `share-ui.js`, and compatibility facade exist |
 | 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | ✅ Done |
@@ -515,7 +519,7 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 | Phase | Implementation state | Verification state |
 |---|---|---|
 | 1. Artifact delivery and immutable tags | Release workflow creates independent tags and a tag-only worker artifact commit. Dispatch input is passed through environment variables and releases are restricted to the default branch. | Workflow build commands match the deployed production path. No real release run or tag exists yet, so tag immutability and jsDelivr propagation remain unverified in production. |
-| 2. Public `lsp-client` surface | Public entry point exists; app-specific worker URL detection has been removed from the reusable import graph; consumers must pass `workerUrl`. | JavaScript unit coverage verifies explicit URL validation and preservation. Full JSDoc coverage remains incomplete (task 4.6). |
+| 2. Public `lsp-client` surface | Public entry point exists; app-specific worker URL detection has been removed from the reusable import graph; consumers must pass `workerUrl`; all public exports have complete JSDoc contracts. | JavaScript unit coverage verifies explicit URL validation and preservation. TypeScript declaration emission from the JSDoc succeeds. |
 | 3. Consumer contract | Import map, Blob worker shim, explicit board-stub loading, protocol source, and executable editor wiring are documented. | Local standalone harness exercises public exports, diagnostics, completion, hover, and explicit ESP32/RP2 bundles. Real CDN URLs remain untestable until tags exist. |
 | 4. Release automation | Manual workflow validates semver/package versions, builds and verifies the worker, commits artifacts only into the tagged tree, pushes an immutable tag, and warms jsDelivr. | Production webpack build succeeds locally. The workflow itself has not been dispatched because doing so publishes a tag. |
 | 5. Documentation | README links to a detailed CDN consumer guide and this plan. Publication status now distinguishes release-ready code from live tags. | Examples are covered indirectly by the standalone harness; repository rename remains an explicit decision before consumers pin URLs. |
@@ -541,16 +545,14 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 
 ### Remaining tasks and gaps
 
-1. Complete JSDoc for every exported API and decide whether declaration generation is required
-   for the CDN-only release.
-2. Generate and publish a stable `messages.d.ts` (or explicitly revise task 4.7 to define
+1. Generate and publish a stable `messages.d.ts` (or explicitly revise task 4.7 to define
    `messages.ts` as the supported TypeScript contract).
-3. Merge PR #64, then dispatch both `0.1.0` releases from `main`.
-4. Verify jsDelivr response bodies, CORS behavior, Blob worker startup, two board bundles, and
+2. Merge PR #64, then dispatch both `0.1.0` releases from `main`.
+3. Verify jsDelivr response bodies, CORS behavior, Blob worker startup, two board bundles, and
    absence of local fallbacks using the immutable tags.
-5. Wire the tagged-CDN harness into a scheduled/manual post-release CI job; the current test is
+4. Wire the tagged-CDN harness into a scheduled/manual post-release CI job; the current test is
    present but skipped unless tag environment variables are supplied.
-6. Decide whether the repository rename to `mp_codemirror` happens before the first consumer pins
+5. Decide whether the repository rename to `mp_codemirror` happens before the first consumer pins
    URLs; renaming afterward requires coordinated downstream URL changes.
-7. Integrate the verified pinned URLs into ViperIDE.
-8. Resolve or explicitly waive the unrelated WebKit OPFS test failure before merging the PR.
+6. Integrate the verified pinned URLs into ViperIDE.
+7. Resolve or explicitly waive the unrelated WebKit OPFS test failure before merging the PR.
