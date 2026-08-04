@@ -1,0 +1,176 @@
+name: Release CDN component
+
+# Publishes a Tier 1 component to jsDelivr by creating an immutable git tag
+# that consumers (e.g. Josverl/ViperIDE) pin against. See docs/cdn-consumption.md.
+#
+# Two independently versioned components:
+#   - lsp-client     → tag `lsp-client-v<version>` (pure source, already in git)
+#   - pyright-worker → tag `pyright-worker-v<version>` (carries built dist/pyright_worker.js)
+#
+# Tags are immutable: a version that already exists is never moved — cut a new one.
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: Component to release
+        type: choice
+        required: true
+        options:
+          - lsp-client
+          - pyright-worker
+      version:
+        description: Semver without prefix, e.g. 0.1.0 (must match the component package.json)
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-cdn-${{ github.event.inputs.component }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag and validate inputs
+        id: meta
+        run: |
+          set -euo pipefail
+          component='${{ github.event.inputs.component }}'
+          version='${{ github.event.inputs.version }}'
+
+          # Basic semver shape check (X.Y.Z with optional -prerelease).
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Version '$version' is not a valid semver (expected e.g. 0.1.0)"
+            exit 1
+          fi
+
+          case "$component" in
+            lsp-client)     pkg='src/lsp/package.json' ;;
+            pyright-worker) pkg='src/worker/package.json' ;;
+            *) echo "::error::Unknown component '$component'"; exit 1 ;;
+          esac
+
+          # Enforce that package.json was bumped in a normal PR before tagging,
+          # so main stays the single source of truth for the version.
+          pkg_version=$(node -p "require('./$pkg').version")
+          if [ "$pkg_version" != "$version" ]; then
+            echo "::error::$pkg version ($pkg_version) does not match input version ($version). Bump it in a PR first."
+            exit 1
+          fi
+
+          tag="${component}-v${version}"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "::error::Tag ${tag} already exists — tags are immutable. Cut a new version."
+            exit 1
+          fi
+
+          echo "component=$component" >> "$GITHUB_OUTPUT"
+          echo "version=$version"     >> "$GITHUB_OUTPUT"
+          echo "tag=$tag"             >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node.js
+        if: steps.meta.outputs.component == 'pyright-worker'
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install uv
+        if: steps.meta.outputs.component == 'pyright-worker'
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Install Node.js dependencies
+        if: steps.meta.outputs.component == 'pyright-worker'
+        run: npm ci --ignore-scripts
+
+      - name: Pack typeshed and board stubs
+        if: steps.meta.outputs.component == 'pyright-worker'
+        run: |
+          uv run scripts/pack-typeshed.py
+          uv run scripts/pack-stubs.py
+
+      - name: Build worker
+        if: steps.meta.outputs.component == 'pyright-worker'
+        run: npx webpack --mode production
+
+      - name: Verify worker artifact
+        if: steps.meta.outputs.component == 'pyright-worker'
+        run: |
+          set -euo pipefail
+          if [ ! -s dist/pyright_worker.js ]; then
+            echo "::error::dist/pyright_worker.js missing or empty"
+            exit 1
+          fi
+          echo "pyright_worker.js: $(stat -c%s dist/pyright_worker.js) bytes"
+
+      - name: Configure git identity
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Create pyright-worker release commit (carries built artifacts)
+        if: steps.meta.outputs.component == 'pyright-worker'
+        run: |
+          set -euo pipefail
+          # dist/ is gitignored on main; force-add only for this tag's tree.
+          git add -f dist/pyright_worker.js dist/pyright_worker.js.LICENSE.txt
+          # assets/*.zip are tracked; include any freshly packed changes.
+          git add assets
+          git commit -m "release(pyright-worker): v${{ steps.meta.outputs.version }} [skip ci]"
+
+      - name: Create and push tag
+        run: |
+          set -euo pipefail
+          tag='${{ steps.meta.outputs.tag }}'
+          git tag -a "$tag" -m "$tag"
+          # Push only the tag ref; the release commit (if any) is reachable
+          # solely via the tag, keeping main's history clean.
+          git push origin "refs/tags/${tag}"
+
+      - name: Warm jsDelivr cache
+        run: |
+          set -uo pipefail
+          repo='${{ github.repository }}'
+          tag='${{ steps.meta.outputs.tag }}'
+          component='${{ steps.meta.outputs.component }}'
+          if [ "$component" = "lsp-client" ]; then
+            paths='src/lsp/index.js'
+          else
+            paths='dist/pyright_worker.js assets/stubs-manifest.json'
+          fi
+          for p in $paths; do
+            url="https://purge.jsdelivr.net/gh/${repo}@${tag}/${p}"
+            echo "Purging/warming: $url"
+            curl -fsSL "$url" >/dev/null || echo "::warning::jsDelivr warm failed for $p (non-fatal)"
+          done
+
+      - name: Summary
+        run: |
+          {
+            echo "### Released \`${{ steps.meta.outputs.tag }}\`"
+            echo ""
+            echo "Consumers can pin:"
+            echo ""
+            if [ '${{ steps.meta.outputs.component }}' = 'lsp-client' ]; then
+              echo "\`\`\`"
+              echo "https://cdn.jsdelivr.net/gh/${{ github.repository }}@${{ steps.meta.outputs.tag }}/src/lsp/index.js"
+              echo "\`\`\`"
+            else
+              echo "\`\`\`"
+              echo "https://cdn.jsdelivr.net/gh/${{ github.repository }}@${{ steps.meta.outputs.tag }}/dist/pyright_worker.js"
+              echo "\`\`\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

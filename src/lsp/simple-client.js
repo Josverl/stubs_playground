@@ -7,9 +7,28 @@
  */
 
 /**
- * Simple LSP Client that handles the protocol
+ * Simple LSP Client that handles the protocol.
+ *
+ * Transport-agnostic JSON-RPC 2.0 client. Pair it with any object that
+ * satisfies the transport interface (see {@link WorkerTransport}):
+ * `connect()`, `send(message)`, `subscribe(handler)`, `unsubscribe(handler)`,
+ * `close()`, `isConnected()`.
+ *
+ * @property {object|null} serverCapabilities - Capabilities reported by the
+ *   server after `initialize`, or `null` before initialization completes.
+ * @property {boolean} connected - Whether the client is currently connected.
  */
 export class SimpleLSPClient {
+    /**
+     * @param {Object} [config={}] - Client configuration.
+     * @param {string} [config.rootUri='file:///workspace'] - Workspace root URI.
+     * @param {number} [config.timeout=5000] - Request timeout in milliseconds.
+     * @param {string} [config.typeCheckingMode] - Pyright type checking mode
+     *   (`off`, `basic`, `standard`, `strict`).
+     * @param {string} [config.typeshedPath] - Pyright typeshed path.
+     * @param {string} [config.pythonVersion] - Pyright python version in `X.Y` format.
+     * @param {string[]} [config.extraPaths] - Absolute extra import search paths.
+     */
     constructor(config = {}) {
         this.config = config;
         this.transport = null;
@@ -71,7 +90,13 @@ export class SimpleLSPClient {
     }
 
     /**
-     * Connect to the LSP server via a transport
+     * Connect to the LSP server via a transport and run the `initialize`
+     * handshake. The transport must already be connected.
+     *
+     * @param {{ send: Function, subscribe: Function }} transport - Transport
+     *   satisfying the LSP transport interface.
+     * @returns {Promise<SimpleLSPClient>} Resolves with this client once the
+     *   server has been initialized.
      */
     async connect(transport) {
         this.transport = transport;
@@ -162,7 +187,12 @@ export class SimpleLSPClient {
     }
 
     /**
-     * Send a request to the server
+     * Send a request to the server and await its response.
+     *
+     * @param {string} method - LSP method name (e.g. `textDocument/hover`).
+     * @param {unknown} params - Method parameters.
+     * @returns {Promise<unknown>} Resolves with the server result, or rejects
+     *   on server error or timeout.
      */
     request(method, params) {
         return new Promise((resolve, reject) => {
@@ -192,7 +222,11 @@ export class SimpleLSPClient {
     }
 
     /**
-     * Send a notification to the server (no response expected)
+     * Send a notification to the server (no response expected).
+     *
+     * @param {string} method - LSP method name (e.g. `textDocument/didChange`).
+     * @param {unknown} params - Method parameters.
+     * @returns {void}
      */
     notify(method, params) {
         const message = {
@@ -270,7 +304,14 @@ export class SimpleLSPClient {
     }
 
     /**
-     * Register a handler for server→client requests
+     * Register a handler for server→client requests (e.g.
+     * `workspace/configuration`). Only one handler per method; the last
+     * registration wins.
+     *
+     * @param {string} method - LSP method name to handle.
+     * @param {(params: unknown) => unknown} handler - Returns the result sent
+     *   back to the server.
+     * @returns {void}
      */
     onRequest(method, handler) {
         this.requestHandlers.set(method, handler);

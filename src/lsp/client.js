@@ -25,6 +25,8 @@ import { createTransport } from './transport-factory.js';
  * @param {boolean} [config.verboseOutput] - Pyright verboseOutput
  * @param {Array<{packageName: string, files: Object.<string, string>}>} [config.extraStubPackages]
  * @param {string[]} [config.extraPaths] - Absolute extra import search paths
+ * @returns {Promise<{client: SimpleLSPClient, transport: WorkerTransport, pyrightVersion: string}>}
+ *   The connected client, its transport, and the detected Pyright version.
  */
 export async function createLSPClient(config = {}) {
     const transport = createTransport({
@@ -133,7 +135,10 @@ export async function switchBoard(current, config) {
 }
 
 /**
- * Helper to check if LSP is available and initialized
+ * Helper to check if LSP is available and initialized.
+ *
+ * @param {SimpleLSPClient} client - LSP client instance (may be null/undefined).
+ * @returns {boolean} True when the client is connected and has server capabilities.
  */
 export function isLSPReady(client) {
     return client && client.connected && client.serverCapabilities !== null;
