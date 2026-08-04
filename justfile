@@ -128,19 +128,66 @@ format:
 http:
     uv run tests/http_server.py 8888 .
 
-# start the HTTP server and open the browser (Unix)
-serve:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "Starting HTTP server on port 8888..."
-    uv run tests/http_server.py 8888 . &
-    HTTP_PID=$!
-    sleep 2
-    echo "Opening browser..."
-    xdg-open http://localhost:8888/src/ 2>/dev/null || open http://localhost:8888/src/ 2>/dev/null || echo "Open http://localhost:8888/src/ in your browser"
-    echo "Server running (HTTP: $HTTP_PID). Press Ctrl+C to stop."
-    trap "kill $HTTP_PID 2>/dev/null" EXIT INT TERM
-    wait
+# start the HTTP server and open local sources or the published CDN harness
+[script("uv", "run", "python")]
+serve source="local":
+    from __future__ import annotations
+
+    import subprocess
+    import sys
+    import time
+    import urllib.error
+    import urllib.request
+    import webbrowser
+
+    source = {{quote(source)}}
+    urls = {
+        "local": "http://localhost:8888/src/",
+        "cdn": (
+            "http://localhost:8888/tests/cdn-harness.html"
+            "?client=cdn&clientTag=lsp-client-v0.1.0"
+            "&worker=cdn&workerTag=pyright-worker-v0.1.0"
+            "&board=esp32"
+        ),
+    }
+    if source not in urls:
+        raise SystemExit("source must be either 'local' or 'cdn'")
+
+    process = subprocess.Popen(
+        [sys.executable, "tests/http_server.py", "8888", "."],
+    )
+    try:
+        server_url = "http://localhost:8888/src/index.html"
+        for _ in range(50):
+            if process.poll() is not None:
+                raise SystemExit(
+                    f"HTTP server exited before startup with code {process.returncode}"
+                )
+            try:
+                with urllib.request.urlopen(server_url, timeout=0.2) as response:
+                    if response.status == 200:
+                        break
+            except (urllib.error.URLError, TimeoutError):
+                time.sleep(0.1)
+        else:
+            raise SystemExit("HTTP server did not become ready within 5 seconds")
+
+        url = urls[source]
+        print(f"Opening {source} source: {url}", flush=True)
+        if not webbrowser.open(url):
+            print(f"Open this URL in your browser: {url}", flush=True)
+        print(f"Server running (PID {process.pid}). Press Ctrl+C to stop.", flush=True)
+        process.wait()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
 
 # --- Test recipes ---
 
