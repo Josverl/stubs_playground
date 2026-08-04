@@ -19,7 +19,7 @@ pytest tests/test_lsp_diagnostics.py -v
 pytest tests/ -v
 
 # Run browser tests with a specific browser
-pytest -m editor -v --browser-name firefox
+pytest -m editor -v --browser firefox
 ```
 
 ## Test Files
@@ -113,4 +113,3 @@ def test_diagnostic_icon_appears(page, live_server):
 # Kill process on port 8888
 lsof -ti:8888 | xargs kill -9
 ```
-
