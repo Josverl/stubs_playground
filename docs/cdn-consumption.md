@@ -15,9 +15,9 @@ Distribution follows **Option B — CDN-only** from
 **immutable git tag** and load files through [jsDelivr](https://www.jsdelivr.com/).
 No npm publishing is involved.
 
-> **Publication status:** the release workflow and consumer contract are implemented,
-> but the first `lsp-client-v0.1.0` and `pyright-worker-v0.1.0` tags have not yet been
-> cut. The versioned URLs below become live after those immutable tags are published.
+> **Publication status:** `lsp-client-v0.1.0` and `pyright-worker-v0.1.0` are published
+> and verified through jsDelivr. The tagged-CDN browser harness passes without local
+> component fallbacks.
 
 The canonical CDN repository is **`Josverl/stubs_playground`**. Consumer URLs should
 continue to use that owner/repository segment.
@@ -86,7 +86,7 @@ MP_CODEMIRROR_CDN_CLIENT_TAG=lsp-client-v0.1.0 \
 MP_CODEMIRROR_CDN_WORKER_TAG=pyright-worker-v0.1.0 \
 uv run pytest \
   tests/test_cdn_harness.py::test_tagged_cdn_consumer_has_no_local_component_fallbacks \
-  --browser-name chromium -v
+  -v
 ```
 
 The `assets/*.zip` stub/typeshed files are already committed on every tag, so they are

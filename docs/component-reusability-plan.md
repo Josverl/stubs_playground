@@ -313,13 +313,12 @@ formal contract.
 Start with **Option B** (CDN-only from a tagged release) to collect feedback with zero overhead.
 Move to **Option A** (npm) only when there are real consumers who need semver + toolchain integration.
 
-> **Release-ready:** Option B is implemented in the repository. Two independently versioned
-> components will be served from jsDelivr at immutable tags (`lsp-client-v*`,
+> **Published:** Option B is implemented and the first two independently versioned
+> components are served from jsDelivr at immutable tags (`lsp-client-v*`,
 > `pyright-worker-v*`), cut by the
 > [`Release CDN component`](../.github/workflows/release-cdn.yml) workflow. The consumer
 > integration contract (import map, cross-origin worker Blob shim, pinned peer-dep versions,
-> stub loading) lives in [`cdn-consumption.md`](./cdn-consumption.md). The first public tags
-> still need to be cut before CDN publication is complete.
+> stub loading) lives in [`cdn-consumption.md`](./cdn-consumption.md).
 
 ---
 
@@ -529,11 +528,11 @@ independently.
 | 4.8 | Decompose `share.js` utility/UI layers | Small | No | ✅ Done — no further `share-core.js` split planned |
 | 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | ✅ Done — direct renderer browser coverage |
 | — | Prepare CDN publication (Option B) | Workflow + docs + harness | n/a | ✅ Implemented and locally validated |
-| — | Cut and verify first immutable CDN tags | Release operation | n/a | Pending |
+| — | Cut and verify first immutable CDN tags | Release operation | n/a | ✅ Done — both `v0.1.0` tags are live and the tagged-CDN harness passes |
 | — | Publish to npm (Option A, when ready) | One-off CI setup | n/a | Deferred |
 
-The completed refactors are additive or internal cleanups. The remaining release and
-post-publication validation tasks can be completed independently.
+The completed refactors are additive or internal cleanups. Remaining downstream integration
+and ongoing post-publication validation can be completed independently.
 
 ---
 
@@ -543,12 +542,12 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 
 | Phase | Implementation state | Verification state |
 |---|---|---|
-| 1. Artifact delivery and immutable tags | Release workflow creates independent tags and a tag-only worker artifact commit. Manual dispatch supports explicitly selected branches after the workflow reaches the default branch. Temporary `cdn-release/<component>/<version>` request tags bootstrap pre-merge releases directly from a PR commit and are removed after success. | Workflow build commands match the deployed production path. No real release run or tag exists yet, so tag immutability and jsDelivr propagation remain unverified in production. |
+| 1. Artifact delivery and immutable tags | Release workflow creates independent tags and a tag-only worker artifact commit. Manual dispatch supports explicitly selected branches after the workflow reaches the default branch. Temporary `cdn-release/<component>/<version>` request tags bootstrap pre-merge releases directly from a PR commit and are removed after success. | Both bootstrap workflows succeeded. `lsp-client-v0.1.0` points to source commit `794939c`; `pyright-worker-v0.1.0` points to its tag-only artifact commit. Both immutable tags are live through jsDelivr. |
 | 2. Public `lsp-client` surface | Public entry point exists; app-specific worker URL detection has been removed from the reusable import graph; consumers must pass `workerUrl`; all public exports have complete JSDoc contracts. | JavaScript unit coverage verifies explicit URL validation and preservation. TypeScript declaration emission from the JSDoc succeeds. |
-| 3. Consumer contract | Import map, Blob worker shim, explicit board-stub loading, protocol declarations, and executable editor wiring are documented. | Local standalone harness exercises public exports, diagnostics, completion, hover, and explicit ESP32/RP2 bundles. TypeScript resolves the worker protocol from both package root and `./messages`. Real CDN URLs remain untestable until tags exist. |
-| 4. Release automation | Manual workflow validates semver/package versions and worker protocol declaration freshness, builds and verifies the worker, commits artifacts only into the tagged tree, pushes an immutable tag, and warms jsDelivr. | Production webpack build and declaration/package-resolution checks succeed locally. The workflow itself has not been dispatched because doing so publishes a tag. |
+| 3. Consumer contract | Import map, Blob worker shim, explicit board-stub loading, protocol declarations, and executable editor wiring are documented. | Local standalone harness exercises public exports, diagnostics, completion, hover, and explicit ESP32/RP2 bundles. TypeScript resolves the worker protocol from both package root and `./messages`. The same public contract passes against the immutable CDN tags. |
+| 4. Release automation | Manual workflow validates semver/package versions and worker protocol declaration freshness, builds and verifies the worker, commits artifacts only into the tagged tree, pushes an immutable tag, and warms jsDelivr. | Both first-release workflow runs succeeded and removed their temporary request tags. |
 | 5. Documentation | README links to a detailed CDN consumer guide and this plan. Publication status now distinguishes release-ready code from live tags. `Josverl/stubs_playground` is the canonical CDN repository. | Examples are covered indirectly by the standalone harness. |
-| 6. Real consumer validation | Harness supports local and tagged-CDN modes and detects local component fallback requests. | Tagged mode is opt-in through `MP_CODEMIRROR_CDN_CLIENT_TAG` and `MP_CODEMIRROR_CDN_WORKER_TAG`; no CI job supplies them yet, and no tags exist. |
+| 6. Real consumer validation | Harness supports local and tagged-CDN modes and detects local component fallback requests. | Chromium tagged mode passed against `lsp-client-v0.1.0` and `pyright-worker-v0.1.0`: diagnostics, completion, hover, ESP32 stubs, and zero local component fallbacks. |
 
 ### Verified evidence
 
@@ -560,8 +559,11 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
   compatibility re-export.
 - Share utility/UI split: 7/7 JavaScript unit tests and 22/22 Chromium tests passed.
 - Python unit suite: 14/14 passed.
-- Standalone Chromium harness: diagnostics, completion, hover, ESP32 stubs, and RP2 stubs passed;
-  the tagged-CDN case is correctly skipped until immutable tags exist.
+- Standalone Chromium harness: diagnostics, completion, hover, ESP32 stubs, and RP2 stubs passed.
+- Immutable tagged-CDN Chromium harness: passed against both `v0.1.0` tags with diagnostics,
+  completion, hover, ESP32 stubs, and zero local component fallbacks.
+- jsDelivr responses for the client entry point and worker bundle return HTTP 200 with
+  cross-origin access and immutable one-year caching.
 - Full Chromium worker tier: 38 passed and 3 skipped. Two fresh-page tests initially timed out
   while loading esm.sh before the editor mounted, then both passed when rerun in isolation.
 - PR #64 checks: unit tests, worker build, all worker browser jobs, Chromium/Firefox editor jobs,
@@ -575,12 +577,8 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 
 ### Remaining tasks and gaps
 
-1. Push both `cdn-release/<component>/0.1.0` bootstrap request tags from the PR branch,
-   then verify jsDelivr response bodies,
-   CORS behavior, Blob worker startup, two board bundles, and
-   absence of local fallbacks using the immutable tags.
-2. Merge PR #64 after the tagged-CDN verification passes.
-3. Wire the tagged-CDN harness into a scheduled/manual post-release CI job; the current test is
+1. Merge PR #64 now that the tagged-CDN verification passes.
+2. Wire the tagged-CDN harness into a scheduled/manual post-release CI job; the current test is
    present but skipped unless tag environment variables are supplied.
-4. Integrate the verified pinned URLs into ViperIDE.
-5. Resolve or explicitly waive the unrelated WebKit OPFS test failure before merging the PR.
+3. Integrate the verified pinned URLs into ViperIDE.
+4. Resolve or explicitly waive the unrelated WebKit OPFS test failure before merging the PR.
