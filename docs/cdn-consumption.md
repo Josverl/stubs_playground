@@ -19,12 +19,8 @@ No npm publishing is involved.
 > but the first `lsp-client-v0.1.0` and `pyright-worker-v0.1.0` tags have not yet been
 > cut. The versioned URLs below become live after those immutable tags are published.
 
-> **TODO — repository rename.** The CDN URLs below use `Josverl/stubs_playground`.
-> This repository will be renamed to **`mp_codemirror`** in the future; when that
-> happens, update every `gh/Josverl/stubs_playground@…` URL to
-> `gh/Josverl/mp_codemirror@…`. The release workflow already uses
-> `${{ github.repository }}`, so tags cut after the rename need no workflow change —
-> only this document and downstream consumers must update the owner/repo segment.
+The canonical CDN repository is **`Josverl/stubs_playground`**. Consumer URLs should
+continue to use that owner/repository segment.
 
 ---
 
@@ -133,7 +129,8 @@ Remember to `URL.revokeObjectURL(workerUrl)` when you tear the editor down.
 The worker's main-thread ↔ worker control-plane protocol
 (`serverLoaded` / `initServer` / `serverInitialized`, file sync, debug messages) is the
 stable contract, defined in
-[`src/worker/messages.ts`](../src/worker/messages.ts). Anyone implementing a custom
+[`src/worker/messages.ts`](../src/worker/messages.ts) and published for consumers as
+[`src/worker/messages.d.ts`](../src/worker/messages.d.ts). Anyone implementing a custom
 worker for a different language server can conform to that contract and remain
 drop-in compatible with `WorkerTransport`.
 

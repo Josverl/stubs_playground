@@ -1,5 +1,5 @@
 """
-Tests for hover popup rendering (src/lsp/hover.js).
+Tests for the standalone Markdown/RST renderer (src/lsp/markdown-renderer.js).
 
 Verifies that processInline / renderMarkdown produce correct HTML for
 Markdown and RST markup found in MicroPython doc-stubs.
@@ -19,14 +19,11 @@ pytestmark = pytest.mark.editor
 # Helpers
 # ---------------------------------------------------------------------------
 
-_HOVER_MODULE_URL = "/src/lsp/hover.js"
-
-
 def _render(page, text: str) -> str:
     """Import renderMarkdown and render *text*; return outerHTML of result."""
     return page.evaluate(
         """async (text) => {
-            const mod = await import('/src/lsp/hover.js');
+            const mod = await import('/src/lsp/markdown-renderer.js');
             const el = mod.renderMarkdown(text);
             return el.outerHTML;
         }""",
@@ -38,7 +35,7 @@ def _inner(page, text: str) -> str:
     """Return innerText of the rendered output (no tags)."""
     return page.evaluate(
         """async (text) => {
-            const mod = await import('/src/lsp/hover.js');
+            const mod = await import('/src/lsp/markdown-renderer.js');
             const el = mod.renderMarkdown(text);
             return el.innerText;
         }""",
@@ -50,7 +47,7 @@ def _query(page, text: str, selector: str) -> list[str]:
     """Render *text* and return list of innerText for all *selector* matches."""
     return page.evaluate(
         """async ([text, selector]) => {
-            const mod = await import('/src/lsp/hover.js');
+            const mod = await import('/src/lsp/markdown-renderer.js');
             const el = mod.renderMarkdown(text);
             return Array.from(el.querySelectorAll(selector)).map(n => n.innerText);
         }""",
@@ -62,12 +59,22 @@ def _attr(page, text: str, selector: str, attr: str) -> list[str]:
     """Return list of *attr* attribute values for all *selector* matches."""
     return page.evaluate(
         """async ([text, selector, attr]) => {
-            const mod = await import('/src/lsp/hover.js');
+            const mod = await import('/src/lsp/markdown-renderer.js');
             const el = mod.renderMarkdown(text);
             return Array.from(el.querySelectorAll(selector)).map(n => n.getAttribute(attr));
         }""",
         [text, selector, attr],
     )
+
+
+def test_hover_module_reexports_renderer(render_page):
+    html = render_page.evaluate(
+        """async () => {
+            const mod = await import('/src/lsp/hover.js');
+            return mod.renderMarkdown('**compatible**').outerHTML;
+        }"""
+    )
+    assert "<strong>compatible</strong>" in html
 
 
 # ---------------------------------------------------------------------------

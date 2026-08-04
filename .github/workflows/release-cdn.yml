@@ -106,6 +106,10 @@ jobs:
         if: steps.meta.outputs.component == 'pyright-worker'
         run: npm ci --ignore-scripts
 
+      - name: Verify worker protocol declarations
+        if: steps.meta.outputs.component == 'pyright-worker'
+        run: npm run check:worker-protocol-types
+
       - name: Pack typeshed and board stubs
         if: steps.meta.outputs.component == 'pyright-worker'
         run: |
