@@ -63,6 +63,21 @@ So that is where I "hired some AI Agents" to do that part of the work for me.
 
 As for the limited UX design - that is proably me tough.
 
+## Reusing the LSP components (CDN)
+
+The LSP bridge and the Pyright Web Worker are packaged as two independently
+versioned, reusable components for other CodeMirror 6 editors (e.g.
+[ViperIDE](https://github.com/Josverl/ViperIDE)):
+
+- `@mp-codemirror/lsp-client` — the LSP bridge (`src/lsp/index.js`)
+- `@mp-codemirror/pyright-worker` — the pre-built Pyright worker (`dist/pyright_worker.js`)
+
+They are distributed **CDN-only** via jsDelivr from immutable git tags — no npm needed.
+See **[docs/cdn-consumption.md](docs/cdn-consumption.md)** for the import map, the
+cross-origin worker Blob shim, pinned peer-dependency versions, jsDelivr URL shapes, and
+a minimal end-to-end example. Releases are cut with the
+[`Release CDN component`](.github/workflows/release-cdn.yml) workflow.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
