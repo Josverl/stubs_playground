@@ -396,6 +396,12 @@ onNotification(handler) {
 This matches the CodeMirror convention (event subscriptions return their own unsubscribers) and
 prevents memory leaks when views are destroyed and recreated.
 
+**Implementation progress (current branch):**
+- Done: `SimpleLSPClient.onNotification(handler)` returns an unsubscribe callback.
+- Done: the callback removes only the registered handler and is safe to call more than once.
+- Done: unit coverage verifies delivery before unsubscribe, no delivery afterward, and
+  idempotent repeated unsubscribe calls.
+
 ### 4.4 Create a public entry point (`src/lsp/index.js`)
 
 A single re-export file defines the published surface and makes tree-shaking trivial:

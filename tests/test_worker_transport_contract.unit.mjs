@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { SimpleLSPClient } from '../src/lsp/simple-client.js';
 import { WorkerTransport } from '../src/lsp/worker-transport.js';
 import { createTransport } from '../src/lsp/transport-factory.js';
 
@@ -22,4 +23,21 @@ test('createTransport rejects app-specific implicit URL resolution', () => {
         () => createTransport(),
         /createTransport requires options\.workerUrl/,
     );
+});
+
+test('onNotification returns an idempotent unsubscribe callback', () => {
+    const client = new SimpleLSPClient();
+    const received = [];
+    const unsubscribe = client.onNotification((method, params) => {
+        received.push({ method, params });
+    });
+
+    client.handleNotification('test/before', { value: 1 });
+    unsubscribe();
+    unsubscribe();
+    client.handleNotification('test/after', { value: 2 });
+
+    assert.deepEqual(received, [
+        { method: 'test/before', params: { value: 1 } },
+    ]);
 });
