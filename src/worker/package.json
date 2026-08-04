@@ -4,8 +4,10 @@
   "private": true,
   "description": "Worker-side protocol contract and packaging metadata",
   "type": "module",
+  "types": "./messages.d.ts",
   "exports": {
-    "./messages": "./messages.ts",
+    ".": "./messages.d.ts",
+    "./messages": "./messages.d.ts",
     "./declarations": "./declarations.d.ts"
   },
   "workerBundle": "../../dist/pyright_worker.js"

@@ -466,6 +466,12 @@ protocol itself is a TypeScript contract that still needs a consumer-facing decl
 This lets a consumer write a custom worker (e.g., for a different language server) that is
 drop-in compatible with `WorkerTransport`.
 
+**Implementation progress (current branch):**
+- Done: `src/worker/messages.d.ts` is generated from and published alongside `messages.ts`.
+- Done: worker package metadata exposes the declaration contract at `./messages`.
+- Done: CI and the CDN release workflow reject a stale declaration artifact.
+- Done: the CDN consumer guide links both the source protocol and published declaration.
+
 ### 4.8 Consider decomposing `share.js` (new)
 
 `share.js` grew from ~200 to ~670 lines with the addition of report-issue functionality, scope
@@ -477,6 +483,12 @@ selectors, and share-settings resolution. The pure utility functions (`compressC
 **Optional change:** Split into `share-core.js` (pure URL/compression/issue-URL helpers) and
 `share-ui.js` (event wiring, modal management). This is only worthwhile if an external consumer
 wants the share/issue-URL logic — otherwise leave as-is.
+
+**Implementation progress (current branch):**
+- Done: reusable utility functions live in `share-core.js`; app-specific event and modal wiring
+  lives in `share-ui.js`.
+- Done: `share.js` remains a compatibility facade, while `app.js` imports the two layers directly.
+- Scope decision: do not split `share-core.js` further; no external reuse is expected.
 
 ### 4.9 Extract Markdown/RST renderer from `hover.js` (new)
 
@@ -494,6 +506,13 @@ tooltip integration (`createHoverTooltip`, `createHoverContent`) is a separate c
 (tooltip lifecycle only). This makes both modules easier to understand, test, and reuse
 independently.
 
+**Implementation progress (current branch):**
+- Done: `markdown-renderer.js` owns `processInline`, `renderBlocks`, `renderMarkdown`, and
+  `PYRIGHT_SIG_RE`.
+- Done: `hover.js` contains tooltip integration and delegates rendering to the extracted module.
+- Done: browser renderer tests import `markdown-renderer.js` directly; `hover.js` retains a
+  compatibility re-export of `renderMarkdown`.
+
 ---
 
 ## 5. Summary checklist
@@ -506,15 +525,15 @@ independently.
 | 4.4 | Create `src/lsp/index.js` entry point | Trivial | No | ✅ Done |
 | 4.5 | Separate component metadata | Small | No | ✅ Done — component manifests own release versions; root manifest remains the application build manifest |
 | 4.6 | Complete JSDoc annotations | Medium | No | ✅ Done — all public exports documented; declaration emission validated |
-| 4.7 | Document and publish worker protocol declarations | Small | No | 🟡 Partial — `messages.ts` is documented and tagged with source, but a consumer-facing `messages.d.ts` is not generated/published |
-| 4.8 | Decompose `share.js` (optional) | Small | No | ✅ Done — `share-core.js`, `share-ui.js`, and compatibility facade exist |
-| 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | ✅ Done |
+| 4.7 | Document and publish worker protocol declarations | Small | No | ✅ Done — generated `messages.d.ts` is exposed and drift-checked |
+| 4.8 | Decompose `share.js` utility/UI layers | Small | No | ✅ Done — no further `share-core.js` split planned |
+| 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | ✅ Done — direct renderer browser coverage |
 | — | Prepare CDN publication (Option B) | Workflow + docs + harness | n/a | ✅ Implemented and locally validated |
 | — | Cut and verify first immutable CDN tags | Release operation | n/a | Pending |
 | — | Publish to npm (Option A, when ready) | One-off CI setup | n/a | Deferred |
 
-The completed refactors are additive or internal cleanups. The remaining declaration,
-documentation, release, and validation tasks can be completed independently.
+The completed refactors are additive or internal cleanups. The remaining release and
+post-publication validation tasks can be completed independently.
 
 ---
 
@@ -526,15 +545,20 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 |---|---|---|
 | 1. Artifact delivery and immutable tags | Release workflow creates independent tags and a tag-only worker artifact commit. Dispatch input is passed through environment variables and releases are restricted to the default branch. | Workflow build commands match the deployed production path. No real release run or tag exists yet, so tag immutability and jsDelivr propagation remain unverified in production. |
 | 2. Public `lsp-client` surface | Public entry point exists; app-specific worker URL detection has been removed from the reusable import graph; consumers must pass `workerUrl`; all public exports have complete JSDoc contracts. | JavaScript unit coverage verifies explicit URL validation and preservation. TypeScript declaration emission from the JSDoc succeeds. |
-| 3. Consumer contract | Import map, Blob worker shim, explicit board-stub loading, protocol source, and executable editor wiring are documented. | Local standalone harness exercises public exports, diagnostics, completion, hover, and explicit ESP32/RP2 bundles. Real CDN URLs remain untestable until tags exist. |
-| 4. Release automation | Manual workflow validates semver/package versions, builds and verifies the worker, commits artifacts only into the tagged tree, pushes an immutable tag, and warms jsDelivr. | Production webpack build succeeds locally. The workflow itself has not been dispatched because doing so publishes a tag. |
-| 5. Documentation | README links to a detailed CDN consumer guide and this plan. Publication status now distinguishes release-ready code from live tags. | Examples are covered indirectly by the standalone harness; repository rename remains an explicit decision before consumers pin URLs. |
+| 3. Consumer contract | Import map, Blob worker shim, explicit board-stub loading, protocol declarations, and executable editor wiring are documented. | Local standalone harness exercises public exports, diagnostics, completion, hover, and explicit ESP32/RP2 bundles. TypeScript resolves the worker protocol from both package root and `./messages`. Real CDN URLs remain untestable until tags exist. |
+| 4. Release automation | Manual workflow validates semver/package versions and worker protocol declaration freshness, builds and verifies the worker, commits artifacts only into the tagged tree, pushes an immutable tag, and warms jsDelivr. | Production webpack build and declaration/package-resolution checks succeed locally. The workflow itself has not been dispatched because doing so publishes a tag. |
+| 5. Documentation | README links to a detailed CDN consumer guide and this plan. Publication status now distinguishes release-ready code from live tags. `Josverl/stubs_playground` is the canonical CDN repository. | Examples are covered indirectly by the standalone harness. |
 | 6. Real consumer validation | Harness supports local and tagged-CDN modes and detects local component fallback requests. | Tagged mode is opt-in through `MP_CODEMIRROR_CDN_CLIENT_TAG` and `MP_CODEMIRROR_CDN_WORKER_TAG`; no CI job supplies them yet, and no tags exist. |
 
 ### Verified evidence
 
 - Production worker build: succeeded locally; `dist/pyright_worker.js` is 9,018,033 bytes.
-- JavaScript unit suite: 35/35 passed, including explicit worker URL contract coverage.
+- JavaScript unit suite: 36/36 passed, including explicit worker URL contract coverage.
+- Worker protocol declaration: generated artifact matches `messages.ts`; root and `./messages`
+  package imports resolve under TypeScript `NodeNext`.
+- Extracted Markdown/RST renderer: 58/58 Chromium tests passed, including the `hover.js`
+  compatibility re-export.
+- Share utility/UI split: 7/7 JavaScript unit tests and 22/22 Chromium tests passed.
 - Python unit suite: 14/14 passed.
 - Standalone Chromium harness: diagnostics, completion, hover, ESP32 stubs, and RP2 stubs passed;
   the tagged-CDN case is correctly skipped until immutable tags exist.
@@ -551,14 +575,10 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 
 ### Remaining tasks and gaps
 
-1. Generate and publish a stable `messages.d.ts` (or explicitly revise task 4.7 to define
-   `messages.ts` as the supported TypeScript contract).
-2. Merge PR #64, then dispatch both `0.1.0` releases from `main`.
-3. Verify jsDelivr response bodies, CORS behavior, Blob worker startup, two board bundles, and
+1. Merge PR #64, then dispatch both `0.1.0` releases from `main`.
+2. Verify jsDelivr response bodies, CORS behavior, Blob worker startup, two board bundles, and
    absence of local fallbacks using the immutable tags.
-4. Wire the tagged-CDN harness into a scheduled/manual post-release CI job; the current test is
+3. Wire the tagged-CDN harness into a scheduled/manual post-release CI job; the current test is
    present but skipped unless tag environment variables are supplied.
-5. Decide whether the repository rename to `mp_codemirror` happens before the first consumer pins
-   URLs; renaming afterward requires coordinated downstream URL changes.
-6. Integrate the verified pinned URLs into ViperIDE.
-7. Resolve or explicitly waive the unrelated WebKit OPFS test failure before merging the PR.
+4. Integrate the verified pinned URLs into ViperIDE.
+5. Resolve or explicitly waive the unrelated WebKit OPFS test failure before merging the PR.

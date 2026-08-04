@@ -72,6 +72,9 @@ versioned, reusable components for other CodeMirror 6 editors (e.g.
 - `@mp-codemirror/lsp-client` — the LSP bridge (`src/lsp/index.js`)
 - `@mp-codemirror/pyright-worker` — the pre-built Pyright worker (`dist/pyright_worker.js`)
 
+Custom worker implementations can use the stable control-plane types published as
+`src/worker/messages.d.ts`.
+
 They are distributed **CDN-only** via jsDelivr from immutable git tags — no npm needed.
 See **[docs/cdn-consumption.md](docs/cdn-consumption.md)** for the import map, the
 cross-origin worker Blob shim, pinned peer-dependency versions, jsDelivr URL shapes, and
