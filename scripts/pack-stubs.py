@@ -7,8 +7,8 @@
 For each board defined below:
   1. Install stubs via `uv pip install micropython-{board}-stubs --target ./tmp`
   2. Zip the .pyi files and packages (skip dist-info metadata)
-  3. Write to assets/stubs-{board}.zip
-  4. Generate assets/stubs-manifest.json
+  3. Write to packages/pyright-worker/assets/stubs-{board}.zip
+  4. Generate packages/pyright-worker/assets/stubs-manifest.json
 
 Usage: uv run scripts/pack-stubs.py [board...]
   No args -> pack all boards.  Pass board IDs to pack specific ones.
@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ASSETS = ROOT / "assets"
+ASSETS = ROOT / "packages" / "pyright-worker" / "assets"
 TMP = ROOT / "tmp_stubs"
 
 
@@ -170,7 +170,7 @@ def pack_board(board: Board) -> Board:
         "version": board.package_version,
     }
     size = zip_directory(target, out_path, metadata=pkg_metadata)
-    print(f"  → assets/stubs-{board.id}.zip  ({size / 1024:.0f} KB)")
+    print(f"  -> {out_path.relative_to(ROOT)}  ({size / 1024:.0f} KB)")
 
     board.file = f"stubs-{board.id}.zip"
     return board
@@ -217,7 +217,7 @@ def main() -> None:
 
     manifest_path = ASSETS / "stubs-manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
-    print("\nManifest → assets/stubs-manifest.json")
+    print(f"\nManifest -> {manifest_path.relative_to(ROOT)}")
 
     # Clean up
     if TMP.exists():

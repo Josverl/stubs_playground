@@ -23,10 +23,6 @@ function saveExpanded(set) {
     sessionStorage.setItem(EXPANDED_KEY, JSON.stringify([...set]));
 }
 
-function getAssetsBase() {
-    return window.location.pathname.includes('/src/') ? '../assets' : './assets';
-}
-
 function isPythonFile(name) {
     const lower = name.toLowerCase();
     return lower.endsWith('.py') || lower.endsWith('.pyi');
@@ -240,7 +236,7 @@ export class FileTree {
         if (isPythonFile(child.name)) {
             const img = document.createElement('img');
             img.className = 'file-tree__icon-img';
-            img.src = `${getAssetsBase()}/file_type_python.svg`;
+            img.src = './assets/file_type_python.svg';
             img.alt = 'Python file';
             icon.appendChild(img);
         } else {

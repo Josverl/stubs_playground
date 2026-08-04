@@ -24,7 +24,7 @@ function runTsc(args, cwd) {
 
 try {
     runTsc([
-        'src/worker/messages.ts',
+        'packages/pyright-worker/src/messages.ts',
         '--declaration',
         '--emitDeclarationOnly',
         '--target', 'ES2020',
@@ -36,13 +36,13 @@ try {
 
     const [generated, committed] = await Promise.all([
         readFile(join(outputDir, 'messages.d.ts'), 'utf8'),
-        readFile(new URL('../src/worker/messages.d.ts', import.meta.url), 'utf8'),
+        readFile(new URL('../packages/pyright-worker/src/messages.d.ts', import.meta.url), 'utf8'),
     ]);
 
     assert.equal(
         committed.replaceAll('\r\n', '\n'),
         generated.replaceAll('\r\n', '\n'),
-        'src/worker/messages.d.ts is stale; regenerate it from src/worker/messages.ts',
+        'packages/pyright-worker/src/messages.d.ts is stale; regenerate it from messages.ts',
     );
 
     const packageDir = join(
@@ -51,19 +51,20 @@ try {
         '@mp-codemirror',
         'pyright-worker',
     );
-    await mkdir(packageDir, { recursive: true });
+    const packageSourceDir = join(packageDir, 'src');
+    await mkdir(packageSourceDir, { recursive: true });
     await Promise.all([
         copyFile(
-            new URL('../src/worker/package.json', import.meta.url),
+            new URL('../packages/pyright-worker/package.json', import.meta.url),
             join(packageDir, 'package.json'),
         ),
         copyFile(
-            new URL('../src/worker/messages.d.ts', import.meta.url),
-            join(packageDir, 'messages.d.ts'),
+            new URL('../packages/pyright-worker/src/messages.d.ts', import.meta.url),
+            join(packageSourceDir, 'messages.d.ts'),
         ),
         copyFile(
-            new URL('../src/worker/declarations.d.ts', import.meta.url),
-            join(packageDir, 'declarations.d.ts'),
+            new URL('../packages/pyright-worker/src/declarations.d.ts', import.meta.url),
+            join(packageSourceDir, 'declarations.d.ts'),
         ),
         writeFile(
             join(outputDir, 'consumer.ts'),

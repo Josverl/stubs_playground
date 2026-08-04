@@ -3,7 +3,7 @@
 Millisecond values are Playwright ``timeout=`` parameters.
 Second values are ``time.sleep()`` durations.
 
-Keep DEBOUNCE_MS in sync with CHANGE_DEBOUNCE_MS in src/app.js.
+Keep DEBOUNCE_MS in sync with CHANGE_DEBOUNCE_MS in apps/playground/app.js.
 """
 
 # ---------------------------------------------------------------------------
@@ -16,7 +16,7 @@ LSP_TIMEOUT = CDN_TIMEOUT + UI_TIMEOUT     # Pyright worker to respond with diag
 OPFS_TIMEOUT = 5_000     # OPFS file-system operation
 
 # ---------------------------------------------------------------------------
-# App timing — must stay in sync with src/app.js
+# App timing — must stay in sync with apps/playground/app.js
 # ---------------------------------------------------------------------------
 
 DEBOUNCE_MS = 300        # CHANGE_DEBOUNCE_MS in app.js

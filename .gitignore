@@ -32,8 +32,8 @@ ENV/
 node_modules/
 yarn.lock
 
-# Build outputs (if we ever add a build step)
-dist/
+# Build outputs
+/packages/pyright-worker/dist/
 build/
 *.bundle.js
 
@@ -50,7 +50,7 @@ htmlcov/
 .playwright-mcp
 *.png
 !docs/**/*.png
-!assets/**/*.png
+!apps/playground/assets/**/*.png
 # type stubs for MicroPython 
 typings/
 # Squad: ignore runtime state (logs, inbox, sessions)

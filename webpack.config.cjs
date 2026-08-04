@@ -14,10 +14,10 @@ function getPyrightVersion() {
 
 module.exports = {
     entry: {
-        pyright_worker: "./src/worker/pyright-worker.ts",
+        pyright_worker: "./packages/pyright-worker/src/pyright-worker.ts",
     },
     output: {
-        path: path.resolve(__dirname, "dist"),
+        path: path.resolve(__dirname, "packages/pyright-worker/dist"),
         filename: "[name].js",
         clean: true,
     },
@@ -27,9 +27,9 @@ module.exports = {
         alias: {
             fs: require.resolve("@zenfs/core"),
             // Stub out Node-only Pyright deps that aren't needed in browser
-            "@yarnpkg/fslib": path.resolve(__dirname, "src/worker/polyfills/yarnpkg-fslib-stub.js"),
-            "@yarnpkg/libzip": path.resolve(__dirname, "src/worker/polyfills/yarnpkg-libzip-stub.js"),
-            tmp: path.resolve(__dirname, "src/worker/polyfills/tmp-stub.js"),
+            "@yarnpkg/fslib": path.resolve(__dirname, "packages/pyright-worker/src/polyfills/yarnpkg-fslib-stub.js"),
+            "@yarnpkg/libzip": path.resolve(__dirname, "packages/pyright-worker/src/polyfills/yarnpkg-libzip-stub.js"),
+            tmp: path.resolve(__dirname, "packages/pyright-worker/src/polyfills/tmp-stub.js"),
         },
         fallback: {
             assert: require.resolve("assert"),

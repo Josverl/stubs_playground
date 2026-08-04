@@ -7,7 +7,7 @@ import {
     positionToOffset,
     runNextDiagnostic,
     runPreviousDiagnostic,
-} from '../src/lsp/diagnostics-core.mjs';
+} from '../packages/lsp-client/src/diagnostics-core.mjs';
 
 function makeDoc(lines) {
     const offsets = [];

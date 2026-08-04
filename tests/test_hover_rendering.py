@@ -1,5 +1,5 @@
 """
-Tests for the standalone Markdown/RST renderer (src/lsp/markdown-renderer.js).
+Tests for the standalone Markdown/RST renderer package.
 
 Verifies that processInline / renderMarkdown produce correct HTML for
 Markdown and RST markup found in MicroPython doc-stubs.
@@ -23,7 +23,7 @@ def _render(page, text: str) -> str:
     """Import renderMarkdown and render *text*; return outerHTML of result."""
     return page.evaluate(
         """async (text) => {
-            const mod = await import('/src/lsp/markdown-renderer.js');
+            const mod = await import('/packages/lsp-client/src/markdown-renderer.js');
             const el = mod.renderMarkdown(text);
             return el.outerHTML;
         }""",
@@ -35,7 +35,7 @@ def _inner(page, text: str) -> str:
     """Return innerText of the rendered output (no tags)."""
     return page.evaluate(
         """async (text) => {
-            const mod = await import('/src/lsp/markdown-renderer.js');
+            const mod = await import('/packages/lsp-client/src/markdown-renderer.js');
             const el = mod.renderMarkdown(text);
             return el.innerText;
         }""",
@@ -47,7 +47,7 @@ def _query(page, text: str, selector: str) -> list[str]:
     """Render *text* and return list of innerText for all *selector* matches."""
     return page.evaluate(
         """async ([text, selector]) => {
-            const mod = await import('/src/lsp/markdown-renderer.js');
+            const mod = await import('/packages/lsp-client/src/markdown-renderer.js');
             const el = mod.renderMarkdown(text);
             return Array.from(el.querySelectorAll(selector)).map(n => n.innerText);
         }""",
@@ -59,7 +59,7 @@ def _attr(page, text: str, selector: str, attr: str) -> list[str]:
     """Return list of *attr* attribute values for all *selector* matches."""
     return page.evaluate(
         """async ([text, selector, attr]) => {
-            const mod = await import('/src/lsp/markdown-renderer.js');
+            const mod = await import('/packages/lsp-client/src/markdown-renderer.js');
             const el = mod.renderMarkdown(text);
             return Array.from(el.querySelectorAll(selector)).map(n => n.getAttribute(attr));
         }""",
@@ -70,7 +70,7 @@ def _attr(page, text: str, selector: str, attr: str) -> list[str]:
 def test_hover_module_reexports_renderer(render_page):
     html = render_page.evaluate(
         """async () => {
-            const mod = await import('/src/lsp/hover.js');
+            const mod = await import('/packages/lsp-client/src/hover.js');
             return mod.renderMarkdown('**compatible**').outerHTML;
         }"""
     )
@@ -855,7 +855,7 @@ def test_empty_input_returns_empty_div(render_page):
     # No child elements for empty input
     children = render_page.evaluate(
         """async () => {
-            const mod = await import('/src/lsp/hover.js');
+            const mod = await import('/packages/lsp-client/src/hover.js');
             const el = mod.renderMarkdown('');
             return el.children.length;
         }"""
@@ -866,7 +866,7 @@ def test_empty_input_returns_empty_div(render_page):
 def test_whitespace_only_input(render_page):
     children = render_page.evaluate(
         """async () => {
-            const mod = await import('/src/lsp/hover.js');
+            const mod = await import('/packages/lsp-client/src/hover.js');
             const el = mod.renderMarkdown('   \\n  \\n  ');
             return el.children.length;
         }"""

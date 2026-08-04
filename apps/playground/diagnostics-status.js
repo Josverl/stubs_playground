@@ -1,11 +1,11 @@
 /**
  * Application-level diagnostics status bar rendering.
  *
- * This module is intentionally DOM-coupled and stays outside src/lsp/
+ * This module is intentionally DOM-coupled and stays outside packages/lsp-client/
  * so the LSP diagnostics core remains reusable.
  */
 
-import { getWorkspaceDiagnostics } from './lsp/diagnostics.js';
+import { getWorkspaceDiagnostics } from './component-source.js';
 
 function escapeHtml(value) {
     return String(value)

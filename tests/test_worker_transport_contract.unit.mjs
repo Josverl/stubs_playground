@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { SimpleLSPClient } from '../src/lsp/simple-client.js';
-import { WorkerTransport } from '../src/lsp/worker-transport.js';
-import { createTransport } from '../src/lsp/transport-factory.js';
+import { SimpleLSPClient } from '../packages/lsp-client/src/simple-client.js';
+import { WorkerTransport } from '../packages/lsp-client/src/worker-transport.js';
+import { createTransport } from '../packages/lsp-client/src/transport-factory.js';
 
 test('WorkerTransport requires an explicit worker URL', () => {
     assert.throws(

@@ -140,8 +140,9 @@ function base64urlToUint8Array(str) {
  */
 export async function buildShareableUrl(codeOrFiles, board, typeCheckMode, stdlib, pythonVersion) {
     const url = new URL(window.location.href);
-    // Remove any existing params we manage
+    const componentSource = url.searchParams.get('components');
     url.search = '';
+    if (componentSource) url.searchParams.set('components', componentSource);
 
     if (board) url.searchParams.set('board', board);
     if (typeCheckMode) url.searchParams.set('typeCheckMode', typeCheckMode);

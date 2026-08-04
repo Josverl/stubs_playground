@@ -5,7 +5,7 @@
  * Consumers should import from this file, not from individual modules.
  * 
  * Example:
- *   import { createLSPClient, createLSPPlugin } from './lsp/index.js';
+ *   import { createLSPClient, createLSPPlugin } from '@mp-codemirror/lsp-client';
  */
 
 // Transport layer
@@ -23,7 +23,8 @@ export {
     notifyDocumentChange,
     removeWorkspaceDiagnosticsFor,
     getWorkspaceDiagnostics,
-    requestDiagnostics
+    requestDiagnostics,
+    lintKeymapExtension,
 } from './diagnostics.js';
 
 // Completion

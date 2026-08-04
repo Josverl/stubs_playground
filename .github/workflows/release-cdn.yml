@@ -5,7 +5,7 @@ name: Release CDN component
 #
 # Two independently versioned components:
 #   - lsp-client     → tag `lsp-client-v<version>` (pure source, already in git)
-#   - pyright-worker → tag `pyright-worker-v<version>` (carries built dist/pyright_worker.js)
+#   - pyright-worker → tag `pyright-worker-v<version>` (carries its built worker bundle)
 #
 # Tags are immutable: a version that already exists is never moved — cut a new one.
 # Manual dispatches may target a feature branch so a release candidate can be
@@ -95,8 +95,8 @@ jobs:
           fi
 
           case "$component" in
-            lsp-client)     pkg='src/lsp/package.json' ;;
-            pyright-worker) pkg='src/worker/package.json' ;;
+            lsp-client)     pkg='packages/lsp-client/package.json' ;;
+            pyright-worker) pkg='packages/pyright-worker/package.json' ;;
             *) echo "::error::Unknown component '$component'"; exit 1 ;;
           esac
 
@@ -121,11 +121,23 @@ jobs:
           echo "source_sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node.js
-        if: steps.meta.outputs.component == 'pyright-worker'
         uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'npm'
+
+      - name: Verify LSP client release tree
+        if: steps.meta.outputs.component == 'lsp-client'
+        run: |
+          set -euo pipefail
+          test -s packages/lsp-client/package.json
+          test -s packages/lsp-client/src/index.js
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(
+            find packages/lsp-client/src -maxdepth 1 -type f \
+              \( -name '*.js' -o -name '*.mjs' \) -print0
+          )
 
       - name: Install uv
         if: steps.meta.outputs.component == 'pyright-worker'
@@ -156,11 +168,15 @@ jobs:
         if: steps.meta.outputs.component == 'pyright-worker'
         run: |
           set -euo pipefail
-          if [ ! -s dist/pyright_worker.js ]; then
-            echo "::error::dist/pyright_worker.js missing or empty"
-            exit 1
-          fi
-          echo "pyright_worker.js: $(stat -c%s dist/pyright_worker.js) bytes"
+          worker='packages/pyright-worker/dist/pyright_worker.js'
+          for path in \
+            "$worker" \
+            packages/pyright-worker/assets/stubs-manifest.json \
+            packages/pyright-worker/assets/stubs-esp32.zip
+          do
+            test -s "$path" || { echo "::error::$path missing or empty"; exit 1; }
+          done
+          echo "pyright_worker.js: $(stat -c%s "$worker") bytes"
 
       - name: Configure git identity
         run: |
@@ -173,10 +189,11 @@ jobs:
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
           set -euo pipefail
-          # dist/ is gitignored on main; force-add only for this tag's tree.
-          git add -f dist/pyright_worker.js dist/pyright_worker.js.LICENSE.txt
-          # assets/*.zip are tracked; include any freshly packed changes.
-          git add assets
+          # Worker dist is gitignored on main; force-add only for this tag's tree.
+          git add -f packages/pyright-worker/dist/pyright_worker.js \
+            packages/pyright-worker/dist/pyright_worker.js.LICENSE.txt
+          # Worker assets are tracked; include any freshly packed changes.
+          git add packages/pyright-worker/assets
           git commit -m "release(pyright-worker): v${VERSION} [skip ci]"
 
       - name: Create and push tag
@@ -197,14 +214,42 @@ jobs:
         run: |
           set -uo pipefail
           if [ "$COMPONENT" = "lsp-client" ]; then
-            paths='src/lsp/index.js'
+            paths='packages/lsp-client/src/index.js'
           else
-            paths='dist/pyright_worker.js assets/stubs-manifest.json'
+            paths='packages/pyright-worker/dist/pyright_worker.js packages/pyright-worker/assets/stubs-manifest.json'
           fi
           for p in $paths; do
             url="https://purge.jsdelivr.net/gh/${REPO}@${TAG}/${p}"
             echo "Purging/warming: $url"
             curl -fsSL "$url" >/dev/null || echo "::warning::jsDelivr warm failed for $p (non-fatal)"
+          done
+
+      - name: Verify immutable jsDelivr files
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          COMPONENT: ${{ steps.meta.outputs.component }}
+        run: |
+          set -euo pipefail
+          if [ "$COMPONENT" = "lsp-client" ]; then
+            paths='packages/lsp-client/src/index.js'
+          else
+            paths='packages/pyright-worker/dist/pyright_worker.js packages/pyright-worker/assets/stubs-manifest.json packages/pyright-worker/assets/stubs-esp32.zip'
+          fi
+          for path in $paths; do
+            url="https://cdn.jsdelivr.net/gh/${REPO}@${TAG}/${path}"
+            output="${RUNNER_TEMP}/$(basename "$path")"
+            for attempt in $(seq 1 12); do
+              if curl -fsSL "$url" -o "$output" && [ -s "$output" ]; then
+                echo "Verified: $url"
+                break
+              fi
+              if [ "$attempt" -eq 12 ]; then
+                echo "::error::jsDelivr did not serve $url"
+                exit 1
+              fi
+              sleep 5
+            done
           done
 
       - name: Remove bootstrap request tag
@@ -226,11 +271,11 @@ jobs:
             echo ""
             if [ "$COMPONENT" = 'lsp-client' ]; then
               echo "\`\`\`"
-              echo "https://cdn.jsdelivr.net/gh/${{ github.repository }}@${{ steps.meta.outputs.tag }}/src/lsp/index.js"
+              echo "https://cdn.jsdelivr.net/gh/${{ github.repository }}@${{ steps.meta.outputs.tag }}/packages/lsp-client/src/index.js"
               echo "\`\`\`"
             else
               echo "\`\`\`"
-              echo "https://cdn.jsdelivr.net/gh/${{ github.repository }}@${{ steps.meta.outputs.tag }}/dist/pyright_worker.js"
+              echo "https://cdn.jsdelivr.net/gh/${{ github.repository }}@${{ steps.meta.outputs.tag }}/packages/pyright-worker/dist/pyright_worker.js"
               echo "\`\`\`"
             fi
           } >> "$GITHUB_STEP_SUMMARY"

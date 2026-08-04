@@ -8,7 +8,7 @@ import {
     dedupeAndSortCompletionOptions,
     isDunderLabel,
     kindToType,
-} from '../src/lsp/completion-core.mjs';
+} from '../packages/lsp-client/src/completion-core.mjs';
 
 test('kindToType maps function-like and fallback kinds', () => {
     assert.equal(kindToType(CompletionItemKind.Function), 'function');

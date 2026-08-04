@@ -8,19 +8,25 @@ from pathlib import Path
 
 import pytest
 
-_worker_js = Path(__file__).parent.parent / "dist" / "pyright_worker.js"
+_worker_js = (
+    Path(__file__).parent.parent
+    / "packages"
+    / "pyright-worker"
+    / "dist"
+    / "pyright_worker.js"
+)
 pytestmark = [
     pytest.mark.worker,
     pytest.mark.skipif(
         not _worker_js.exists(),
-        reason="dist/pyright_worker.js not found. Run: npm run build:worker",
+        reason="Worker bundle not found. Run: npm run build:worker",
     ),
 ]
 
 
 @pytest.fixture(scope="module")
 def test_page_url(project_server):
-    return f"{project_server}/src/tests/worker-transport-test.html"
+    return f"{project_server}/apps/playground/tests/worker-transport-test.html"
 
 
 @pytest.fixture(autouse=True)

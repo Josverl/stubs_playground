@@ -32,14 +32,14 @@ Thank you for your interest in contributing to this project! This document provi
    just build
    ```
 
-4. **Start the HTTP server:**
+4. **Start the playground with workspace components:**
    ```bash
-   just http
-   # or: python -m http.server 8888
+   just serve
    ```
 
 5. **Open in browser:**
-   Navigate to `http://localhost:8888/src/`
+   `just serve` opens `http://localhost:8888/apps/playground/?components=local`.
+   Use `just serve cdn` to run the same application with published components.
 
 ## Development Workflow
 
@@ -58,7 +58,8 @@ Thank you for your interest in contributing to this project! This document provi
    ```
 
 2. **Make your changes:**
-   - Edit files in the `src/` directory
+   - Edit application files in `apps/playground/`
+   - Edit reusable components in `packages/lsp-client/` or `packages/pyright-worker/`
    - Test your changes thoroughly
    - Check browser console for errors
 
@@ -288,10 +289,11 @@ mp_codemirror/
 │   ├── workflows/
 │   │   └── deploy.yml              # GitHub Actions deployment
 │   └── copilot-instructions.md     # Agent instructions
-├── src/
-│   ├── index.html                  # Main application
-│   ├── app.js                      # Application logic
-│   └── styles.css                  # Styling
+├── apps/
+│   └── playground/                 # Main browser application
+├── packages/
+│   ├── lsp-client/                 # Reusable CodeMirror LSP bridge
+│   └── pyright-worker/             # Worker source, bundle, and board assets
 ├── tests/
 │   ├── conftest.py                 # Pytest configuration
 │   ├── test_editor.py              # Playwright tests

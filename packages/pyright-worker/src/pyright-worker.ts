@@ -25,11 +25,11 @@ import * as path from "path";
 const { configure, InMemory } = fs as any;
 
 // Bundled typeshed (inlined as ArrayBuffer by arraybuffer-loader)
-import typeshedFallbackZip from "../../assets/typeshed-fallback.zip";
-import micropythonStdlibZip from "../../assets/stubs-stdlib.zip";
+import typeshedFallbackZip from "../assets/typeshed-fallback.zip";
+import micropythonStdlibZip from "../assets/stubs-stdlib.zip";
 
 // Bundled default board stubs (rp2)
-import defaultBoardStubsZip from "../../assets/stubs-rp2.zip";
+import defaultBoardStubsZip from "../assets/stubs-rp2.zip";
 
 import {
     BrowserMessageReader,

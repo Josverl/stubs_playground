@@ -54,19 +54,30 @@ jobs:
       - name: Verify build artifacts
         run: |
           set -euo pipefail
-          if [ ! -f dist/pyright_worker.js ] || [ ! -s dist/pyright_worker.js ]; then
-            echo "ERROR: dist/pyright_worker.js missing or empty"
+          worker='packages/pyright-worker/dist/pyright_worker.js'
+          if [ ! -f "$worker" ] || [ ! -s "$worker" ]; then
+            echo "ERROR: $worker missing or empty"
             exit 1
           fi
-          echo "pyright_worker.js: $(stat -c%s dist/pyright_worker.js) bytes"
+          echo "pyright_worker.js: $(stat -c%s "$worker") bytes"
 
       - name: Prepare deploy directory
+        run: just stage-pages
+
+      - name: Verify deploy tree
         run: |
           set -euo pipefail
-          mkdir -p deploy
-          cp -r src/* deploy/
-          cp dist/pyright_worker.js deploy/
-          cp -r assets deploy/
+          for path in \
+            deploy/index.html \
+            deploy/apps/playground/index.html \
+            deploy/apps/playground/component-source.js \
+            deploy/packages/lsp-client/src/index.js \
+            deploy/packages/pyright-worker/dist/pyright_worker.js \
+            deploy/packages/pyright-worker/assets/stubs-manifest.json \
+            deploy/packages/pyright-worker/assets/stubs-esp32.zip
+          do
+            test -s "$path" || { echo "::error::$path missing or empty"; exit 1; }
+          done
 
       - name: Setup Pages
         uses: actions/configure-pages@v6.0.0
