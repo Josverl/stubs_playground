@@ -418,10 +418,10 @@ export {
 } from './completion-core.mjs';
 ```
 
-### 4.5 Separate `package.json` for the client library (optional but clean)
+### 4.5 Separate component metadata (optional but clean)
 
-Move the existing `package.json` (which today describes only the webpack worker build) into
-`src/worker/package.json`, and create `src/lsp/package.json` for the library:
+Keep the root `package.json` as the application and worker-build manifest, and add
+component-local metadata for the two independently versioned CDN components:
 
 ```
 mp_codemirror/
@@ -431,12 +431,13 @@ mp_codemirror/
       index.js              ← NEW (re-export entry point)
       ...existing files...
     worker/
-      package.json          ← MOVED from root
+      package.json          ← worker component metadata
       ...existing files...
 ```
 
-This keeps the two publishable units independent and avoids coupling the library's semver to the
-worker's Pyright version.
+The root manifest remains necessary for `npm ci`, webpack, and local development. The release
+workflow validates the version from each component manifest, keeping the client and worker version
+streams independent without duplicating the root build dependency graph.
 
 ### 4.6 Add JSDoc type annotations to public API functions
 
@@ -492,7 +493,7 @@ independently.
 | 4.2 | Remove `window.lspClients` global; refactor to options object | Small | No | ✅ Done |
 | 4.3 | Add unsubscribe return to `onNotification` | Trivial | No | ✅ Done |
 | 4.4 | Create `src/lsp/index.js` entry point | Trivial | No | ✅ Done |
-| 4.5 | Separate `package.json` files | Small | No | Partial — `src/lsp/package.json` + `src/worker/package.json` exist; root webpack `package.json` not relocated |
+| 4.5 | Separate component metadata | Small | No | ✅ Done — component manifests own release versions; root manifest remains the application build manifest |
 | 4.6 | Complete JSDoc annotations | Medium | No | ✅ Done |
 | 4.7 | Document worker protocol in README | Small | No | ✅ Done |
 | 4.8 | Decompose `share.js` (optional) | Small | No | Not started |
