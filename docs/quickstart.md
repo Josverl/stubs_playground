@@ -46,20 +46,17 @@ You get full LSP features (diagnostics, completions, hover, board switching) wit
 ## Testing
 
 ```bash
-# Run all tests
-pytest tests/ -v
+# Run independently owned unit suites
+npm run test:app:unit
+npm run test:components:unit
+uv run pytest packages/pyright-worker/tests -m unit -v
 
-# Run by tier
-pytest tests/ -m unit -v          # Unit tests
-pytest tests/ -m editor -v        # Editor/UI tests
-pytest tests/ -m worker -v        # Web Worker tests
-pytest tests/ -m lsp -v           # LSP feature tests
+# Run application or component browser tests
+uv run pytest apps/playground/tests -v --browser chromium
+uv run pytest packages/lsp-client/tests -v --browser chromium
 
-# Run with browser visible
-pytest tests/ --headed
-
-# Run specific test
-pytest tests/test_editor.py::test_page_loads -v
+# Run all Pytest suites with the browser visible
+uv run pytest --headed
 ```
 
 ### Git Commands
@@ -219,7 +216,7 @@ Before committing changes:
 - [ ] All buttons functional
 - [ ] Theme toggle works
 - [ ] Console has no errors
-- [ ] Tests pass: `pytest tests/ -v`
+- [ ] Application and component tests pass: `npm run test:unit && uv run pytest -v`
 - [ ] Mobile view works
 
 ---

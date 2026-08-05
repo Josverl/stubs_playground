@@ -8,7 +8,7 @@ and appear in the tree, and that clicking a file opens it in the editor.
 import pytest
 import time
 
-from timing import CDN_TIMEOUT, UI_TIMEOUT, OPFS_TIMEOUT, SHORT_SETTLE, OPFS_SETTLE
+from tests.timing import CDN_TIMEOUT, UI_TIMEOUT, OPFS_TIMEOUT, SHORT_SETTLE, OPFS_SETTLE
 
 pytestmark = pytest.mark.editor
 

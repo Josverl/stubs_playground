@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createCompletionSource } from '../packages/lsp-client/src/completion.js';
+import { createCompletionSource } from '../src/completion.js';
 
 function makeContext({
     explicit = false,

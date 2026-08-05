@@ -13,12 +13,14 @@ from pathlib import Path
 
 import pytest
 
+from tests.timing import CDN_TIMEOUT, LSP_TIMEOUT, UI_TIMEOUT, SHORT_SETTLE, LSP_ROUND_TRIP
+
 # ---------------------------------------------------------------------------
 # Module-level skip marker — evaluated at collection time
 # ---------------------------------------------------------------------------
 
 _worker_available = (
-    Path(__file__).parent.parent
+    Path(__file__).parents[3]
     / "packages"
     / "pyright-worker"
     / "dist"
@@ -34,11 +36,6 @@ pytestmark = pytest.mark.worker
 
 # ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
-
-from timing import CDN_TIMEOUT, LSP_TIMEOUT, UI_TIMEOUT, DEBOUNCE_SETTLE, SHORT_SETTLE, LSP_ROUND_TRIP, POLL_INTERVAL
-
-
 def _load_editor(page, base_url: str):
     """Navigate to the editor and wait for CodeMirror to be ready."""
     page.goto(f"{base_url}/index.html?cb={time.time_ns()}", wait_until="domcontentloaded")
@@ -240,7 +237,7 @@ def test_clean_code_produces_no_errors(diagnostics_page):
 @requires_lsp
 def test_cross_file_import_resolves_without_diagnostics(page, live_server):
     """Workspace files must be visible to Pyright so local imports resolve cleanly."""
-    setup_url = f"{live_server}/tests/worker-transport-test.html?test-cross-file=setup&cb={time.time_ns()}"
+    setup_url = f"{live_server}/tests/state-setup.html?test-cross-file=setup&cb={time.time_ns()}"
     verify_url = f"{live_server}/index.html?test-cross-file=verify&cb={time.time_ns()}"
 
     page.goto(setup_url, wait_until="domcontentloaded")
@@ -292,7 +289,7 @@ def test_cross_file_import_resolves_without_diagnostics(page, live_server):
 @requires_lsp
 def test_non_python_file_produces_no_diagnostics(page, live_server):
     """Opening a non-Python file must not show any type-checking errors or warnings."""
-    setup_url = f"{live_server}/tests/worker-transport-test.html?cb={time.time_ns()}"
+    setup_url = f"{live_server}/tests/state-setup.html?cb={time.time_ns()}"
     verify_url = f"{live_server}/index.html?cb={time.time_ns()}"
 
     # Write a .txt file and set it as the active file in OPFS
@@ -342,7 +339,7 @@ def test_status_bar_shows_workspace_totals_on_document_switch(page, live_server)
     file's diagnostics.  After receiving errors for file A and switching to a
     clean file B, the error count must still be non-zero.
     """
-    setup_url = f"{live_server}/tests/worker-transport-test.html?cb={time.time_ns()}"
+    setup_url = f"{live_server}/tests/state-setup.html?cb={time.time_ns()}"
     verify_url = f"{live_server}/index.html?cb={time.time_ns()}"
 
     # Prepare two files: one with an error, one clean

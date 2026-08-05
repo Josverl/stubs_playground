@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 _worker_js = (
-    Path(__file__).parent.parent
+    Path(__file__).parents[3]
     / "packages"
     / "pyright-worker"
     / "dist"
@@ -26,7 +26,7 @@ pytestmark = [
 
 @pytest.fixture(scope="module")
 def test_page_url(project_server):
-    return f"{project_server}/apps/playground/tests/worker-transport-test.html"
+    return f"{project_server}/packages/lsp-client/tests/worker-transport-harness.html"
 
 
 @pytest.fixture(autouse=True)

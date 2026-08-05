@@ -19,14 +19,14 @@ import time
 from pathlib import Path
 
 import pytest
-from timing import CDN_TIMEOUT, LSP_TIMEOUT, UI_TIMEOUT, POLL_INTERVAL, HOVER_WAIT, LSP_ROUND_TRIP
+from tests.timing import CDN_TIMEOUT, LSP_TIMEOUT, UI_TIMEOUT, POLL_INTERVAL, HOVER_WAIT, LSP_ROUND_TRIP
 
 # ---------------------------------------------------------------------------
 # Module-level skip marker (evaluated at collection time)
 # ---------------------------------------------------------------------------
 
 _worker_available = (
-    Path(__file__).parent.parent
+    Path(__file__).parents[3]
     / "packages"
     / "pyright-worker"
     / "dist"

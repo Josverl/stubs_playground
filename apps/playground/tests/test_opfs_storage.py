@@ -8,9 +8,9 @@ These tests use the page's JS context to exercise OPFSProject directly.
 import pytest
 import time
 
-pytestmark = pytest.mark.editor
+from tests.timing import LSP_TIMEOUT, UI_TIMEOUT, OPFS_SETTLE
 
-from timing import LSP_TIMEOUT, UI_TIMEOUT, OPFS_SETTLE
+pytestmark = pytest.mark.editor
 
 counter = 0
 start = time.time()

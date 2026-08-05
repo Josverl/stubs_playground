@@ -255,24 +255,34 @@ serve source="local":
 
 # run tests
 test *args='':
-    pytest tests/ -v {{args}}
+    uv run pytest -v {{args}}
 
-# run Tier 0 Python unit tests only
+# run Python component unit tests only
 test-unit-py:
-    uv run pytest -m unit -v || test $? -eq 5
+    uv run pytest packages/pyright-worker/tests -m unit -v
 
-# run Tier 0 JavaScript unit tests only
+# run all JavaScript unit tests
 test-unit-js:
-    node --test tests/*.unit.mjs
+    npm run test:unit
 
-# run all Tier 0 unit tests (Python + JavaScript)
+# run all unit tests
 test-unit:
     just test-unit-py
     just test-unit-js
 
-# run only the worker transport tests
+# run the playground application tests
+test-app *args='':
+    uv run pytest apps/playground/tests -v {{args}}
+
+# run the published LSP client tests without loading the application
+test-lsp-client *args='':
+    npm run test:lsp-client:unit
+    uv run pytest packages/lsp-client/tests -v {{args}}
+
+# run the published worker tests without loading the application
 test-worker *args='':
-    pytest tests/test_worker_transport.py -v {{args}}
+    npm run test:pyright-worker:unit
+    uv run pytest packages/pyright-worker/tests -v {{args}}
 
 # --- Info recipes ---
 

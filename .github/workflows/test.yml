@@ -14,8 +14,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit-tests:
-    # Tier 0: Pure Python + JavaScript unit tests, no browser, no server. Fast.
+  application-unit-tests:
+    # Playground-owned unit tests. Component internals are tested separately.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Node.js dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Verify generated component config
+        run: node scripts/generate-component-config.mjs --check
+
+      - name: Verify application and component test boundaries
+        run: npm run check:test-boundaries
+
+      - name: Run playground unit tests
+        run: npm run test:app:unit
+
+  component-unit-tests:
+    # Published package tests run without loading any playground modules.
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -40,14 +66,11 @@ jobs:
       - name: Install Node.js dependencies
         run: npm ci --ignore-scripts
 
-      - name: Run Python unit tests
-        run: uv run pytest -m unit -v || test $? -eq 5
+      - name: Run LSP client and worker contract tests
+        run: npm run test:components:unit
 
-      - name: Verify generated component config
-        run: node scripts/generate-component-config.mjs --check
-
-      - name: Run JavaScript unit tests
-        run: node --test tests/*.unit.mjs
+      - name: Run worker packaging tests
+        run: uv run pytest packages/pyright-worker/tests -m unit -v
 
   security-audit:
     # Tier 0: Check npm dependencies for known vulnerabilities.
@@ -119,16 +142,14 @@ jobs:
           path: packages/pyright-worker/dist/pyright_worker.js
           if-no-files-found: error
 
-  browser-tests:
-    # Tier 1+2: Playwright suites against browser + suite matrix.
+  application-browser-tests:
+    # The playground verifies rendered behavior and public component interfaces.
     runs-on: ubuntu-latest
     needs: [worker-build]
     timeout-minutes: 20
     strategy:
       fail-fast: false
-      max-parallel: 8
       matrix:
-        suite: [editor, worker]
         browser: [chromium, firefox, webkit]
     steps:
       - name: Checkout
@@ -162,4 +183,47 @@ jobs:
         run: uv run playwright install ${{ matrix.browser }} --with-deps
 
       - name: Run suite tests
-        run: uv run pytest -m "${{ matrix.suite }}" -v --browser "${{ matrix.browser }}"
+        run: uv run pytest apps/playground/tests -v --browser "${{ matrix.browser }}"
+
+  component-browser-tests:
+    # Package-owned harnesses test published components without the playground.
+    runs-on: ubuntu-latest
+    needs: [worker-build]
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download worker artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: pyright-worker-dist
+          path: packages/pyright-worker/dist
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ matrix.browser }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-${{ matrix.browser }}-
+            ${{ runner.os }}-playwright-
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Install dependencies
+        run: uv sync --extra test
+
+      - name: Install Playwright browsers
+        run: uv run playwright install ${{ matrix.browser }} --with-deps
+
+      - name: Run component browser tests
+        run: uv run pytest packages/lsp-client/tests -v --browser "${{ matrix.browser }}"

@@ -84,7 +84,7 @@ curl -fI \
 MP_CODEMIRROR_CDN_CLIENT_TAG=lsp-client-v0.2.0 \
 MP_CODEMIRROR_CDN_WORKER_TAG=pyright-worker-v0.2.0 \
 uv run pytest \
-  tests/test_cdn_harness.py::test_tagged_cdn_consumer_has_no_local_component_fallbacks \
+  packages/lsp-client/tests/test_public_consumer.py::test_tagged_cdn_consumer_has_no_local_component_fallbacks \
   -v
 ```
 
@@ -210,11 +210,9 @@ paths and hide the worker control-plane `postMessage` details.
 
 ## 4. Stubs and typeshed
 
-The worker bundle **inlines** Pyright's typeshed fallback and the default MicroPython
-stubs (RP2), so a minimal single-board setup needs **no extra network fetches** beyond
-the worker itself.
+The worker bundle **inlines** Pyright's typeshed fallback and a set of  MicroPython stubs, so a minimal single-board setup needs **no extra network fetches** beyond the worker itself.
 
-To offer board switching (ESP32, STM32, CircuitPython, SAMD, …):
+To offer port/board switching (ESP32, STM32, CircuitPython, SAMD, …):
 
 1. Fetch the manifest to discover available boards and their zip filenames:
    ```
@@ -265,8 +263,9 @@ view.dispatch({
 See [`apps/playground/app.js`](../apps/playground/app.js) for a complete integration
 (board switching, multi-file workspace, status bar),
 [`apps/playground/component-source.js`](../apps/playground/component-source.js) for the
-local/CDN boundary, and [`tests/cdn-harness.html`](../tests/cdn-harness.html) for a
-minimal standalone harness that loads only the public API. The playground pins both
+local/CDN boundary, and
+[`packages/lsp-client/tests/consumer-harness.html`](../packages/lsp-client/tests/consumer-harness.html)
+for a minimal standalone harness that loads only the public API. The playground pins both
 component versions as exact dependencies in `apps/playground/package.json`. Run
 `npm run generate:component-config` after changing those dependencies; CI rejects a
 stale generated browser configuration.

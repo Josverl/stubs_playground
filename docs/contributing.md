@@ -58,7 +58,7 @@ Thank you for your interest in contributing to this project! This document provi
 
 3. **Test your changes:**
    - Open `index.html` and verify functionality
-   - Run automated tests: `pytest tests/ -v`
+   - Run automated tests: `npm run test:unit && uv run pytest -v`
    - Test in multiple browsers if possible
    - Test responsive design (mobile viewport)
 
@@ -165,20 +165,20 @@ Before submitting a PR, verify:
 
 ### Automated Tests
 
-Run tests with pytest:
+Run tests by code owner:
 
 ```bash
-# Run all tests
-pytest tests/ -v
+# Playground-owned tests
+npm run test:app:unit
+uv run pytest apps/playground/tests -v
 
-# Run by tier
-pytest tests/ -m unit -v
-pytest tests/ -m editor -v
-pytest tests/ -m worker -v
-pytest tests/ -m lsp -v
+# Published component tests (no playground imports)
+npm run test:components:unit
+uv run pytest packages/lsp-client/tests -v
+uv run pytest packages/pyright-worker/tests -v
 
-# Run with browser visible
-pytest tests/ --headed
+# All Pytest suites with the browser visible
+uv run pytest --headed
 ```
 
 ## Adding New Features

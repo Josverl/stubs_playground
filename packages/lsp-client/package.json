@@ -4,6 +4,9 @@
   "description": "Reusable LSP bridge for CodeMirror 6",
   "type": "module",
   "main": "./src/index.js",
+  "scripts": {
+    "test": "node --test tests/*.unit.mjs"
+  },
   "exports": {
     ".": {
       "import": "./src/index.js"

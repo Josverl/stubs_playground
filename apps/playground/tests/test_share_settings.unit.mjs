@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { resolveShareSettings } from '../apps/playground/share.js';
+import { resolveShareSettings } from '../share.js';
 
 test('resolveShareSettings returns expected values from provider callbacks', () => {
     const settings = resolveShareSettings(

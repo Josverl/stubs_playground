@@ -6,13 +6,13 @@ import { EditorState } from '@codemirror/state';
 import {
     createDiagnosticsSubscription,
     createLSPDiagnostics,
-} from '../packages/lsp-client/src/diagnostics.js';
+} from '../src/diagnostics.js';
 import {
     getWorkspaceDiagnostics,
     notifyDocumentClose,
     notifyDocumentOpen,
-} from '../packages/lsp-client/src/index.js';
-import { SimpleLSPClient } from '../packages/lsp-client/src/simple-client.js';
+} from '../src/index.js';
+import { SimpleLSPClient } from '../src/simple-client.js';
 
 const FILE_URI = 'file:///workspace/main.py';
 const RENAMED_FILE_URI = 'file:///workspace/app.py';

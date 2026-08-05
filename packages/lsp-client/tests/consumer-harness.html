@@ -26,9 +26,7 @@
         .cm-editor { height: 100%; }
     </style>
 
-    <!-- Peer dependencies for @mp-codemirror/lsp-client and the editor host.
-         Versions mirror apps/playground/index.html. The lsp-client module imports these
-         bare specifiers; the consumer supplies them via this import map. -->
+    <!-- The consumer supplies the LSP client's CodeMirror peer dependencies. -->
     <script type="importmap">
     {
         "imports": {
@@ -81,7 +79,7 @@
                 params.get('clientTag') || 'lsp-client-v0.2.0',
                 'packages/lsp-client/src/index.js',
             )
-            : '../packages/lsp-client/src/index.js';
+            : '../src/index.js';
 
         // Resolve the worker URL. A cross-origin (CDN) worker must be wrapped in
         // a same-origin Blob that importScripts() the remote bundle.
@@ -94,7 +92,7 @@
                 params.get('workerTag') || 'pyright-worker-v0.2.0',
                 'packages/pyright-worker/dist/pyright_worker.js',
             ))
-            : '../packages/pyright-worker/dist/pyright_worker.js';
+            : '../../pyright-worker/dist/pyright_worker.js';
 
         const sourceMode = {
             client: params.get('client') === 'cdn' ? 'cdn' : 'local',
@@ -114,7 +112,7 @@
                     params.get('workerTag') || 'pyright-worker-v0.2.0',
                     'packages/pyright-worker/assets',
                 )
-                : '../packages/pyright-worker/assets';
+                : '../../pyright-worker/assets';
             const response = await fetch(`${base}/stubs-${board}.zip`);
             if (!response.ok) {
                 throw new Error(`Failed to load ${board} stubs: HTTP ${response.status}`);

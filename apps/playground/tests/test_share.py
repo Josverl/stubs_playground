@@ -6,7 +6,7 @@ Tests URL encoding/decoding, share dropdown UI, and URL restoration.
 
 import pytest
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, expect
-from timing import CDN_TIMEOUT
+from tests.timing import CDN_TIMEOUT
 
 pytestmark = pytest.mark.editor
 

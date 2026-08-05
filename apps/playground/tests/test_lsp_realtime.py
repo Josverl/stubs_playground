@@ -16,12 +16,14 @@ from pathlib import Path
 
 import pytest
 
+from tests.timing import CDN_TIMEOUT, LSP_TIMEOUT, DEBOUNCE_MS, DEBOUNCE_SETTLE, SHORT_SETTLE, POLL_INTERVAL
+
 # ---------------------------------------------------------------------------
 # Module-level skip marker
 # ---------------------------------------------------------------------------
 
 _worker_available = (
-    Path(__file__).parent.parent
+    Path(__file__).parents[3]
     / "packages"
     / "pyright-worker"
     / "dist"
@@ -37,11 +39,6 @@ pytestmark = pytest.mark.worker
 
 # ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
-
-from timing import CDN_TIMEOUT, LSP_TIMEOUT, DEBOUNCE_MS, DEBOUNCE_SETTLE, SHORT_SETTLE, POLL_INTERVAL
-
-
 def _load_and_wait(page, base_url: str):
     """Navigate to editor and wait for LSP to initialise."""
     page.goto(f"{base_url}/index.html", wait_until="domcontentloaded")

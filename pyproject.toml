@@ -33,14 +33,21 @@ target-version = "py312"
 quote-style = "double"
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 markers = [
     "unit: Pure Python unit tests, no browser (Tier 0)",
+    "app: Playground application tests",
+    "component: Published component tests that do not load the playground",
     "editor: Editor UI tests, needs HTTP + CDN (Tier 1)",
     "worker: Worker tests, needs packages/pyright-worker/dist/pyright_worker.js (Tier 2)",
     "lsp: Full LSP integration, needs LSP bridge (Tier 3)",
     "slow: Tests that take >10s to complete",
 ]
-testpaths = ["tests"]
+testpaths = [
+    "apps/playground/tests",
+    "packages/lsp-client/tests",
+    "packages/pyright-worker/tests",
+]
 
 # ###################################################################
 # pyright options for MicroPython

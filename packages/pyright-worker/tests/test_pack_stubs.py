@@ -8,22 +8,20 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 import zipfile
 from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.component, pytest.mark.unit]
 
 # ---------------------------------------------------------------------------
 # Load pack-stubs.py as a module (it has a hyphen in the filename so we use
 # importlib rather than a plain import statement).
-# ---------------------------------------------------------------------------
-import sys
-
 _spec = importlib.util.spec_from_file_location(
     "pack_stubs",
-    Path(__file__).parent.parent / "scripts" / "pack-stubs.py",
+    Path(__file__).parents[3] / "scripts" / "pack-stubs.py",
 )
 _mod = importlib.util.module_from_spec(_spec)
 sys.modules["pack_stubs"] = _mod

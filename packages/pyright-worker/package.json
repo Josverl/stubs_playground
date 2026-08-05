@@ -4,6 +4,9 @@
   "private": true,
   "description": "Worker-side protocol contract and packaging metadata",
   "type": "module",
+  "scripts": {
+    "test": "node ../../scripts/check-worker-protocol-types.mjs"
+  },
   "types": "./src/messages.d.ts",
   "exports": {
     ".": "./src/messages.d.ts",
