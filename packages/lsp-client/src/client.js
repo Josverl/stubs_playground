@@ -46,6 +46,8 @@ import { createTransport } from './transport-factory.js';
  * @property {(diagnostics: Array<{uri: string, fileName: string, line: number,
  *   character: number, message: string, severity: string}>) => void}
  *   [onDiagnosticsChange] - Receives a snapshot of workspace diagnostics.
+ * @property {number} [diagnosticDelayMs=0] - Idle time before displaying the
+ *   latest Pyright diagnostics. Document changes remain immediate.
  */
 
 /**
@@ -111,14 +113,21 @@ export function createLSPPlugin(client, view, options = {}) {
         fileUri = 'file:///workspace/document.py',
         languageId = 'python',
         initialContent = '',
-        onDiagnosticsChange = null
+        onDiagnosticsChange = null,
+        diagnosticDelayMs = 0,
     } = options;
 
     // Notify server that document is open
     notifyDocumentOpen(client, fileUri, languageId, initialContent, 1);
 
     // Create diagnostics extension with the view
-    const diagnosticsExtensions = createLSPDiagnostics(client, fileUri, view, onDiagnosticsChange);
+    const diagnosticsExtensions = createLSPDiagnostics(
+        client,
+        fileUri,
+        view,
+        onDiagnosticsChange,
+        diagnosticDelayMs,
+    );
 
     // Create completion source
     const completionSource = createCompletionSource(client, fileUri);

@@ -254,6 +254,7 @@ view.dispatch({
     createLSPPlugin(client, view, {
       fileUri: 'file:///workspace/main.py',
       initialContent: view.state.doc.toString(),
+      diagnosticDelayMs: 750, // keep completion current while hiding transient typing errors
       onDiagnosticsChange: (diags) => console.log('diagnostics', diags),
     }),
   ),

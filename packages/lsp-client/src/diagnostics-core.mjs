@@ -58,6 +58,60 @@ export function convertLSPDiagnostic(lspDiag, doc) {
 }
 
 /**
+ * Coalesce diagnostic publications while preserving immediate document synchronization.
+ *
+ * @param {(diagnostics: unknown) => void} publish - Receives the latest diagnostics.
+ * @param {number} delayMs - Idle time required before publishing.
+ * @param {(callback: () => void, delay: number) => unknown} [schedule=setTimeout]
+ * @param {(timer: unknown) => void} [cancelSchedule=clearTimeout]
+ * @returns {{publish: (diagnostics: unknown) => void, cancel: () => void}}
+ */
+export function createDebouncedPublisher(
+    publish,
+    delayMs,
+    schedule = setTimeout,
+    cancelSchedule = clearTimeout,
+) {
+    if (typeof publish !== 'function') {
+        throw new TypeError('Diagnostic publisher requires a callback');
+    }
+    if (!Number.isFinite(delayMs) || delayMs < 0) {
+        throw new TypeError('Diagnostic delay must be a non-negative finite number');
+    }
+
+    let timer = null;
+    let pending = null;
+
+    const cancel = () => {
+        if (timer !== null) {
+            cancelSchedule(timer);
+            timer = null;
+        }
+        pending = null;
+    };
+
+    return {
+        publish(diagnostics) {
+            if (delayMs === 0) {
+                publish(diagnostics);
+                return;
+            }
+            if (timer !== null) {
+                cancelSchedule(timer);
+            }
+            pending = diagnostics;
+            timer = schedule(() => {
+                timer = null;
+                const latest = pending;
+                pending = null;
+                publish(latest);
+            }, delayMs);
+        },
+        cancel,
+    };
+}
+
+/**
  * Shared behavior for F8: open panel, navigate, restore focus.
  */
 export function runNextDiagnostic(view, openLintPanel, nextDiagnostic) {

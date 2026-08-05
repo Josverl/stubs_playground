@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { EditorState } from '@codemirror/state';
 
+import { createDebouncedPublisher } from '../src/diagnostics-core.mjs';
 import {
     createDiagnosticsSubscription,
     createLSPDiagnostics,
@@ -16,6 +17,56 @@ import { SimpleLSPClient } from '../src/simple-client.js';
 
 const FILE_URI = 'file:///workspace/main.py';
 const RENAMED_FILE_URI = 'file:///workspace/app.py';
+
+test('diagnostic debounce publishes only the latest result after idle time', () => {
+    const scheduled = [];
+    const published = [];
+    const publisher = createDebouncedPublisher(
+        diagnostics => published.push(diagnostics),
+        750,
+        (callback, delay) => {
+            const timer = { callback, delay, cancelled: false };
+            scheduled.push(timer);
+            return timer;
+        },
+        timer => {
+            timer.cancelled = true;
+        },
+    );
+
+    publisher.publish(['transient']);
+    publisher.publish(['settled']);
+
+    assert.equal(scheduled[0].cancelled, true);
+    assert.equal(scheduled[1].delay, 750);
+    assert.deepEqual(published, []);
+
+    scheduled[1].callback();
+    assert.deepEqual(published, [['settled']]);
+});
+
+test('diagnostic debounce cancels pending publication during editor teardown', () => {
+    const scheduled = [];
+    const published = [];
+    const publisher = createDebouncedPublisher(
+        diagnostics => published.push(diagnostics),
+        750,
+        callback => {
+            const timer = { callback, cancelled: false };
+            scheduled.push(timer);
+            return timer;
+        },
+        timer => {
+            timer.cancelled = true;
+        },
+    );
+
+    publisher.publish(['stale']);
+    publisher.cancel();
+
+    assert.equal(scheduled[0].cancelled, true);
+    assert.deepEqual(published, []);
+});
 
 test('diagnostics subscription is disposed with its view plugin', () => {
     const client = new SimpleLSPClient();
