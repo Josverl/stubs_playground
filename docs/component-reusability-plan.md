@@ -17,6 +17,11 @@ implemented workspace/package boundaries.
 > - *August 2026 update* — moved the application to `apps/playground`, moved reusable
 >   components to `packages/lsp-client` and `packages/pyright-worker`, and made the real
 >   application switch between workspace and immutable CDN sources.
+> - *August 2026 ViperIDE review* — reviewed ViperIDE commits through upstream
+>   `3a5a331` (v0.6.2). Defined a single immutable-CDN distribution model: Rollup
+>   consumes the tagged client source at build time and resolves CodeMirror imports from
+>   ViperIDE, while the browser loads the tagged worker artifact at runtime. Also added
+>   lifecycle and workspace-sync prerequisites for ViperIDE's multi-tab architecture.
 
 ---
 
@@ -233,15 +238,11 @@ CodeMirror tooltip lifecycle (LSP request, range mapping, tooltip creation).
 ### 2.3 `@mp-codemirror/pyright-worker` (built artifact)
 
 This is the compiled `packages/pyright-worker/dist/pyright_worker.js` published through
-an immutable component tag:
-pointing at the `.js` file, so consumers can reference it from their bundler or CDN:
+an immutable component tag, so consumers reference the built file directly:
 
 ```js
-// Bundler (Vite / webpack)
-import workerUrl from '@mp-codemirror/pyright-worker?url';
-
-// CDN
-const workerUrl = 'https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@x.y.z/worker.js';
+const workerUrl =
+  'https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/dist/pyright_worker.js';
 ```
 
 The worker's internal control-plane protocol (`serverLoaded` / `initServer` / `serverInitialized`)
@@ -252,45 +253,14 @@ be published as TypeScript declarations.
 
 ## 3. How to share components with projects outside this repo's control
 
-### Option A: npm (recommended)
+### Option A: npm (not selected)
 
-Publish `@mp-codemirror/lsp-client` and `@mp-codemirror/pyright-worker` to the public npm registry.
+Publishing these components to npm would add a second release workflow, registry metadata, and
+consumer path for the same integration goal. The packages are not being presented as
+production-ready npm packages, and ViperIDE will not depend on this option. No npm publication work
+is planned.
 
-**Pros:**
-- Standard toolchain (Vite, webpack, Rollup) picks them up automatically.
-- Versioned with semver — callers pin exact versions, no surprise breakage.
-- CDN consumption via `esm.sh` or `jsDelivr` is automatic once published.
-- GitHub Actions CI can automate publishing on tag push.
-
-**Cons:**
-- Requires ongoing maintenance to keep versions aligned with Pyright upstream.
-- Pyright worker bundle is ~4 MB uncompressed, ~1 MB gzipped — large but within npm norms; consumers who ship only this worker pay a one-time 1 MB download.
-
-**Minimum viable publishing setup:**
-
-```jsonc
-// package.json (lsp-client)
-{
-  "name": "@mp-codemirror/lsp-client",
-  "version": "0.1.0",
-  "type": "module",
-  "main": "./dist/index.js",
-  "exports": {
-    ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" }
-  },
-  "peerDependencies": {
-    "@codemirror/state": "^6",
-    "@codemirror/view": "^6",
-    "@codemirror/lint": "^6",
-    "@codemirror/autocomplete": "^6"
-  }
-}
-```
-
-A single `packages/lsp-client/src/index.js` re-exporting the public surface (see §4) is all that is needed; no
-transpilation step is required since the code is already ES2020+ and uses only browser globals.
-
-### Option B: CDN-only (zero-maintenance path)
+### Option B: immutable CDN tags (selected)
 
 Point consumers at `esm.sh` or `jsDelivr` directly from the GitHub repo (using a tag):
 
@@ -304,18 +274,44 @@ Point consumers at `esm.sh` or `jsDelivr` directly from the GitHub repo (using a
 </script>
 ```
 
-**Pros:** No npm account or CI needed to start.  
-**Cons:** `esm.sh`'s GitHub transform is unofficial; no semver resolution; no npm toolchain integration.
+For an unbundled browser app, import the URL through an import map as shown above. For a bundled
+host such as ViperIDE, a small Rollup HTTPS-module loader fetches the same tagged source graph at
+build time. Relative imports stay on the immutable tag; bare imports such as
+`@codemirror/state`, `@codemirror/view`, and `@codemirror/lint` fall through to
+`@rollup/plugin-node-resolve` and are resolved from the host's `node_modules`.
 
-### Option C: Copy-paste / vendoring (current implicit approach)
+**Pros:**
+- One release and distribution architecture for both bundled and unbundled consumers.
+- No npm publication or package-registry maintenance.
+- ViperIDE gets one CodeMirror module graph from its own lockfile.
+- Exact immutable tags keep client and worker inputs reproducible.
 
-Consumers copy the `packages/lsp-client/src/` directory directly. This works but offers no upgrade path and no
-formal contract.
+**Cons:**
+- ViperIDE's build needs network access to jsDelivr unless CI provides a validated cache.
+- Rollup needs a small, tested HTTPS-module loader because it does not fetch remote modules itself.
+- There is no semver resolver; upgrades are explicit tag changes.
+
+### Option C: Copy-paste / vendoring (not selected)
+
+Consumers copy the `packages/lsp-client/src/` directory directly. This works but offers no upgrade
+path and no formal contract. ViperIDE will not use this option.
 
 ### Recommendation
 
-Start with **Option B** (CDN-only from a tagged release) to collect feedback with zero overhead.
-Move to **Option A** (npm) only when there are real consumers who need semver + toolchain integration.
+Use **Option B only**. Keep publishing the client source, worker, and stub assets through immutable
+component tags and jsDelivr.
+
+ViperIDE's Rollup build must fetch the tagged client source graph and then resolve its bare
+CodeMirror imports from ViperIDE's installed dependencies. This is different from dynamically
+importing the client in the browser: build-time ingestion lets Rollup include the client and
+ViperIDE's CodeMirror modules in one IIFE and therefore preserves one
+`@codemirror/state` / `@codemirror/view` identity set. The worker remains a pinned CDN runtime
+artifact loaded through the documented same-origin Blob shim.
+
+This approach was probed against ViperIDE's current lockfile. The client resolved to ViperIDE's
+`@codemirror/state@6.4.1`, `@codemirror/view@6.28.5`, and `@codemirror/lint@6.8.1`; Rollup produced
+an IIFE with no remaining bare CodeMirror import. No npm publication or vendored client copy is
+part of the plan.
 
 > **Published:** Option B is implemented and the first two independently versioned
 > components are served from jsDelivr at immutable tags (`lsp-client-v*`,
@@ -529,6 +525,39 @@ independently.
 - Done: browser renderer tests import `markdown-renderer.js` directly; `hover.js` retains a
   compatibility re-export of `renderMarkdown`.
 
+### 4.10 Make diagnostics subscriptions follow the editor-view lifecycle
+
+`SimpleLSPClient.onNotification()` now returns an unsubscribe callback, but
+`createLSPDiagnostics()` currently discards it. Reconfiguring an LSP compartment or closing one of
+ViperIDE's editor tabs therefore leaves a handler retaining the old `EditorView`; a later
+`publishDiagnostics` can dispatch into a stale or destroyed view.
+
+**Required before ViperIDE integration:** implement the diagnostics listener as a CodeMirror
+view plugin (or equivalent disposable extension) whose `destroy()` calls the unsubscribe
+function. Add coverage for tab/view destruction and repeated board/client rebinds.
+
+### 4.11 Add a public document-close helper
+
+The proposed API in §2.2 includes `notifyDocumentClose`, but the current package only implements and
+exports `notifyDocumentOpen` and `notifyDocumentChange`. ViperIDE now has explicit `tabClosed`,
+`fileRemoved`, `dirRemoved`, and `fileRenamed` events, so leaving documents open in Pyright would
+retain stale diagnostics and document contents.
+
+**Required before ViperIDE integration:** implement and export
+`notifyDocumentClose(client, fileUri)`, remove that URI from the workspace diagnostics cache, and
+test close followed by reopen and rename (close old URI, open new URI).
+
+### 4.12 Expose dynamic workspace file operations above the raw worker
+
+The worker protocol supports `syncFile` and `deleteFile`, but consumers currently reach through
+`lspTransport.worker.postMessage(...)`. ViperIDE's `fs_cache.js` now centralizes file content,
+renames, removals, device refreshes, and unsaved drafts; keeping it synchronized requires both
+operations without coupling ViperIDE to a transport implementation detail.
+
+**Required before ViperIDE integration:** add typed public methods/helpers for syncing and deleting
+workspace files. A rename is expressed as delete-old + sync-new. Keep the raw protocol declarations
+as the source of truth and cover these helpers with worker transport tests.
+
 ---
 
 ## 5. Summary checklist
@@ -544,9 +573,12 @@ independently.
 | 4.7 | Document and publish worker protocol declarations | Small | No | ✅ Done — generated `messages.d.ts` is exposed and drift-checked |
 | 4.8 | Decompose `share.js` utility/UI layers | Small | No | ✅ Done — no further `share-core.js` split planned |
 | 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | ✅ Done — direct renderer browser coverage |
+| 4.10 | Dispose diagnostic subscriptions with each editor view | Small | No | Required for ViperIDE |
+| 4.11 | Implement/export `notifyDocumentClose` | Small | No | Required for ViperIDE |
+| 4.12 | Expose worker workspace sync/delete helpers | Small | No | Required for ViperIDE |
 | — | Prepare CDN publication (Option B) | Workflow + docs + harness | n/a | ✅ Implemented and locally validated |
 | — | Cut and verify immutable CDN tags | Release operation | n/a | ✅ Done — both coherent `v0.2.0` package-layout tags are live and the tagged-CDN harness passes |
-| — | Publish to npm (Option A, when ready) | One-off CI setup | n/a | Deferred |
+| — | Add a validated Rollup HTTPS loader for immutable client tags | Small build integration | n/a | Planned for ViperIDE |
 
 The completed refactors are additive or internal cleanups. Remaining downstream integration
 and ongoing post-publication validation can be completed independently.
@@ -598,5 +630,72 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 1. Merge PR #64 now that the tagged-CDN verification passes.
 2. Wire the tagged-CDN harness into a scheduled/manual post-release CI job; the current test is
    present but skipped unless tag environment variables are supplied.
-3. Integrate the verified pinned URLs into ViperIDE.
-4. Resolve or explicitly waive the unrelated WebKit OPFS test failure before merging the PR.
+3. Complete tasks 4.10-4.12 and release the updated client before binding multiple ViperIDE tabs.
+4. Add and test ViperIDE's Rollup HTTPS-module loader. It must accept only the configured immutable
+   jsDelivr tag/base URL, resolve relative client imports on that tag, reject failed/non-JavaScript
+   responses, and let bare CodeMirror imports resolve from ViperIDE's lockfile.
+5. Rebase ViperIDE's `typechecking_1` branch onto upstream v0.6.2 before integration. At review time
+   the branch was at `5799bb8`, three commits behind upstream `3a5a331`.
+6. Follow the ViperIDE-specific phased integration plan in §7.
+7. Resolve or explicitly waive the unrelated WebKit OPFS test failure before merging PR #64.
+
+---
+
+## 7. ViperIDE integration review (2026-08-05)
+
+### 7.1 Relevant upstream changes
+
+The local ViperIDE `typechecking_1` branch and local `main` were identical at `5799bb8`. Fetching
+upstream showed v0.6.2 at `3a5a331`; the review below covers commits from 2026-03-08 through that
+upstream tip.
+
+| ViperIDE change | Integration consequence |
+|---|---|
+| v0.5.5 (`27fcfe3`): added `fs_cache.js`, expanded editor tabs/file events, split transports, and added Mocha integration tests | Treat ViperIDE as a multi-document workspace, not a single active editor. Use its cache and file events as the source of truth, and add tests to its existing runner rather than a separate harness. |
+| Persistent settings (`986f4c0`) | Add type-checking enable/mode and board override controls through `settings.js`; do not create a second local-storage schema. |
+| MCP control surface (`e67348c`) | Keep type checking behind a service/API boundary rather than DOM scraping. A later MCP diagnostic/status tool can consume that boundary, but MCP support is not required for the first integration. |
+| Tool shortcuts (`ca0a14f`) | Do not add global shortcuts that collide with ViperIDE's Ctrl/Cmd, Alt+Shift, F5, or CodeMirror lint bindings. Prefer settings/menu controls first; reserve F8/Shift-F8 for diagnostic navigation inside CodeMirror. |
+| Reconnection and session teardown (`1d27c20`, v0.6.0) | The LSP worker is independent of the serial/WebREPL transport. Keep it alive across transient reconnects, but re-evaluate stubs after a newly identified device and dispose it only on type-check disable, board change, or application teardown. |
+| Device metadata and ABI-aware package work (`26e1032`, v0.6.0) | Reuse `devInfo` (`machine`, `sysname`, `release`, `version`, `mpy_arch`, `mpy_ver`) as input to board/stub selection. Because those fields do not uniquely identify every board, persist and expose a manual override. |
+| Rollup/IIFE build and CodeMirror dependencies (current v0.6.2) | Fetch the immutable CDN client source during the Rollup build and let bare imports resolve from ViperIDE's `node_modules`. Keep the worker/stub assets as runtime CDN resources. This uses one distribution architecture and one CodeMirror module graph. |
+| v0.6.2 editor cleanup (`8771484`, `3a5a331`) | No new type-checking API is introduced, but integration changes to `editor.js` must be based on v0.6.2 to avoid conflicting with the new syntax-tree-driven decoration code. |
+
+WebREPL speedups, QuickInstall, Markdown rendering, virtual-device examples, and the viper-tools
+updates do not require changes to the type-checking architecture.
+
+### 7.2 Revised integration architecture
+
+1. Add a small ViperIDE-owned `typechecking.js` service. It owns the Pyright client/transport,
+   worker Blob URL, selected stub bundle, document versions, and diagnostic status. `app.js` and
+   `editor.js` should call this service rather than importing worker internals.
+2. Import `@mp-codemirror/lsp-client` from its exact jsDelivr tag in ViperIDE's Rollup graph through
+   a restricted HTTPS-module loader. The loader handles only remote/relative client modules; bare
+   `@codemirror/*` imports fall through to `@rollup/plugin-node-resolve` and use ViperIDE's
+   lockfile versions. Do not add an npm package or copy client source into ViperIDE.
+3. Load the pinned `pyright-worker-v*` script and stub manifest/assets from jsDelivr. Create one
+   same-origin Blob worker URL per application session and revoke it on final teardown.
+4. Give each editable `.py` `EditorView` its own LSP `Compartment` and URI derived from the current
+   tab path. Non-Python, rendered Markdown, hex, and `.mpy.dis` tabs receive no LSP extension.
+5. Use ViperIDE's existing events and cache:
+   - `editorLoaded` / `tabClosed` for open/close;
+   - the existing editor update listener for debounced `didChange`;
+   - `fileRenamed`, `fileRemoved`, and `dirRemoved` for close/delete/reopen operations;
+   - `fsCache.peek()` for known device content and live editor drafts for unsaved content.
+6. Do not fetch every device file during initial startup. Seed open Python tabs first, then sync
+   cached/imported Python files. Add an explicit background hydration policy only if cross-file
+   imports prove incomplete; avoid slowing device connection by reading the entire filesystem.
+7. On `deviceConnected`, map `devInfo` to the best stub target and restart Pyright only if that
+   target differs. On transient `deviceDisconnected`, retain the current worker and open documents.
+8. Preserve Ruff and MicroPython compile diagnostics. Pyright diagnostics should share CodeMirror's
+   lint UI and carry a source label so users can distinguish all three producers.
+
+### 7.3 Phased implementation and acceptance gates
+
+| Phase | Work | Acceptance gate |
+|---|---|---|
+| 0. Library readiness | Complete 4.10-4.12, publish a new immutable client version, and verify it with the existing standalone/CDN harnesses. | Destroy/rebind tests show no retained handlers; close/reopen and sync/delete tests pass. |
+| 1. ViperIDE build integration | Rebase `typechecking_1` on v0.6.2; add the restricted Rollup HTTPS loader; import the exact tagged client; load the pinned worker URL; initialize one type-checking service. | Production IIFE contains the client and only ViperIDE's CodeMirror modules, has no unresolved bare imports, and starts the CDN worker without a vendored fallback. |
+| 2. One-document vertical slice | Bind the active `.py` tab, display diagnostics/completion/hover, retain Ruff/mpy-cross linting, and add status/error UI. | Existing editor behavior remains intact; a MicroPython sample receives Pyright diagnostics, completion, and hover. |
+| 3. Multi-tab/workspace lifecycle | Bind every open Python view; implement close, rename, delete, draft, and cached-file synchronization. | Tests cover two tabs importing each other, unsaved edits, close/reopen, file/folder rename, delete, and repeated board rebinds. |
+| 4. Device-aware stubs and settings | Map `devInfo` to stubs, add a persistent manual override/type-check mode, and avoid restarts on transient reconnects. | ESP32/RP2 (plus VM) resolve correct APIs; override survives reload; reconnect does not duplicate workers or listeners. |
+| 5. Consumer hardening | Add browser exploratory coverage, Pytest + Playwright integration tests under this repository's `tests/`, ViperIDE build/lint tests, and optional MCP diagnostic exposure. | Chromium and Firefox pass the end-to-end flows; failure/offline states are visible and type checking can be disabled without affecting editing/device operations. |
