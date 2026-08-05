@@ -21,6 +21,7 @@ export {
     createLSPDiagnostics,
     notifyDocumentOpen,
     notifyDocumentChange,
+    notifyDocumentClose,
     removeWorkspaceDiagnosticsFor,
     getWorkspaceDiagnostics,
     requestDiagnostics,

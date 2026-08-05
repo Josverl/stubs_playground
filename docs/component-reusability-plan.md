@@ -413,7 +413,7 @@ export { SimpleLSPClient } from './simple-client.js';
 export { WorkerTransport } from './worker-transport.js';
 export { createTransport as createWorkerTransport } from './transport-factory.js';
 export { createLSPClient, createLSPPlugin, switchBoard, isLSPReady } from './client.js';
-export { createLSPDiagnostics, notifyDocumentOpen, notifyDocumentChange,
+export { createLSPDiagnostics, notifyDocumentOpen, notifyDocumentChange, notifyDocumentClose,
          removeWorkspaceDiagnosticsFor, getWorkspaceDiagnostics,
          requestDiagnostics } from './diagnostics.js';
 export { createCompletionSource } from './completion.js';
@@ -553,6 +553,12 @@ retain stale diagnostics and document contents.
 `notifyDocumentClose(client, fileUri)`, remove that URI from the workspace diagnostics cache, and
 test close followed by reopen and rename (close old URI, open new URI).
 
+**Implementation progress:**
+- Done: `notifyDocumentClose` sends `textDocument/didClose` and then removes the URI from
+  the workspace diagnostics cache.
+- Done: the public entry point and CDN consumer API list export the helper.
+- Done: unit coverage verifies open, populated diagnostics, close/cache cleanup, and reopen.
+
 ### 4.12 Expose dynamic workspace file operations above the raw worker
 
 The worker protocol supports `syncFile` and `deleteFile`, but consumers currently reach through
@@ -580,7 +586,7 @@ as the source of truth and cover these helpers with worker transport tests.
 | 4.8 | Decompose `share.js` utility/UI layers | Small | No | ✅ Done — no further `share-core.js` split planned |
 | 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | ✅ Done — direct renderer browser coverage |
 | 4.10 | Dispose diagnostic subscriptions with each editor view | Small | No | ✅ Done — view plugin owns and disposes the notification subscription |
-| 4.11 | Implement/export `notifyDocumentClose` | Small | No | Required for ViperIDE |
+| 4.11 | Implement/export `notifyDocumentClose` | Small | No | ✅ Done — public close helper clears cached diagnostics |
 | 4.12 | Expose worker workspace sync/delete helpers | Small | No | Required for ViperIDE |
 | — | Prepare CDN publication (Option B) | Workflow + docs + harness | n/a | ✅ Implemented and locally validated |
 | — | Cut and verify immutable CDN tags | Release operation | n/a | ✅ Done — both coherent `v0.2.0` package-layout tags are live and the tagged-CDN harness passes |

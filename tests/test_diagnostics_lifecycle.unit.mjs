@@ -7,9 +7,15 @@ import {
     createDiagnosticsSubscription,
     createLSPDiagnostics,
 } from '../packages/lsp-client/src/diagnostics.js';
+import {
+    getWorkspaceDiagnostics,
+    notifyDocumentClose,
+    notifyDocumentOpen,
+} from '../packages/lsp-client/src/index.js';
 import { SimpleLSPClient } from '../packages/lsp-client/src/simple-client.js';
 
 const FILE_URI = 'file:///workspace/main.py';
+const RENAMED_FILE_URI = 'file:///workspace/app.py';
 
 test('diagnostics subscription is disposed with its view plugin', () => {
     const client = new SimpleLSPClient();
@@ -58,4 +64,72 @@ test('diagnostics extensions include a lifecycle-owned view plugin', () => {
 
     assert.equal(extensions.length, 2);
     assert.equal(client.messageHandlers.length, 0);
+});
+
+test('document close clears cached diagnostics before opening a renamed URI', () => {
+    const sent = [];
+    const client = new SimpleLSPClient();
+    client.transport = {
+        send(message) {
+            sent.push(JSON.parse(message));
+        },
+    };
+    const view = {
+        state: EditorState.create({ doc: 'value = missing_name\n' }),
+        dispatch() {},
+    };
+    const subscription = createDiagnosticsSubscription(client, FILE_URI, view);
+
+    notifyDocumentOpen(client, FILE_URI, 'python', view.state.doc.toString(), 1);
+    client.handleNotification('textDocument/publishDiagnostics', {
+        uri: FILE_URI,
+        diagnostics: [{
+            range: {
+                start: { line: 0, character: 8 },
+                end: { line: 0, character: 20 },
+            },
+            severity: 1,
+            message: '"missing_name" is not defined',
+            source: 'Pyright',
+        }],
+    });
+    assert.equal(getWorkspaceDiagnostics().length, 1);
+
+    notifyDocumentClose(client, FILE_URI);
+    assert.deepEqual(getWorkspaceDiagnostics(), []);
+
+    notifyDocumentOpen(client, RENAMED_FILE_URI, 'python', 'value = 42\n', 1);
+    assert.deepEqual(
+        sent.map(({ method, params }) => ({ method, params })),
+        [{
+            method: 'textDocument/didOpen',
+            params: {
+                textDocument: {
+                    uri: FILE_URI,
+                    languageId: 'python',
+                    version: 1,
+                    text: 'value = missing_name\n',
+                },
+            },
+        }, {
+            method: 'textDocument/didClose',
+            params: {
+                textDocument: {
+                    uri: FILE_URI,
+                },
+            },
+        }, {
+            method: 'textDocument/didOpen',
+            params: {
+                textDocument: {
+                    uri: RENAMED_FILE_URI,
+                    languageId: 'python',
+                    version: 1,
+                    text: 'value = 42\n',
+                },
+            },
+        }],
+    );
+
+    subscription.destroy();
 });

@@ -233,3 +233,21 @@ export function notifyDocumentOpen(client, fileUri, languageId, content, version
         }
     });
 }
+
+/**
+ * Send a `textDocument/didClose` notification and remove cached diagnostics
+ * for the document.
+ *
+ * @param {import('./simple-client.js').SimpleLSPClient} client - Connected LSP client.
+ * @param {string} fileUri - URI of the document being closed.
+ * @returns {void}
+ * @throws {TypeError} If the client has no attached transport.
+ */
+export function notifyDocumentClose(client, fileUri) {
+    client.notify('textDocument/didClose', {
+        textDocument: {
+            uri: fileUri
+        }
+    });
+    removeWorkspaceDiagnosticsFor(fileUri);
+}
