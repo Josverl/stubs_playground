@@ -26,6 +26,16 @@ def _reset_tree_state(page):
     if clear_all.count() > 0:
         page.once("dialog", lambda dialog: dialog.accept())
         clear_all.click()
+        page.wait_for_function(
+            """() => {
+                const clearButton = document.querySelector('.file-tree__clear-all-btn');
+                const hasEntries = document.querySelector(
+                    '.file-tree__file, .file-tree__dir'
+                );
+                return clearButton && !clearButton.disabled && !hasEntries;
+            }""",
+            timeout=OPFS_TIMEOUT,
+        )
 
     # Recreate main.py from the tree UI.
     new_file_btn = page.locator(".file-tree__header .file-tree__icon-btn").first

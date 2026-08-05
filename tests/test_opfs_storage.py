@@ -173,16 +173,46 @@ class TestOPFSStorage:
                 await window.OPFSProject.writeFile('rollback_old.py', '# old-content');
                 await window.OPFSProject.writeFile('rollback_new.py', '# existing-destination');
 
-                const originalRemoveEntry = FileSystemDirectoryHandle.prototype.removeEntry;
                 let simulated = false;
+                const fallbackKey = 'opfs_fallback:rollback_old.py';
+                const usingFallback = localStorage.getItem(fallbackKey) !== null;
+                let restoreDelete;
 
-                FileSystemDirectoryHandle.prototype.removeEntry = async function(name, options) {
-                    if (!simulated && name === 'rollback_old.py') {
-                        simulated = true;
-                        throw new DOMException('simulated failure', 'NoModificationAllowedError');
-                    }
-                    return originalRemoveEntry.call(this, name, options);
-                };
+                if (usingFallback) {
+                    const storagePrototype = Object.getPrototypeOf(localStorage);
+                    const originalRemoveItem = storagePrototype.removeItem;
+                    storagePrototype.removeItem = function(key) {
+                        if (!simulated && key === fallbackKey) {
+                            simulated = true;
+                            throw new DOMException(
+                                'simulated failure',
+                                'NoModificationAllowedError'
+                            );
+                        }
+                        return originalRemoveItem.call(this, key);
+                    };
+                    restoreDelete = () => {
+                        storagePrototype.removeItem = originalRemoveItem;
+                    };
+                } else {
+                    const root = await navigator.storage.getDirectory();
+                    const projectDir = await root.getDirectoryHandle('mp_project');
+                    const directoryPrototype = Object.getPrototypeOf(projectDir);
+                    const originalRemoveEntry = directoryPrototype.removeEntry;
+                    directoryPrototype.removeEntry = async function(name, options) {
+                        if (!simulated && name === 'rollback_old.py') {
+                            simulated = true;
+                            throw new DOMException(
+                                'simulated failure',
+                                'NoModificationAllowedError'
+                            );
+                        }
+                        return originalRemoveEntry.call(this, name, options);
+                    };
+                    restoreDelete = () => {
+                        directoryPrototype.removeEntry = originalRemoveEntry;
+                    };
+                }
 
                 let renameError = null;
                 try {
@@ -190,17 +220,25 @@ class TestOPFSStorage:
                 } catch (err) {
                     renameError = err && err.name ? err.name : String(err);
                 } finally {
-                    FileSystemDirectoryHandle.prototype.removeEntry = originalRemoveEntry;
+                    restoreDelete();
                 }
 
                 const oldExists = await window.OPFSProject.exists('rollback_old.py');
                 const newExists = await window.OPFSProject.exists('rollback_new.py');
                 const newContent = newExists ? await window.OPFSProject.readFile('rollback_new.py') : null;
 
-                return { renameError, oldExists, newExists, newContent };
+                return {
+                    backend: usingFallback ? 'localStorage' : 'opfs',
+                    simulated,
+                    renameError,
+                    oldExists,
+                    newExists,
+                    newContent,
+                };
             }
         """)
 
+        assert result['simulated'], f"delete failure injection did not run: {result}"
         assert result['renameError'], "rename should fail when delete old is forced to fail"
         assert result['oldExists'], "old file should still exist after failed rename"
         assert result['newExists'], "destination should still exist after rollback"

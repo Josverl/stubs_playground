@@ -55,6 +55,7 @@ export class FileTree {
         this._expanded = loadExpanded();
         this._activeFile = null;
         this._entries = [];
+        this._mutationInProgress = false;
         container.classList.add('file-tree');
 
         // Header with "New file" button
@@ -65,14 +66,17 @@ export class FileTree {
         title.className = 'file-tree__title';
         title.textContent = 'Files';
 
-        const newFileBtn = document.createElement('button');
-        newFileBtn.className = 'file-tree__icon-btn';
-        newFileBtn.title = 'New file';
-        newFileBtn.textContent = '+';
-        newFileBtn.addEventListener('click', () => this._promptNewFile(''));
+        this._newFileBtn = document.createElement('button');
+        this._newFileBtn.className = 'file-tree__icon-btn';
+        this._newFileBtn.title = 'New file';
+        this._newFileBtn.textContent = '+';
+        this._newFileBtn.addEventListener(
+            'click',
+            () => this._startMutation(() => this._promptNewFile('')),
+        );
 
         this._header.appendChild(title);
-        this._header.appendChild(newFileBtn);
+        this._header.appendChild(this._newFileBtn);
         container.appendChild(this._header);
 
         this._list = document.createElement('ul');
@@ -106,17 +110,46 @@ export class FileTree {
         importFile.style.display = 'none';
         importLabel.appendChild(importFile);
 
-        const clearAllBtn = document.createElement('button');
-        clearAllBtn.className = 'file-tree__clear-all-btn';
-        clearAllBtn.title = 'Delete all files';
-        clearAllBtn.textContent = 'Clear All';
-        clearAllBtn.addEventListener('click', () => this._clearAll());
+        this._clearAllBtn = document.createElement('button');
+        this._clearAllBtn.className = 'file-tree__clear-all-btn';
+        this._clearAllBtn.title = 'Delete all files';
+        this._clearAllBtn.textContent = 'Clear All';
+        this._clearAllBtn.addEventListener(
+            'click',
+            () => this._startMutation(() => this._clearAll()),
+        );
 
         footerActions.appendChild(importLabel);
         footerActions.appendChild(exportBtn);
         this._footer.appendChild(footerActions);
-        this._footer.appendChild(clearAllBtn);
+        this._footer.appendChild(this._clearAllBtn);
         container.appendChild(this._footer);
+    }
+
+    _startMutation(operation) {
+        this._runMutation(operation).catch((error) => {
+            console.error('File tree mutation failed:', error);
+        });
+    }
+
+    _setMutationState(inProgress) {
+        this._mutationInProgress = inProgress;
+        this._container.setAttribute('aria-busy', String(inProgress));
+        for (const button of this._container.querySelectorAll(
+            '.file-tree__icon-btn, .file-tree__clear-all-btn',
+        )) {
+            button.disabled = inProgress;
+        }
+    }
+
+    async _runMutation(operation) {
+        if (this._mutationInProgress) return;
+        this._setMutationState(true);
+        try {
+            await operation();
+        } finally {
+            this._setMutationState(false);
+        }
     }
 
     setActiveFile(path) {
@@ -257,7 +290,7 @@ export class FileTree {
         row.addEventListener('click', () => this._onOpen(child.path));
         row.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this._onOpen(child.path);
-            if (e.key === 'Delete') this._deleteEntry(child.path);
+            if (e.key === 'Delete') this._startMutation(() => this._deleteEntry(child.path));
         });
     }
 
@@ -270,7 +303,11 @@ export class FileTree {
             newFileBtn.className = 'file-tree__icon-btn';
             newFileBtn.title = 'New file here';
             newFileBtn.textContent = '+';
-            newFileBtn.addEventListener('click', (e) => { e.stopPropagation(); this._promptNewFile(path); });
+            newFileBtn.disabled = this._mutationInProgress;
+            newFileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._startMutation(() => this._promptNewFile(path));
+            });
             wrap.appendChild(newFileBtn);
         }
 
@@ -278,13 +315,21 @@ export class FileTree {
         renameBtn.className = 'file-tree__icon-btn';
         renameBtn.title = 'Rename';
         renameBtn.textContent = '✎';
-        renameBtn.addEventListener('click', (e) => { e.stopPropagation(); this._promptRename(path); });
+        renameBtn.disabled = this._mutationInProgress;
+        renameBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._startMutation(() => this._promptRename(path));
+        });
 
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'file-tree__icon-btn file-tree__icon-btn--danger';
         deleteBtn.title = 'Delete';
         deleteBtn.textContent = '✕';
-        deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); this._deleteEntry(path); });
+        deleteBtn.disabled = this._mutationInProgress;
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._startMutation(() => this._deleteEntry(path));
+        });
 
         wrap.appendChild(renameBtn);
         wrap.appendChild(deleteBtn);
