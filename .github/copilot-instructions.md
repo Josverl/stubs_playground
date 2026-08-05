@@ -14,8 +14,15 @@ the .ai_history folder contains previous documentation about this project, refer
 ## TESTING GUIDELINES
 you MUST test your code thoroughly
 tests should reside in the tests/ folder
-Exploratory testing of web pages must be done using the Playwright MCP Server
+Use Playwright skills to test the web application (Stubs_playground or ViperIDE).
+Take screenshots for the most relevant successful scenarios and all failing scenarios.
 Unit and integration testing should be based on Pytest + Playwright - but only start creating these after exploratory testing of a feature is complete
+
+Install the Playwright CLI and skills with:
+```bash
+npm install -g @playwright/cli@latest
+playwright-cli install --skills
+```
 
 
 ## Development servers
