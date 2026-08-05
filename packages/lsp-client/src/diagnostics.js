@@ -5,7 +5,15 @@
  * to show errors, warnings, and hints from the LSP server.
  */
 
-import { lintGutter, setDiagnostics, openLintPanel, nextDiagnostic, previousDiagnostic } from '@codemirror/lint';
+import {
+    forceLinting,
+    linter,
+    lintGutter,
+    setDiagnostics,
+    openLintPanel,
+    nextDiagnostic,
+    previousDiagnostic,
+} from '@codemirror/lint';
 import { keymap, ViewPlugin } from '@codemirror/view';
 import { Prec } from '@codemirror/state';
 import {
@@ -88,9 +96,17 @@ export function getWorkspaceDiagnostics() {
  * @param {import('@codemirror/view').EditorView} view - Target editor view.
  * @param {(diagnostics: WorkspaceDiagnostic[]) => void} [onDiagnosticsChange] -
  *   Receives a fresh workspace-level snapshot after matching publications.
+ * @param {(diagnostics: import('@codemirror/lint').Diagnostic[]) => void}
+ *   [publishDiagnostics] - Merge-safe lint-source update callback.
  * @returns {{destroy: () => void}} Plugin value whose destroy method unsubscribes.
  */
-export function createDiagnosticsSubscription(client, fileUri, view, onDiagnosticsChange = null) {
+export function createDiagnosticsSubscription(
+    client,
+    fileUri,
+    view,
+    onDiagnosticsChange = null,
+    publishDiagnostics = null,
+) {
     const unsubscribe = client.onNotification((method, params) => {
         if (method === 'textDocument/publishDiagnostics') {
             if (params.uri === fileUri) {
@@ -122,9 +138,13 @@ export function createDiagnosticsSubscription(client, fileUri, view, onDiagnosti
                     })));
                 }
 
-                // Use setDiagnostics to update the editor
-                view.dispatch(setDiagnostics(view.state, cmDiagnostics));
-                console.log('Dispatched setDiagnostics');
+                if (publishDiagnostics) {
+                    // A linter source merges with Ruff and other host lint producers.
+                    publishDiagnostics(cmDiagnostics);
+                } else {
+                    // Preserve the direct-subscription API for existing consumers.
+                    view.dispatch(setDiagnostics(view.state, cmDiagnostics));
+                }
 
                 if (typeof onDiagnosticsChange === 'function') {
                     onDiagnosticsChange(getWorkspaceDiagnostics());
@@ -148,13 +168,25 @@ export function createDiagnosticsSubscription(client, fileUri, view, onDiagnosti
  * @param {(diagnostics: WorkspaceDiagnostic[]) => void} [onDiagnosticsChange] -
  *   Receives a fresh workspace-level snapshot after matching publications.
  * @returns {import('@codemirror/state').Extension[]} CodeMirror lint extensions.
+ *   Pyright is registered as its own lint source so host sources remain active.
  */
 export function createLSPDiagnostics(client, fileUri, view, onDiagnosticsChange = null) {
+    let currentDiagnostics = [];
+    const diagnosticSource = linter(() => currentDiagnostics);
     const subscriptionPlugin = ViewPlugin.define((pluginView) =>
-        createDiagnosticsSubscription(client, fileUri, pluginView, onDiagnosticsChange)
+        createDiagnosticsSubscription(
+            client,
+            fileUri,
+            pluginView,
+            onDiagnosticsChange,
+            (diagnostics) => {
+                currentDiagnostics = diagnostics;
+                forceLinting(pluginView);
+            },
+        )
     );
 
-    return [lintGutter(), subscriptionPlugin];
+    return [lintGutter(), diagnosticSource, subscriptionPlugin];
 }
 
 /**

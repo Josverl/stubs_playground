@@ -648,17 +648,17 @@ Status reviewed against the live `copilot/publish-tier-1-components` branch on 2
 
 ### Remaining tasks and gaps
 
-1. Merge PR #64 now that the tagged-CDN verification passes.
-2. Wire the tagged-CDN harness into a scheduled/manual post-release CI job; the current test is
+1. Completed: Merge PR #64 now that the tagged-CDN verification passes.
+2. Completed: Wire the tagged-CDN harness into a scheduled/manual post-release CI job; the current test is
    present but skipped unless tag environment variables are supplied.
-3. Complete tasks 4.10-4.12 and release the updated client before binding multiple ViperIDE tabs.
-4. Add and test ViperIDE's Rollup HTTPS-module loader. It must accept only the configured immutable
+3. Completed: Complete tasks 4.10-4.12 and release the updated client before binding multiple ViperIDE tabs.
+4. Completed: Add and test ViperIDE's Rollup HTTPS-module loader. It must accept only the configured immutable
    jsDelivr tag/base URL, resolve relative client imports on that tag, reject failed/non-JavaScript
    responses, and let bare CodeMirror imports resolve from ViperIDE's lockfile.
-5. Rebase ViperIDE's `typechecking_1` branch onto upstream v0.6.2 before integration. At review time
+5. Completed: Rebase ViperIDE's `typechecking_1` branch onto upstream v0.6.2 before integration. At review time
    the branch was at `5799bb8`, three commits behind upstream `3a5a331`.
 6. Follow the ViperIDE-specific phased integration plan in §7.
-7. Resolve or explicitly waive the unrelated WebKit OPFS test failure before merging PR #64.
+7. Issue solved: Resolve or explicitly waive the unrelated WebKit OPFS test failure before merging PR #64.
 
 ---
 
