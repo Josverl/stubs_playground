@@ -27,6 +27,10 @@ implemented workspace/package boundaries.
 >   loader, application-owned service, editor/workspace lifecycle, device-aware stubs,
 >   merge-safe diagnostics, and browser race fixes. Remaining work is limited to settings
 >   and broader automated browser hardening.
+> - *August 2026 ViperIDE diagnostics/stubs update* — added idle-delayed diagnostic
+>   presentation, immediate document synchronization, a dedicated WebAssembly stub archive,
+>   and stale-range protection. ViperIDE now pins `lsp-client-v0.2.5` and
+>   `pyright-worker-v0.2.2`.
 
 ---
 
@@ -323,7 +327,7 @@ part of the plan.
 > [`Release CDN component`](../.github/workflows/release-cdn.yml) workflow. The consumer
 > integration contract (import map, cross-origin worker Blob shim, pinned peer-dep versions,
 > stub loading) lives in [`cdn-consumption.md`](./cdn-consumption.md). ViperIDE currently
-> pins `lsp-client-v0.2.3` and `pyright-worker-v0.2.1`.
+> pins `lsp-client-v0.2.5` and `pyright-worker-v0.2.2`.
 
 ---
 
@@ -699,55 +703,65 @@ The architecture below is implemented on ViperIDE's `typechecking_1` branch:
    `TypecheckingService`, while `typechecking_service.js` owns the client/transport, selected stub
    bundle, document versions, diagnostic status, editor bindings, workspace paths, and lifecycle.
    `typechecking_assets.js` owns immutable runtime asset loading and the session Blob worker URL.
-2. ViperIDE imports the client from the exact `lsp-client-v0.2.3` jsDelivr tag through its
+2. ViperIDE imports the client from the exact `lsp-client-v0.2.5` jsDelivr tag through its
    restricted HTTPS-module loader. The loader handles only remote/relative client modules; bare
    `@codemirror/*` imports fall through to `@rollup/plugin-node-resolve` and use ViperIDE's
    lockfile versions. No npm package or vendored client copy was added.
-3. ViperIDE loads the `pyright-worker-v0.2.1` script and stub manifest/assets from jsDelivr. It
+3. ViperIDE loads the `pyright-worker-v0.2.2` script and stub manifest/assets from jsDelivr. It
    creates one same-origin Blob worker URL per application session and revokes it on final teardown.
 4. Each editable `.py` `EditorView` receives its own LSP `Compartment` and URI derived from the
    current tab path. Non-Python, read-only Python, rendered Markdown, hex, and `.mpy.dis` tabs
    receive no LSP extension.
 5. ViperIDE uses its existing events and cache:
    - `editorLoaded` / `tabClosed` for open/close;
-   - the existing editor update listener for debounced `didChange`;
+   - the existing editor update listener for immediate `didChange`, with draft persistence
+     remaining coalesced;
    - `fileRenamed`, `fileRemoved`, and `dirRemoved` for close/delete/reopen operations;
    - `fsCache.peek()` for known device content and live editor drafts for unsaved content.
 6. Startup does not fetch the complete device filesystem. Open Python tabs are seeded first, then
    cached Python files are hydrated through `fsCache.knownPaths()` and `fsCache.peek()`.
-7. On `deviceConnected`, ViperIDE maps `devInfo` to the best available stub target and replaces
-   Pyright only when the target changes. Transient disconnects retain the worker. Editor binding is
-   serialized with worker replacement so a quickly opened file cannot write to a closed transport.
+7. On `deviceConnected`, ViperIDE maps `devInfo` to the best available stub target, including the
+   dedicated `webassembly` archive for its VM, and replaces Pyright only when the target changes.
+   Transient disconnects retain the worker. Editor binding is serialized with worker replacement so
+   a quickly opened file cannot write to a closed transport.
 8. Ruff, MicroPython compile, and Pyright diagnostics share CodeMirror's lint UI. Pyright
    diagnostics use a merge-safe lint source and carry a `Pyright` source label.
 9. Runtime asset fetch uses a global-bound browser `fetch`; this avoids `Illegal invocation` during
    manifest loading while preserving injectable fetch functions for tests.
+10. Pyright document synchronization remains immediate for completion and hover. Diagnostic
+    presentation waits for 750 ms of editor inactivity, drops pending results on further edits, and
+    converts LSP positions against the document visible at publication time.
 
 ### 7.3 Phased implementation and acceptance gates
 
 | Phase | Work | Acceptance gate | Current state |
 |---|---|---|---|
-| 0. Library readiness | Complete 4.10-4.12, publish a new immutable client version, and verify it with the existing standalone/CDN harnesses. | Destroy/rebind tests show no retained handlers; close/reopen and sync/delete tests pass. | ✅ Done — merge-safe diagnostics were released as `lsp-client-v0.2.3`. |
+| 0. Library readiness | Complete 4.10-4.12, publish a new immutable client version, and verify it with the existing standalone/CDN harnesses. | Destroy/rebind tests show no retained handlers; close/reopen and sync/delete tests pass. | ✅ Done — delayed merge-safe diagnostics and stale-range protection are released as `lsp-client-v0.2.5`. |
 | 1. ViperIDE build integration | Rebase `typechecking_1` on v0.6.2; add the restricted Rollup HTTPS loader; import the exact tagged client; load the pinned worker URL; initialize one type-checking service. | Production IIFE contains the client and only ViperIDE's CodeMirror modules, has no unresolved bare imports, and starts the CDN worker without a vendored fallback. | ✅ Done — `bfaa8a4`, `2c36be9`, `fce95ff`, `790a332`, and `47bc84e`. |
-| 2. One-document vertical slice | Bind the active `.py` tab, display diagnostics/completion/hover, retain Ruff/mpy-cross linting, and add status/error UI. | Existing editor behavior remains intact; a MicroPython sample receives Pyright diagnostics, completion, and hover. | 🟡 Core complete — editor binding and merge-safe diagnostics are implemented; startup errors use ViperIDE's existing reporting, but dedicated type-check status/disable UI remains. |
+| 2. One-document vertical slice | Bind the active `.py` tab, display diagnostics/completion/hover, retain Ruff/mpy-cross linting, and add status/error UI. | Existing editor behavior remains intact; a MicroPython sample receives Pyright diagnostics, completion, and hover. | 🟡 Core complete — editor binding, merge-safe 750 ms diagnostic presentation, immediate completion/hover synchronization, and VM MicroPython resolution are implemented; dedicated type-check status/disable UI remains. |
 | 3. Multi-tab/workspace lifecycle | Bind every open Python view; implement close, rename, delete, draft, and cached-file synchronization. | Tests cover two tabs importing each other, unsaved edits, close/reopen, file/folder rename, delete, and repeated board rebinds. | ✅ Implemented — `0fda2b7`, `82dac85`, and `be1a9d1`; service tests cover binding, edits, rename/delete, hydration, rebind, and teardown. |
-| 4. Device-aware stubs and settings | Map `devInfo` to stubs, add a persistent manual override/type-check mode, and avoid restarts on transient reconnects. | ESP32/RP2 (plus VM) resolve correct APIs; override survives reload; reconnect does not duplicate workers or listeners. | 🟡 Partial — automatic device mapping and reconnect behavior are implemented in `1234ccd`; persistent enable/mode and manual board override settings remain. |
-| 5. Consumer hardening | Add browser exploratory coverage, Pytest + Playwright integration tests under this repository's `tests/`, ViperIDE build/lint tests, and optional MCP diagnostic exposure. | Chromium and Firefox pass the end-to-end flows; failure/offline states are visible and type checking can be disabled without affecting editing/device operations. | 🟡 Partial — Mocha unit/build coverage, lint, production builds, and manual Chromium startup/fast-open checks pass. Automated Pytest + Playwright multi-browser/offline coverage and optional MCP exposure remain. |
+| 4. Device-aware stubs and settings | Map `devInfo` to stubs, add a persistent manual override/type-check mode, and avoid restarts on transient reconnects. | ESP32/RP2 (plus VM) resolve correct APIs; override survives reload; reconnect does not duplicate workers or listeners. | 🟡 Partial — automatic device mapping, reconnect behavior, and dedicated VM stubs are implemented (`1234ccd`, `568d2c1`, `15a09d9`); persistent enable/mode and manual board override settings remain. |
+| 5. Consumer hardening | Add browser exploratory coverage, Pytest + Playwright integration tests under this repository's `tests/`, ViperIDE build/lint tests, and optional MCP diagnostic exposure. | Chromium and Firefox pass the end-to-end flows; failure/offline states are visible and type checking can be disabled without affecting editing/device operations. | 🟡 Partial — Mocha unit/build coverage, lint, production builds, component Playwright coverage in Chromium/Firefox/WebKit, and manual ViperIDE Chromium checks pass. Automated ViperIDE multi-browser/offline coverage and optional MCP exposure remain. |
 
 ### 7.4 Current verified implementation
 
 - ViperIDE integration commits run from the restricted loader (`bfaa8a4`) through runtime
-  hardening (`c5a5a8e`, `24370d6`) on `typechecking_1`.
-- The shared component adjustment in `d42b719` preserves host diagnostics and is consumed from
-  immutable tag `lsp-client-v0.2.3`.
-- The browser loads the worker and assets from `pyright-worker-v0.2.1`; startup reaches an initialized
-  LSP client and publishes labeled Pyright diagnostics.
+  hardening (`c5a5a8e`, `24370d6`) and the diagnostics/VM update (`15a09d9`) on
+  `typechecking_1`.
+- Shared client commits `a7d424b` and `1673c9b` add display-only debouncing, discard stale
+  delayed ranges after edits, and are consumed from immutable tag `lsp-client-v0.2.5`.
+- Worker commit `568d2c1` packages `micropython-webassembly-stubs 1.26.0.post2`; the browser loads
+  it with the worker from immutable tag `pyright-worker-v0.2.2`. The current ViperIDE VM reports
+  MicroPython 1.28, so the archive is port-correct but older than the runtime.
 - ViperIDE's full suite passes with 199 tests and 7 expected WebAssembly limitations pending.
   `npm run lint` and the production Rollup build also pass.
-- Manual Chromium checks confirm both runtime regressions are fixed:
+- Manual Chromium checks confirm all observed runtime regressions are fixed:
   browser asset loading no longer throws `Illegal invocation`, and opening another Python file while
   device-driven worker replacement is in progress no longer throws
-  `WorkerTransport: not connected`.
+  `WorkerTransport: not connected`. On the WebAssembly VM, `import micropython` has no diagnostic,
+  completion includes `opt_level`, hover shows the port documentation, a transient invalid edit has
+  no warning at 300 ms, and the settled warning appears after approximately 772 ms. Correcting the
+  text clears the warning without the prior stale-range console exception.
 
 ### 7.5 Remaining ViperIDE work
 
