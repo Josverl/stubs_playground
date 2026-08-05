@@ -26,6 +26,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          cache: 'npm'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
@@ -33,8 +34,11 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: uv sync --extra test
+
+      - name: Install Node.js dependencies
+        run: npm ci --ignore-scripts
 
       - name: Run Python unit tests
         run: uv run pytest -m unit -v || test $? -eq 5
