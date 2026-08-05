@@ -1,7 +1,7 @@
 name: Release CDN component
 
-# Publishes a Tier 1 component to jsDelivr by creating an immutable git tag
-# that consumers (e.g. Josverl/ViperIDE) pin against. See docs/cdn-consumption.md.
+# Publishes a reusable component to jsDelivr by creating an immutable git tag
+# that consumers (Stubs Playground/ViperIDE) pin against. See docs/cdn-consumption.md.
 #
 # Two independently versioned components:
 #   - lsp-client     → tag `lsp-client-v<version>` (pure source, already in git)
@@ -123,8 +123,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
 
       - name: Verify generated playground component config
         run: node scripts/generate-component-config.mjs --check

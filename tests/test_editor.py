@@ -89,7 +89,7 @@ def test_no_console_errors_on_load(page, live_server):
 
     # Filter out known non-issues:
     # - favicon 404 in dev
-    # - LSP worker load failure (worker not built in Tier 1 editor tests)
+    # - LSP worker load failure (worker not built in editor tests)
     # - buttons.github.io 403s (star-count iframe requests blocked in headless)
     real_errors = [
         e
