@@ -13,8 +13,8 @@
       local files (default, used by CI before a tag exists) and the published
       CDN tags:
 
-        ?client=cdn&clientTag=lsp-client-v0.2.0
-        ?worker=cdn&workerTag=pyright-worker-v0.2.0
+        ?client=cdn&clientTag=lsp-client-v0.2.1
+        ?worker=cdn&workerTag=pyright-worker-v0.2.1
         ?repo=Josverl/stubs_playground   (override owner/repo, e.g. after rename)
 
       See docs/cdn-consumption.md for the full integration contract.
@@ -76,7 +76,7 @@
         // Resolve the LSP client module URL (local by default, CDN on request).
         const clientUrl = params.get('client') === 'cdn'
             ? cdn(
-                params.get('clientTag') || 'lsp-client-v0.2.0',
+                params.get('clientTag') || 'lsp-client-v0.2.1',
                 'packages/lsp-client/src/index.js',
             )
             : '../src/index.js';
@@ -89,7 +89,7 @@
         }
         const workerUrl = params.get('worker') === 'cdn'
             ? makeSameOriginWorkerUrl(cdn(
-                params.get('workerTag') || 'pyright-worker-v0.2.0',
+                params.get('workerTag') || 'pyright-worker-v0.2.1',
                 'packages/pyright-worker/dist/pyright_worker.js',
             ))
             : '../../pyright-worker/dist/pyright_worker.js';
@@ -109,7 +109,7 @@
 
             const base = sourceMode.worker === 'cdn'
                 ? cdn(
-                    params.get('workerTag') || 'pyright-worker-v0.2.0',
+                    params.get('workerTag') || 'pyright-worker-v0.2.1',
                     'packages/pyright-worker/assets',
                 )
                 : '../../pyright-worker/assets';

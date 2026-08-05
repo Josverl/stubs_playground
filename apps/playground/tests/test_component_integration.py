@@ -89,16 +89,16 @@ def test_cdn_mode_uses_published_component_interfaces(
     assert state["failed"] is False
     assert state["activeBoard"] == "esp32"
     assert state["source"]["mode"] == "cdn"
-    assert state["source"]["clientVersion"] == "lsp-client-v0.2.0"
-    assert state["source"]["workerVersion"] == "pyright-worker-v0.2.0"
+    assert state["source"]["clientVersion"] == "lsp-client-v0.2.1"
+    assert state["source"]["workerVersion"] == "pyright-worker-v0.2.1"
     assert "Pyright" in state["status"]
     assert any("/apps/playground/app.js" in url for url in requests)
 
     published_paths = (
-        "@lsp-client-v0.2.0/packages/lsp-client/src/index.js",
-        "@pyright-worker-v0.2.0/packages/pyright-worker/dist/pyright_worker.js",
-        "@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-manifest.json",
-        "@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-esp32.zip",
+        "@lsp-client-v0.2.1/packages/lsp-client/src/index.js",
+        "@pyright-worker-v0.2.1/packages/pyright-worker/dist/pyright_worker.js",
+        "@pyright-worker-v0.2.1/packages/pyright-worker/assets/stubs-manifest.json",
+        "@pyright-worker-v0.2.1/packages/pyright-worker/assets/stubs-esp32.zip",
     )
     for suffix in published_paths:
         matching = [status for url, status in responses.items() if suffix in url]

@@ -9,12 +9,12 @@ type checking without npm, a bundler, or a server.
 | `@mp-codemirror/lsp-client` | Reusable LSP bridge for CodeMirror 6 (client, transport, diagnostics, completion, hover, markdown renderer) | `packages/lsp-client/src/index.js` at tag `lsp-client-v<version>` |
 | `@mp-codemirror/pyright-worker` | Pre-built Pyright Web Worker bundle (~9 MB) with typeshed + default MicroPython stubs inlined | `packages/pyright-worker/dist/pyright_worker.js` at tag `pyright-worker-v<version>` |
 
-The currently published v0.2.0 artifacts follow **Option B — CDN-only** from
+The currently published v0.2.1 artifacts follow **Option B — CDN-only** from
 [`component-reusability-plan.md`](./component-reusability-plan.md): consumers pin an
 **immutable git tag** and load files through [jsDelivr](https://www.jsdelivr.com/).
 No npm publishing is involved in that release.
 
-> **Publication status:** `lsp-client-v0.2.0` and `pyright-worker-v0.2.0` are published
+> **Publication status:** `lsp-client-v0.2.1` and `pyright-worker-v0.2.1` are published
 > and verified through jsDelivr. The tagged-CDN browser harness passes without local
 > component fallbacks.
 
@@ -27,17 +27,17 @@ continue to use that owner/repository segment.
 
 The two components version **independently**:
 
-- `lsp-client-v0.2.0`, `lsp-client-v0.3.0`, … — pure source, tagged directly on the
+- `lsp-client-v0.2.1`, `lsp-client-v0.3.0`, … — pure source, tagged directly on the
   commit; no build step.
-- `pyright-worker-v0.2.0`, … — the tag's tree additionally carries the built
+- `pyright-worker-v0.2.1`, … — the tag's tree additionally carries the built
   `packages/pyright-worker/dist/pyright_worker.js` (which is git-ignored on `main`).
 
 Tags are **immutable** — a published version is never moved. Consumers should always
 pin an exact tag, never a branch:
 
 ```
-https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.0/packages/lsp-client/src/index.js
-https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/dist/pyright_worker.js
+https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.1/packages/lsp-client/src/index.js
+https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.1/packages/pyright-worker/dist/pyright_worker.js
 ```
 
 ### Cutting tags before merging
@@ -77,12 +77,12 @@ Verify the current tags before merging with:
 
 ```bash
 curl -fI \
-  https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.0/packages/lsp-client/src/index.js
+  https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.1/packages/lsp-client/src/index.js
 curl -fI \
-  https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/dist/pyright_worker.js
+  https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.1/packages/pyright-worker/dist/pyright_worker.js
 
-MP_CODEMIRROR_CDN_CLIENT_TAG=lsp-client-v0.2.0 \
-MP_CODEMIRROR_CDN_WORKER_TAG=pyright-worker-v0.2.0 \
+MP_CODEMIRROR_CDN_CLIENT_TAG=lsp-client-v0.2.1 \
+MP_CODEMIRROR_CDN_WORKER_TAG=pyright-worker-v0.2.1 \
 uv run pytest \
   packages/lsp-client/tests/test_public_consumer.py::test_tagged_cdn_consumer_has_no_local_component_fallbacks \
   -v
@@ -92,8 +92,8 @@ The worker package's `assets/*.zip` stub/typeshed files are committed on every t
 CDN-servable from the same tag:
 
 ```
-https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-manifest.json
-https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-esp32.zip
+https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.1/packages/pyright-worker/assets/stubs-manifest.json
+https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.1/packages/pyright-worker/assets/stubs-esp32.zip
 ```
 
 ### Why not GitHub Release assets?
@@ -136,7 +136,7 @@ work together:
 <script type="importmap">
 {
   "imports": {
-    "@mp-codemirror/lsp-client": "https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.0/packages/lsp-client/src/index.js",
+    "@mp-codemirror/lsp-client": "https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.1/packages/lsp-client/src/index.js",
 
     "@codemirror/state": "https://esm.sh/@codemirror/state@6.6.0",
     "@codemirror/view": "https://esm.sh/@codemirror/view@6.41.1?deps=@codemirror/state@6.6.0",
@@ -178,7 +178,7 @@ the real CDN URL, then pass the resulting object URL to `createTransport`/`creat
 
 ```js
 const WORKER_CDN_URL =
-  'https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/dist/pyright_worker.js';
+  'https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.1/packages/pyright-worker/dist/pyright_worker.js';
 
 // Same-origin shim so the browser allows constructing the Worker.
 function makeSameOriginWorkerUrl(remoteUrl) {
@@ -216,11 +216,11 @@ To offer port/board switching (ESP32, STM32, CircuitPython, SAMD, …):
 
 1. Fetch the manifest to discover available boards and their zip filenames:
    ```
-   https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-manifest.json
+   https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.1/packages/pyright-worker/assets/stubs-manifest.json
    ```
 2. Fetch the selected board's zip as an `ArrayBuffer`:
    ```
-   https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/assets/stubs-<board>.zip
+   https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.1/packages/pyright-worker/assets/stubs-<board>.zip
    ```
 3. Supply it via `createTransport({ boardStubs })` / `createLSPClient({ boardStubs })`,
    or call `switchBoard(current, { …, boardStubs })` to rebuild the worker with the new

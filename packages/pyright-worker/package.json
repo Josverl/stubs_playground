@@ -1,6 +1,6 @@
 {
   "name": "@mp-codemirror/pyright-worker",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Worker-side protocol contract and packaging metadata",
   "type": "module",
