@@ -99,6 +99,8 @@ export function getWorkspaceDiagnostics() {
  *   Receives a fresh workspace-level snapshot after matching publications.
  * @param {(diagnostics: import('@codemirror/lint').Diagnostic[]) => void}
  *   [publishDiagnostics] - Merge-safe lint-source update callback.
+ * @param {(diagnostics: import('vscode-languageserver-types').Diagnostic[]) => void}
+ *   [publishLSPDiagnostics] - Raw diagnostic callback for deferred conversion.
  * @returns {{destroy: () => void}} Plugin value whose destroy method unsubscribes.
  */
 export function createDiagnosticsSubscription(
@@ -107,22 +109,13 @@ export function createDiagnosticsSubscription(
     view,
     onDiagnosticsChange = null,
     publishDiagnostics = null,
+    publishLSPDiagnostics = null,
 ) {
     const unsubscribe = client.onNotification((method, params) => {
         if (method === 'textDocument/publishDiagnostics') {
             if (params.uri === fileUri) {
                 const lspDiagnostics = params.diagnostics || [];
                 console.log('Received diagnostics:', lspDiagnostics);
-
-                // Convert LSP diagnostics to CodeMirror format
-                const cmDiagnostics = lspDiagnostics.map(diag => {
-                    const converted = convertLSPDiagnostic(diag, view.state.doc);
-                    console.log('LSP diagnostic:', diag);
-                    console.log('Converted to CM diagnostic:', converted);
-                    return converted;
-                });
-
-                console.log('Converted diagnostics:', cmDiagnostics);
 
                 // Store report-ready snapshot in workspace map (1-based positions)
                 const fileName = fileUri.replace('file:///workspace/', '');
@@ -139,12 +132,22 @@ export function createDiagnosticsSubscription(
                     })));
                 }
 
-                if (publishDiagnostics) {
-                    // A linter source merges with Ruff and other host lint producers.
-                    publishDiagnostics(cmDiagnostics);
+                if (publishLSPDiagnostics) {
+                    publishLSPDiagnostics(lspDiagnostics);
                 } else {
-                    // Preserve the direct-subscription API for existing consumers.
-                    view.dispatch(setDiagnostics(view.state, cmDiagnostics));
+                    // Convert immediately for consumers that do not defer presentation.
+                    const cmDiagnostics = lspDiagnostics.map(diag =>
+                        convertLSPDiagnostic(diag, view.state.doc));
+
+                    console.log('Converted diagnostics:', cmDiagnostics);
+
+                    if (publishDiagnostics) {
+                        // A linter source merges with Ruff and other host lint producers.
+                        publishDiagnostics(cmDiagnostics);
+                    } else {
+                        // Preserve the direct-subscription API for existing consumers.
+                        view.dispatch(setDiagnostics(view.state, cmDiagnostics));
+                    }
                 }
 
                 if (typeof onDiagnosticsChange === 'function') {
@@ -155,6 +158,23 @@ export function createDiagnosticsSubscription(
     });
 
     return { destroy: unsubscribe };
+}
+
+/**
+ * Delay raw LSP diagnostics and map their positions against the document shown
+ * when they are actually published.
+ */
+export function createDeferredDiagnosticsPublisher(
+    view,
+    publishDiagnostics,
+    diagnosticDelayMs,
+    schedule = setTimeout,
+    cancelSchedule = clearTimeout,
+) {
+    return createDebouncedPublisher((lspDiagnostics) => {
+        publishDiagnostics(lspDiagnostics.map(diag =>
+            convertLSPDiagnostic(diag, view.state.doc)));
+    }, diagnosticDelayMs, schedule, cancelSchedule);
 }
 
 /**
@@ -183,7 +203,7 @@ export function createLSPDiagnostics(
     let currentDiagnostics = [];
     const diagnosticSource = linter(() => currentDiagnostics);
     const subscriptionPlugin = ViewPlugin.define((pluginView) => {
-        const publisher = createDebouncedPublisher((diagnostics) => {
+        const publisher = createDeferredDiagnosticsPublisher(pluginView, (diagnostics) => {
             currentDiagnostics = diagnostics;
             forceLinting(pluginView);
         }, diagnosticDelayMs);
@@ -192,9 +212,20 @@ export function createLSPDiagnostics(
             fileUri,
             pluginView,
             onDiagnosticsChange,
+            null,
             publisher.publish,
         );
         return {
+            update(update) {
+                if (!update.docChanged) {
+                    return;
+                }
+                publisher.cancel();
+                if (currentDiagnostics.length) {
+                    currentDiagnostics = [];
+                    forceLinting(pluginView);
+                }
+            },
             destroy() {
                 publisher.cancel();
                 subscription.destroy();

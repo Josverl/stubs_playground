@@ -5,6 +5,7 @@ import { EditorState } from '@codemirror/state';
 
 import { createDebouncedPublisher } from '../src/diagnostics-core.mjs';
 import {
+    createDeferredDiagnosticsPublisher,
     createDiagnosticsSubscription,
     createLSPDiagnostics,
 } from '../src/diagnostics.js';
@@ -68,6 +69,38 @@ test('diagnostic debounce cancels pending publication during editor teardown', (
     assert.deepEqual(published, []);
 });
 
+test('deferred diagnostics map positions against the document at publication time', () => {
+    const scheduled = [];
+    const published = [];
+    const view = {
+        state: EditorState.create({ doc: 'value = 1\nprint(missing_name)\n' }),
+    };
+    const publisher = createDeferredDiagnosticsPublisher(
+        view,
+        diagnostics => published.push(diagnostics),
+        750,
+        callback => {
+            scheduled.push(callback);
+            return callback;
+        },
+        () => {},
+    );
+    publisher.publish([{
+        range: {
+            start: { line: 1, character: 6 },
+            end: { line: 1, character: 18 },
+        },
+        severity: 2,
+        message: '"missing_name" is not defined',
+    }]);
+
+    view.state = EditorState.create({ doc: 'value = 1\n' });
+    scheduled[0]();
+
+    assert.equal(published[0][0].from, view.state.doc.length);
+    assert.equal(published[0][0].to, view.state.doc.length);
+});
+
 test('diagnostics subscription is disposed with its view plugin', () => {
     const client = new SimpleLSPClient();
     const dispatches = [];
@@ -115,6 +148,34 @@ test('diagnostics extensions include a merge-safe lint source and lifecycle plug
 
     assert.equal(extensions.length, 3);
     assert.equal(client.messageHandlers.length, 0);
+});
+
+test('document edits clear published Pyright diagnostics before linting again', () => {
+    const client = new SimpleLSPClient();
+    const pluginView = {
+        state: EditorState.create({ doc: 'print(missing_name)\n' }),
+        plugin: () => null,
+    };
+    const extensions = createLSPDiagnostics(client, FILE_URI, pluginView);
+    const diagnosticSource = extensions[1][0].value.source;
+    const plugin = extensions[2].create(pluginView);
+
+    client.handleNotification('textDocument/publishDiagnostics', {
+        uri: FILE_URI,
+        diagnostics: [{
+            range: {
+                start: { line: 0, character: 6 },
+                end: { line: 0, character: 18 },
+            },
+            severity: 2,
+            message: '"missing_name" is not defined',
+        }],
+    });
+    assert.equal(diagnosticSource().length, 1);
+
+    plugin.update({ docChanged: true });
+    assert.deepEqual(diagnosticSource(), []);
+    plugin.destroy();
 });
 
 test('merge-safe publications are labeled and do not dispatch replacement diagnostics', () => {

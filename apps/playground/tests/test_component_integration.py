@@ -89,13 +89,13 @@ def test_cdn_mode_uses_published_component_interfaces(
     assert state["failed"] is False
     assert state["activeBoard"] == "esp32"
     assert state["source"]["mode"] == "cdn"
-    assert state["source"]["clientVersion"] == "lsp-client-v0.2.4"
+    assert state["source"]["clientVersion"] == "lsp-client-v0.2.5"
     assert state["source"]["workerVersion"] == "pyright-worker-v0.2.2"
     assert "Pyright" in state["status"]
     assert any("/apps/playground/app.js" in url for url in requests)
 
     published_paths = (
-        "@lsp-client-v0.2.4/packages/lsp-client/src/index.js",
+        "@lsp-client-v0.2.5/packages/lsp-client/src/index.js",
         "@pyright-worker-v0.2.2/packages/pyright-worker/dist/pyright_worker.js",
         "@pyright-worker-v0.2.2/packages/pyright-worker/assets/stubs-manifest.json",
         "@pyright-worker-v0.2.2/packages/pyright-worker/assets/stubs-esp32.zip",
