@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 import pytest
 from playwright.sync_api import Page
@@ -118,11 +118,13 @@ def test_tagged_cdn_consumer_has_no_local_component_fallbacks(
 
     def record_request(request):
         url = request.url
+        request_path = urlparse(url).path
         if url.startswith(project_server) and any(
-            path in url
+            request_path.startswith(path)
             for path in (
-                "/packages/lsp-client/",
-                "/packages/pyright-worker/",
+                "/packages/lsp-client/src/",
+                "/packages/pyright-worker/dist/",
+                "/packages/pyright-worker/assets/",
             )
         ):
             local_component_requests.append(url)
