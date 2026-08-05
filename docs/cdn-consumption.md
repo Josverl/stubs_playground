@@ -1,19 +1,18 @@
 # Reusing these components (CDN)
 
 This repository prepares two independently versioned, framework-agnostic building
-blocks for publication so other CodeMirror 6 editors — starting with
-[Josverl/ViperIDE](https://github.com/Josverl/ViperIDE) — can embed in-browser
-Python/MicroPython type checking without npm, a bundler, or a server.
+blocks so standalone CodeMirror 6 editors can embed in-browser Python/MicroPython
+type checking without npm, a bundler, or a server.
 
 | Component | What it is | Served from |
 |-----------|------------|-------------|
 | `@mp-codemirror/lsp-client` | Reusable LSP bridge for CodeMirror 6 (client, transport, diagnostics, completion, hover, markdown renderer) | `packages/lsp-client/src/index.js` at tag `lsp-client-v<version>` |
 | `@mp-codemirror/pyright-worker` | Pre-built Pyright Web Worker bundle (~9 MB) with typeshed + default MicroPython stubs inlined | `packages/pyright-worker/dist/pyright_worker.js` at tag `pyright-worker-v<version>` |
 
-Distribution follows **Option B — CDN-only** from
+The currently published v0.2.0 artifacts follow **Option B — CDN-only** from
 [`component-reusability-plan.md`](./component-reusability-plan.md): consumers pin an
 **immutable git tag** and load files through [jsDelivr](https://www.jsdelivr.com/).
-No npm publishing is involved.
+No npm publishing is involved in that release.
 
 > **Publication status:** `lsp-client-v0.2.0` and `pyright-worker-v0.2.0` are published
 > and verified through jsDelivr. The tagged-CDN browser harness passes without local
@@ -113,6 +112,20 @@ The library imports bare `@codemirror/*` specifiers and does **not** bundle them
 the consuming page supplies them via an [import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap).
 Pin the same CodeMirror versions the host editor uses to avoid duplicate singletons of
 `@codemirror/state` / `@codemirror/view`.
+
+> **Bundled hosts such as ViperIDE:** do not use this browser import-map path alongside
+> a separately bundled CodeMirror installation. Instead, have Rollup fetch the exact
+> immutable client tag at build time. A restricted HTTPS-module loader resolves relative
+> imports on that tag, while bare `@codemirror/*` imports fall through to
+> `@rollup/plugin-node-resolve` and resolve from the host's lockfile. This produces one
+> CodeMirror module graph without npm publication or vendoring. The pre-built worker
+> continues to use the pinned CDN + Blob-shim flow below. See the ViperIDE review in
+> [`component-reusability-plan.md`](./component-reusability-plan.md#7-viperide-integration-review-2026-08-05).
+
+The loader must restrict remote IDs to the configured jsDelivr repository and immutable
+`lsp-client-v*` tag, fail on HTTP/content errors, and be covered by a production-build
+test. Builds need network access unless CI supplies and verifies a cache of those exact
+immutable responses.
 
 The library's runtime peers are `@codemirror/state`, `@codemirror/view`, and
 `@codemirror/lint`; `@codemirror/autocomplete` is used through the language-data facet.
@@ -255,9 +268,10 @@ stale generated browser configuration.
 
 ## 6. Upgrade path
 
-CDN-only is the zero-maintenance starting point. If external consumers later need
-semver resolution and bundler/toolchain integration, publish the same two packages to
-npm (**Option A** in [`component-reusability-plan.md`](./component-reusability-plan.md)).
+Immutable CDN tags are the sole selected distribution architecture. Unbundled consumers
+load the client through an import map; bundled consumers fetch the same tagged source
+during their build and resolve bare peer imports locally. The worker remains an
+independently pinned CDN artifact.
 The public surface (`packages/lsp-client/src/index.js`) and the worker protocol
 (`packages/pyright-worker/src/messages.ts`) are designed to remain the contract in
 either model.
