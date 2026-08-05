@@ -137,6 +137,22 @@ test('convertLSPDiagnostic keeps source unchanged when code is missing', () => {
     assert.equal(converted.source, 'Pyright');
 });
 
+test('convertLSPDiagnostic labels diagnostics without a source as Pyright', () => {
+    const converted = convertLSPDiagnostic(
+        {
+            range: {
+                start: { line: 0, character: 0 },
+                end: { line: 0, character: 1 },
+            },
+            severity: 2,
+            message: 'Unknown type',
+        },
+        makeDoc(['x']),
+    );
+
+    assert.equal(converted.source, 'Pyright');
+});
+
 test('positionToOffset clamps stale line/character to valid bounds', () => {
     const doc = makeDoc(['abc', 'xy']);
 

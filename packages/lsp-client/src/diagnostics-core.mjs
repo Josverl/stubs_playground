@@ -43,9 +43,10 @@ export function convertLSPDiagnostic(lspDiag, doc) {
     const to = positionToOffset(doc, lspDiag.range.end);
     const severity = lspSeverityToString(lspDiag.severity);
 
+    const sourceName = lspDiag.source || 'Pyright';
     const source = lspDiag.code
-        ? `${lspDiag.source || 'lsp'}: ${lspDiag.code}`
-        : (lspDiag.source || 'lsp');
+        ? `${sourceName}: ${lspDiag.code}`
+        : sourceName;
 
     return {
         from,

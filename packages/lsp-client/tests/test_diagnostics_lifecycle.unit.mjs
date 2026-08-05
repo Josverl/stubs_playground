@@ -56,14 +56,50 @@ test('diagnostics subscription is disposed with its view plugin', () => {
     assert.deepEqual(snapshots, [[]]);
 });
 
-test('diagnostics extensions include a lifecycle-owned view plugin', () => {
+test('diagnostics extensions include a merge-safe lint source and lifecycle plugin', () => {
     const client = new SimpleLSPClient();
     const view = { state: EditorState.create({ doc: '' }) };
 
     const extensions = createLSPDiagnostics(client, FILE_URI, view);
 
-    assert.equal(extensions.length, 2);
+    assert.equal(extensions.length, 3);
     assert.equal(client.messageHandlers.length, 0);
+});
+
+test('merge-safe publications are labeled and do not dispatch replacement diagnostics', () => {
+    const client = new SimpleLSPClient();
+    const dispatches = [];
+    const publications = [];
+    const view = {
+        state: EditorState.create({ doc: 'value = missing_name\n' }),
+        dispatch(spec) {
+            dispatches.push(spec);
+        },
+    };
+    const subscription = createDiagnosticsSubscription(
+        client,
+        FILE_URI,
+        view,
+        null,
+        (diagnostics) => publications.push(diagnostics),
+    );
+
+    client.handleNotification('textDocument/publishDiagnostics', {
+        uri: FILE_URI,
+        diagnostics: [{
+            range: {
+                start: { line: 0, character: 8 },
+                end: { line: 0, character: 20 },
+            },
+            severity: 1,
+            message: '"missing_name" is not defined',
+        }],
+    });
+
+    assert.equal(dispatches.length, 0);
+    assert.equal(publications.length, 1);
+    assert.equal(publications[0][0].source, 'Pyright');
+    subscription.destroy();
 });
 
 test('document close clears cached diagnostics before opening a renamed URI', () => {
