@@ -17,6 +17,7 @@ import {
 import { keymap, ViewPlugin } from '@codemirror/view';
 import { Prec } from '@codemirror/state';
 import {
+    createDebouncedPublisher,
     convertLSPDiagnostic,
     lspSeverityToString,
     runNextDiagnostic,
@@ -167,24 +168,39 @@ export function createDiagnosticsSubscription(
  * @param {import('@codemirror/view').EditorView} view - Target editor view.
  * @param {(diagnostics: WorkspaceDiagnostic[]) => void} [onDiagnosticsChange] -
  *   Receives a fresh workspace-level snapshot after matching publications.
+ * @param {number} [diagnosticDelayMs=0] - Idle time before displaying the latest
+ *   Pyright diagnostics. Document synchronization remains immediate.
  * @returns {import('@codemirror/state').Extension[]} CodeMirror lint extensions.
  *   Pyright is registered as its own lint source so host sources remain active.
  */
-export function createLSPDiagnostics(client, fileUri, view, onDiagnosticsChange = null) {
+export function createLSPDiagnostics(
+    client,
+    fileUri,
+    view,
+    onDiagnosticsChange = null,
+    diagnosticDelayMs = 0,
+) {
     let currentDiagnostics = [];
     const diagnosticSource = linter(() => currentDiagnostics);
-    const subscriptionPlugin = ViewPlugin.define((pluginView) =>
-        createDiagnosticsSubscription(
+    const subscriptionPlugin = ViewPlugin.define((pluginView) => {
+        const publisher = createDebouncedPublisher((diagnostics) => {
+            currentDiagnostics = diagnostics;
+            forceLinting(pluginView);
+        }, diagnosticDelayMs);
+        const subscription = createDiagnosticsSubscription(
             client,
             fileUri,
             pluginView,
             onDiagnosticsChange,
-            (diagnostics) => {
-                currentDiagnostics = diagnostics;
-                forceLinting(pluginView);
+            publisher.publish,
+        );
+        return {
+            destroy() {
+                publisher.cancel();
+                subscription.destroy();
             },
-        )
-    );
+        };
+    });
 
     return [lintGutter(), diagnosticSource, subscriptionPlugin];
 }
