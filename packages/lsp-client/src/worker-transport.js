@@ -29,6 +29,20 @@
  * @property {number} [size] - File size in bytes.
  */
 
+function validateWorkspacePath(path) {
+    if (typeof path !== 'string' || path.length === 0) {
+        throw new TypeError('Workspace file path must be a non-empty string');
+    }
+    if (path.startsWith('/') || path.includes('\\') || path.includes('\0')) {
+        throw new TypeError('Workspace file path must be relative and use forward slashes');
+    }
+    const segments = path.split('/');
+    if (segments.some((segment) => segment === '' || segment === '.' || segment === '..')) {
+        throw new TypeError('Workspace file path must not contain empty, "." or ".." segments');
+    }
+    return path;
+}
+
 /**
  * Transport that adapts a classic Web Worker to the string-based interface
  * expected by {@link SimpleLSPClient}.
@@ -375,6 +389,48 @@ export class WorkerTransport {
      */
     isConnected() {
         return this.connected && this.worker !== null;
+    }
+
+    /**
+     * Write a text file into the worker's `/workspace` filesystem.
+     *
+     * @param {string} path - Workspace-relative path using forward slashes.
+     * @param {string} content - Complete text file content.
+     * @returns {void}
+     * @throws {Error} If the transport is disconnected.
+     * @throws {TypeError} If the path or content is invalid.
+     */
+    syncWorkspaceFile(path, content) {
+        if (!this.isConnected()) {
+            throw new Error('WorkerTransport: not connected');
+        }
+        const workspacePath = validateWorkspacePath(path);
+        if (typeof content !== 'string') {
+            throw new TypeError('Workspace file content must be a string');
+        }
+        this.worker.postMessage({
+            type: 'syncFile',
+            path: workspacePath,
+            content,
+        });
+    }
+
+    /**
+     * Delete a file from the worker's `/workspace` filesystem.
+     *
+     * @param {string} path - Workspace-relative path using forward slashes.
+     * @returns {void}
+     * @throws {Error} If the transport is disconnected.
+     * @throws {TypeError} If the path is invalid.
+     */
+    deleteWorkspaceFile(path) {
+        if (!this.isConnected()) {
+            throw new Error('WorkerTransport: not connected');
+        }
+        this.worker.postMessage({
+            type: 'deleteFile',
+            path: validateWorkspacePath(path),
+        });
     }
 
     /**

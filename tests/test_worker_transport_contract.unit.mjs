@@ -41,3 +41,55 @@ test('onNotification returns an idempotent unsubscribe callback', () => {
         { method: 'test/before', params: { value: 1 } },
     ]);
 });
+
+test('workspace file methods send typed worker protocol messages', () => {
+    const messages = [];
+    const transport = new WorkerTransport('worker.js');
+    transport.connected = true;
+    transport.worker = {
+        postMessage(message) {
+            messages.push(message);
+        },
+    };
+
+    transport.syncWorkspaceFile('lib/helpers.py', 'answer = 42\n');
+    transport.deleteWorkspaceFile('lib/helpers.py');
+
+    assert.deepEqual(messages, [{
+        type: 'syncFile',
+        path: 'lib/helpers.py',
+        content: 'answer = 42\n',
+    }, {
+        type: 'deleteFile',
+        path: 'lib/helpers.py',
+    }]);
+});
+
+test('workspace file methods reject disconnected and invalid writes', () => {
+    const disconnected = new WorkerTransport('worker.js');
+    assert.throws(
+        () => disconnected.syncWorkspaceFile('main.py', ''),
+        /WorkerTransport: not connected/,
+    );
+
+    const transport = new WorkerTransport('worker.js');
+    transport.connected = true;
+    transport.worker = { postMessage() {} };
+
+    for (const path of ['', '/main.py', '../main.py', 'lib/../main.py', 'lib\\main.py']) {
+        assert.throws(
+            () => transport.syncWorkspaceFile(path, ''),
+            /Workspace file path/,
+            path,
+        );
+        assert.throws(
+            () => transport.deleteWorkspaceFile(path),
+            /Workspace file path/,
+            path,
+        );
+    }
+    assert.throws(
+        () => transport.syncWorkspaceFile('main.py', new Uint8Array()),
+        /Workspace file content must be a string/,
+    );
+});

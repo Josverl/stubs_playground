@@ -175,6 +175,26 @@ const tests = {
             hasStubPath: content.includes('stubPath = "/typings"'),
         };
     },
+
+    async 'workspace-files'() {
+        const t = new WorkerTransport('../../../packages/pyright-worker/dist/pyright_worker.js');
+        await t.connect();
+        const path = 'runtime/helpers.py';
+        t.syncWorkspaceFile(path, 'answer = 42\n');
+        const afterSync = await t.debugListFs('/workspace', 3);
+        t.deleteWorkspaceFile(path);
+        const afterDelete = await t.debugListFs('/workspace', 3);
+        t.close();
+        return {
+            success: true,
+            foundAfterSync: afterSync.entries.some((entry) =>
+                entry.path === `/workspace/${path}` && entry.kind === 'file'
+            ),
+            absentAfterDelete: !afterDelete.entries.some((entry) =>
+                entry.path === `/workspace/${path}`
+            ),
+        };
+    },
 };
 
 window.runTest = async function(name) {
