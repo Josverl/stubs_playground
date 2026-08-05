@@ -48,6 +48,7 @@ BOARDS: list[Board] = [
     Board(id="rp2",   package="micropython-rp2-stubs"),
     Board(id="stm32", package="micropython-stm32-stubs"),
     Board(id="samd",  package="micropython-samd-stubs"),
+    Board(id="webassembly", package="micropython-webassembly-stubs"),
     Board(id="circuitpython",  package="circuitpython-stubs"),
 ]
 
@@ -122,6 +123,17 @@ def get_zip_embedded_version(zip_path: Path) -> str:
         return ""
 
 
+def get_cached_board(board: Board) -> Board:
+    """Build manifest metadata for a board from its existing archive."""
+    archive = ASSETS / f"stubs-{board.id}.zip"
+    return Board(
+        id=board.id,
+        package=board.package,
+        file=archive.name if archive.exists() else None,
+        package_version=get_zip_embedded_version(archive),
+    )
+
+
 def pack_board(board: Board) -> Board:
     """Install stubs and pack them into a zip. Returns updated board."""
     target = TMP / board.id
@@ -190,14 +202,17 @@ def main() -> None:
     ASSETS.mkdir(parents=True, exist_ok=True)
 
     print(f"Packing stubs for {len(boards)} board(s)...")
-    results: list[Board] = []
+    packed: dict[str, Board] = {}
     for board in boards:
         print(f"\n[{board.id}]")
-        results.append(pack_board(board))
+        packed[board.id] = pack_board(board)
 
-    # Add virtual boards to the manifest
-    for vb in VIRTUAL_BOARDS:
-        results.append(vb)
+    # Targeted runs update one archive without dropping other existing boards.
+    results = [
+        packed[board.id] if board.id in packed else get_cached_board(board)
+        for board in BOARDS
+    ]
+    results.extend(VIRTUAL_BOARDS)
 
     # Generate manifest
     default_id = DEFAULT_BOARD_ID if any(b.id == DEFAULT_BOARD_ID for b in BOARDS) else boards[0].id

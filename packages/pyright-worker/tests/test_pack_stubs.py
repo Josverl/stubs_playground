@@ -29,7 +29,47 @@ _spec.loader.exec_module(_mod)
 
 get_installed_version = _mod.get_installed_version
 get_zip_embedded_version = _mod.get_zip_embedded_version
+get_cached_board = _mod.get_cached_board
 zip_directory = _mod.zip_directory
+
+
+def test_webassembly_port_is_packaged_as_a_board_target():
+    board = _mod.BOARD_MAP["webassembly"]
+
+    assert board.package == "micropython-webassembly-stubs"
+
+
+def test_webassembly_archive_and_manifest_expose_micropython_modules():
+    assets = Path(__file__).parents[1] / "assets"
+    manifest = json.loads((assets / "stubs-manifest.json").read_text(encoding="utf-8"))
+    board = next(item for item in manifest["boards"] if item["id"] == "webassembly")
+
+    assert board["package"] == "micropython-webassembly-stubs"
+    assert board["file"] == "stubs-webassembly.zip"
+
+    with zipfile.ZipFile(assets / board["file"]) as archive:
+        names = set(archive.namelist())
+
+    assert {"micropython.pyi", "uasyncio.pyi", "umachine.pyi", "js.pyi"} <= names
+
+
+def test_targeted_pack_preserves_cached_board_manifest_entries(tmp_path, monkeypatch):
+    assets = tmp_path / "assets"
+    source = tmp_path / "source"
+    assets.mkdir()
+    source.mkdir()
+    cached = _mod.Board(id="esp32", package="micropython-esp32-stubs")
+    zip_directory(
+        source,
+        assets / "stubs-esp32.zip",
+        metadata={"package": cached.package, "version": "1.28.0.post1"},
+    )
+
+    monkeypatch.setattr(_mod, "ASSETS", assets)
+    manifest_board = get_cached_board(cached)
+
+    assert manifest_board.file == "stubs-esp32.zip"
+    assert manifest_board.package_version == "1.28.0.post1"
 
 
 # ---------------------------------------------------------------------------
