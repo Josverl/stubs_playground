@@ -155,6 +155,7 @@ surface):
 - `SimpleLSPClient`, `WorkerTransport`, `createWorkerTransport`
 - `createLSPClient`, `createLSPPlugin`, `switchBoard`, `isLSPReady`
 - Diagnostics: `createLSPDiagnostics`, `notifyDocumentOpen`, `notifyDocumentChange`,
+  `notifyDocumentClose`,
   `removeWorkspaceDiagnosticsFor`, `getWorkspaceDiagnostics`, `requestDiagnostics`,
   `lintKeymapExtension`
 - Completion: `createCompletionSource`, plus pure helpers from `completion-core.mjs`
