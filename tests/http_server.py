@@ -25,7 +25,7 @@ def main():
         pass
 
     with ThreadingHTTPServer(("", port), Handler) as httpd:
-        print(f"Serving at http://localhost:{port}/apps/playground/", flush=True)
+        print(f"Serving repository root at http://localhost:{port}/", flush=True)
         httpd.serve_forever()
 
 

@@ -3,9 +3,9 @@ import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-import { componentConfig } from '../apps/playground/component-config.generated.js';
+import { componentConfig } from '../component-config.generated.js';
 
-const root = new URL('..', import.meta.url);
+const root = new URL('../../../', import.meta.url);
 
 test('generated CDN config matches playground dependencies', async () => {
     const result = spawnSync(
@@ -15,7 +15,7 @@ test('generated CDN config matches playground dependencies', async () => {
     );
     assert.equal(result.status, 0, result.stderr || result.stdout);
 
-    const app = JSON.parse(await readFile(new URL('../apps/playground/package.json', import.meta.url)));
+    const app = JSON.parse(await readFile(new URL('../package.json', import.meta.url)));
     assert.equal(
         componentConfig.lspClient.version,
         app.dependencies['@mp-codemirror/lsp-client'],
@@ -28,7 +28,7 @@ test('generated CDN config matches playground dependencies', async () => {
 
 test('runtime source selector contains no component release versions', async () => {
     const source = await readFile(
-        new URL('../apps/playground/component-source.js', import.meta.url),
+        new URL('../component-source.js', import.meta.url),
         'utf8',
     );
     assert.doesNotMatch(source, /(?:lsp-client|pyright-worker)-v\d/);

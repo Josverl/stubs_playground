@@ -8,19 +8,8 @@ import time
 import urllib.request
 from pathlib import Path
 
-# Build artifact detection
-WORKER_JS = (
-    Path(__file__).parent.parent
-    / "packages"
-    / "pyright-worker"
-    / "dist"
-    / "pyright_worker.js"
-)
-worker_available = WORKER_JS.exists()
-
 import pytest
 from playwright.sync_api import sync_playwright
-
 
 def _free_port() -> int:
     """Return an ephemeral TCP port that is free right now."""
@@ -30,24 +19,24 @@ def _free_port() -> int:
 
 
 def _server_responds(base_url: str, timeout: float = 3.0) -> bool:
-    """Return True if the server at base_url/index.html responds with HTTP 200."""
+    """Return True if the repository-level package manifest is available."""
     try:
-        resp = urllib.request.urlopen(f"{base_url}/index.html", timeout=timeout)
+        resp = urllib.request.urlopen(f"{base_url}/package.json", timeout=timeout)
         return resp.status == 200
     except Exception:
         return False
 
 
 @pytest.fixture(scope="session")
-def live_server():
+def project_server():
     """
     Start a fresh HTTP server on a dynamically chosen free port for this
     test session.  Using a unique port per session means concurrent pytest
     invocations (e.g. two terminals, CI matrix) never share or kill each
     other's server.
 
-    The server serves from the project root so the app and packages are
-    accessible; the yielded base URL is http://localhost:{port}/apps/playground.
+    The server serves from the project root so each owner can load only its own
+    browser harnesses.
     """
     port = _free_port()
     project_root = Path(__file__).parent.parent
@@ -58,7 +47,7 @@ def live_server():
         stderr=subprocess.PIPE,
     )
 
-    base_url = f"http://localhost:{port}/apps/playground"
+    base_url = f"http://localhost:{port}"
     # Wait until the server actually responds (up to 5 s)
     for _ in range(25):
         if _server_responds(base_url):
@@ -71,15 +60,6 @@ def live_server():
     yield base_url
     process.terminate()
     process.wait()
-
-
-@pytest.fixture(scope="session")
-def project_server(live_server):
-    """Base URL serving the project root."""
-    if live_server.endswith("/apps/playground"):
-        yield live_server.removesuffix("/apps/playground")
-    else:
-        yield live_server
 
 
 @pytest.fixture(scope="session")

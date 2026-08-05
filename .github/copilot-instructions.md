@@ -13,7 +13,7 @@ the .ai_history folder contains previous documentation about this project, refer
 
 ## TESTING GUIDELINES
 you MUST test your code thoroughly
-tests should reside in the tests/ folder
+tests should reside in the `tests/` folder owned by the application or package
 Use Playwright skills to test the web application (Stubs_playground or ViperIDE).
 Take screenshots for the most relevant successful scenarios and all failing scenarios.
 Unit and integration testing should be based on Pytest + Playwright - but only start creating these after exploratory testing of a feature is complete
@@ -71,23 +71,24 @@ mp_codemirror/
 │       ├── test.yml             # CI test workflow
 │       └── deploy.yml           # GitHub Pages deployment
 ├── apps/
-│   └── playground/     # Main browser application and examples
+│   └── playground/
+│       └── tests/      # Application behavior and public component interface tests
 ├── packages/
 │   ├── lsp-client/
-│   │   └── src/        # Public CodeMirror LSP bridge
+│   │   ├── src/        # Public CodeMirror LSP bridge
+│   │   └── tests/      # LSP client tests; never load the playground
 │   └── pyright-worker/
 │       ├── src/        # Pyright worker and protocol declarations
 │       ├── dist/       # Built worker bundle
-│       └── assets/     # Typeshed and board stub archives
+│       ├── assets/     # Typeshed and board stub archives
+│       └── tests/      # Worker protocol and packaging tests
 ├── scripts/
 │   ├── pack-typeshed.mjs    # Pack typeshed for browser
 │   └── pack-stubs.mjs       # Pack stubs per board
 ├── tests/
-│   ├── conftest.py          # Pytest configuration and fixtures
-│   ├── test_editor.py       # Editor UI tests
-│   ├── test_worker_transport.py  # Worker transport tests
-│   ├── test_lsp_features.py     # LSP feature tests
-│   └── README.md            # Testing documentation
+│   ├── fixtures.py      # Shared, application-neutral Pytest fixtures
+│   ├── timing.py        # Shared test timing constants
+│   └── README.md        # Test ownership and commands
 ├── typings/             # MicroPython type stubs
 ├── justfile             # Build and dev task runner
 ├── webpack.config.cjs   # Webpack config for worker build
@@ -113,13 +114,13 @@ mp_codemirror/
 
 ## Phase 4: Testing, CI, and Code Quality (Current Phase)
 
-### Test tiers:
+### Independently owned test suites:
 ```bash
-pytest tests/ -m unit -v          # Unit tests
-pytest tests/ -m editor -v        # Editor/UI tests (Playwright)
-pytest tests/ -m worker -v        # Web Worker tests
-pytest tests/ -m lsp -v           # LSP feature tests
-pytest tests/ -v                  # All tests
+npm run test:app:unit
+npm run test:components:unit
+uv run pytest apps/playground/tests -v
+uv run pytest packages/lsp-client/tests -v
+uv run pytest packages/pyright-worker/tests -v
 ```
 
 ### CI:
@@ -131,7 +132,7 @@ pytest tests/ -v                  # All tests
 - Test completion for MicroPython-specific modules (machine, micropython, etc.)
 - Verify CPython-only modules are not suggested
 - Test device-specific APIs (ESP32 vs RP2040)
-- Run test tiers independently: `pytest -m unit`, `pytest -m editor`, `pytest -m worker`, `pytest -m lsp`
+- Keep application tests at the public component boundary; package internals are tested only by package-owned suites
 
 ## Development Guidelines
 

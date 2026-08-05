@@ -17,7 +17,7 @@ Covers:
 
 import pytest
 from playwright.sync_api import expect
-from timing import CDN_TIMEOUT
+from tests.timing import CDN_TIMEOUT
 
 pytestmark = pytest.mark.editor
 

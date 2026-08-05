@@ -8,7 +8,7 @@ LSP-dependent tests are in test_lsp.py — this file only tests the editor UI.
 import pytest
 from playwright.sync_api import expect
 
-from timing import CDN_TIMEOUT, UI_TIMEOUT
+from tests.timing import CDN_TIMEOUT, UI_TIMEOUT
 
 pytestmark = pytest.mark.editor
 

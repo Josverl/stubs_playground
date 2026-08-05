@@ -10,7 +10,7 @@ Verifies that:
 import pytest
 import time
 
-from timing import CDN_TIMEOUT, UI_TIMEOUT, OPFS_TIMEOUT, OPFS_SETTLE, SHORT_SETTLE, POLL_INTERVAL, DEBOUNCE_SETTLE
+from tests.timing import CDN_TIMEOUT, UI_TIMEOUT, OPFS_TIMEOUT, OPFS_SETTLE, SHORT_SETTLE, POLL_INTERVAL, DEBOUNCE_SETTLE
 
 pytestmark = pytest.mark.editor
 

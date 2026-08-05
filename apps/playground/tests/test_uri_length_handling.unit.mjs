@@ -8,7 +8,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildIssueUrl } from '../apps/playground/share-core.js';
+import { buildIssueUrl } from '../share-core.js';
 
 const LONG_PLAYGROUND_URL =
     'https://very-long-playground-url-that-contributes-significantly-to-uri-length.example.com/' +
