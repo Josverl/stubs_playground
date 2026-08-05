@@ -235,6 +235,40 @@ def test_clean_code_produces_no_errors(diagnostics_page):
 
 
 @requires_lsp
+def test_webassembly_bundle_resolves_micropython_module(page, live_server):
+    """The WebAssembly target must resolve APIs from its port-specific archive."""
+    _load_editor(page, live_server)
+    page.wait_for_function(
+        "() => window.__lspReady === true || window.__lspFailed === true",
+        timeout=LSP_TIMEOUT,
+    )
+    page.locator("#boardSelect option[value='webassembly']").wait_for(
+        state="attached",
+        timeout=UI_TIMEOUT,
+    )
+
+    page.locator("#boardSelect").select_option("webassembly")
+    page.wait_for_function(
+        """() => {
+            const select = document.getElementById('boardSelect');
+            const loading = document.getElementById('boardLoading');
+            return select.value === 'webassembly' && !select.disabled && loading.hidden;
+        }""",
+        timeout=LSP_TIMEOUT,
+    )
+
+    _clear_editor(page)
+    _type_in_editor(page, "import micropython\nlevel = micropython.opt_level()")
+    time.sleep(LSP_ROUND_TRIP)
+
+    diagnostics = page.evaluate(
+        "() => import('./component-source.js').then(m => m.getWorkspaceDiagnostics())"
+    )
+    messages = [item["message"] for item in diagnostics]
+    assert not any("micropython" in message and "resolved" in message for message in messages), messages
+
+
+@requires_lsp
 def test_cross_file_import_resolves_without_diagnostics(page, live_server):
     """Workspace files must be visible to Pyright so local imports resolve cleanly."""
     setup_url = f"{live_server}/tests/state-setup.html?test-cross-file=setup&cb={time.time_ns()}"

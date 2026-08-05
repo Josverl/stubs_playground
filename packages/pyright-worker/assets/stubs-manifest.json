@@ -33,6 +33,12 @@
       "file": "stubs-samd.zip"
     },
     {
+      "id": "webassembly",
+      "package": "micropython-webassembly-stubs",
+      "package_version": "1.26.0.post2",
+      "file": "stubs-webassembly.zip"
+    },
+    {
       "id": "circuitpython",
       "package": "circuitpython-stubs",
       "package_version": "10.2.1",

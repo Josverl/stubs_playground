@@ -175,7 +175,8 @@ jobs:
           for path in \
             "$worker" \
             packages/pyright-worker/assets/stubs-manifest.json \
-            packages/pyright-worker/assets/stubs-esp32.zip
+            packages/pyright-worker/assets/stubs-esp32.zip \
+            packages/pyright-worker/assets/stubs-webassembly.zip
           do
             test -s "$path" || { echo "::error::$path missing or empty"; exit 1; }
           done
@@ -237,7 +238,7 @@ jobs:
           if [ "$COMPONENT" = "lsp-client" ]; then
             paths='packages/lsp-client/src/index.js'
           else
-            paths='packages/pyright-worker/dist/pyright_worker.js packages/pyright-worker/assets/stubs-manifest.json packages/pyright-worker/assets/stubs-esp32.zip'
+            paths='packages/pyright-worker/dist/pyright_worker.js packages/pyright-worker/assets/stubs-manifest.json packages/pyright-worker/assets/stubs-esp32.zip packages/pyright-worker/assets/stubs-webassembly.zip'
           fi
           for path in $paths; do
             url="https://cdn.jsdelivr.net/gh/${REPO}@${TAG}/${path}"
