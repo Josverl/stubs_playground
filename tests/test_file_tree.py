@@ -21,9 +21,22 @@ def _load_editor(page, live_server):
 
 def _reset_tree_state(page):
     """Reset UI/OPFS state through app controls without reloading the app."""
+    inline_input = page.locator(".file-tree__inline-input")
+    if inline_input.count() > 0:
+        inline_input.press("Escape")
+        page.wait_for_function(
+            """() => {
+                const clearButton = document.querySelector('.file-tree__clear-all-btn');
+                return !document.querySelector('.file-tree__inline-input')
+                    && clearButton && !clearButton.disabled;
+            }""",
+            timeout=UI_TIMEOUT,
+        )
+
     # Delete all project files through the built-in action so editor + tree stay in sync.
     clear_all = page.locator(".file-tree__clear-all-btn")
-    if clear_all.count() > 0:
+    entries = page.locator(".file-tree__file, .file-tree__dir")
+    if clear_all.count() > 0 and entries.count() > 0:
         page.once("dialog", lambda dialog: dialog.accept())
         clear_all.click()
         page.wait_for_function(
