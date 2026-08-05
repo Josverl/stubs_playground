@@ -600,8 +600,8 @@ async function syncWorkspaceToLSP({ openDocuments = false, activeUri = documentU
         for (const [filePath, content] of Object.entries(files)) {
             const fileUri = `file:///workspace/${filePath}`;
 
-            if (!workspaceFiles && lspTransport?.worker) {
-                lspTransport.worker.postMessage({ type: 'syncFile', path: filePath, content });
+            if (!workspaceFiles && lspTransport?.isConnected()) {
+                lspTransport.syncWorkspaceFile(filePath, content);
             }
 
             if (openDocuments && fileUri !== activeUri) {
@@ -1116,8 +1116,8 @@ function buildExtensions(path, themeC, lspC, options = {}) {
             const v = bumpDocumentVersion(uri);
             console.log(`Sending didChange ${path} (version ${v})`);
             notifyDocumentChange(lspClient, uri, c, v);
-            if (lspTransport?.worker) {
-                lspTransport.worker.postMessage({ type: 'syncFile', path, content: c });
+            if (lspTransport?.isConnected()) {
+                lspTransport.syncWorkspaceFile(path, c);
             }
         }, CHANGE_DEBOUNCE_MS));
     });
@@ -1402,9 +1402,9 @@ async function initializeEditor() {
                 try { content = await OPFSProject.readFile(newPath); } catch { content = ''; }
             }
             // Update worker VFS: remove old path, write new path
-            if (lspTransport?.worker) {
-                lspTransport.worker.postMessage({ type: 'deleteFile', path: oldPath });
-                lspTransport.worker.postMessage({ type: 'syncFile', path: newPath, content });
+            if (lspTransport?.isConnected()) {
+                lspTransport.deleteWorkspaceFile(oldPath);
+                lspTransport.syncWorkspaceFile(newPath, content);
             }
             // Notify Pyright about the file-system change so it re-analyses importers
             if (lspClient) {

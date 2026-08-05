@@ -153,6 +153,7 @@ Public exports (see
 surface):
 
 - `SimpleLSPClient`, `WorkerTransport`, `createWorkerTransport`
+- `WorkerTransport.syncWorkspaceFile`, `WorkerTransport.deleteWorkspaceFile`
 - `createLSPClient`, `createLSPPlugin`, `switchBoard`, `isLSPReady`
 - Diagnostics: `createLSPDiagnostics`, `notifyDocumentOpen`, `notifyDocumentChange`,
   `notifyDocumentClose`,
@@ -199,6 +200,11 @@ and published for consumers as
 Anyone implementing a custom
 worker for a different language server can conform to that contract and remain
 drop-in compatible with `WorkerTransport`.
+
+Consumers synchronize project mutations through
+`WorkerTransport.syncWorkspaceFile(path, content)` and
+`WorkerTransport.deleteWorkspaceFile(path)`. Both accept workspace-relative forward-slash
+paths and hide the worker control-plane `postMessage` details.
 
 ---
 

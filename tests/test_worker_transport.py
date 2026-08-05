@@ -121,3 +121,16 @@ def test_worker_transport_reads_generated_config(page, test_page_url):
     assert result["success"] is True
     assert result["hasToolSection"] is True
     assert result["hasStubPath"] is True
+
+
+def test_worker_transport_syncs_and_deletes_workspace_files(page, test_page_url):
+    """Public workspace methods update the worker VFS without raw postMessage access."""
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate("""() => {
+        return window.runTest('workspace-files');
+    }""")
+
+    assert result["success"] is True
+    assert result["foundAfterSync"] is True
+    assert result["absentAfterDelete"] is True

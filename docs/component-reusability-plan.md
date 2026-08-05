@@ -570,6 +570,15 @@ operations without coupling ViperIDE to a transport implementation detail.
 workspace files. A rename is expressed as delete-old + sync-new. Keep the raw protocol declarations
 as the source of truth and cover these helpers with worker transport tests.
 
+**Implementation progress:**
+- Done: `WorkerTransport.syncWorkspaceFile(path, content)` and
+  `deleteWorkspaceFile(path)` expose the existing typed worker protocol without exposing
+  the raw worker.
+- Done: both methods require a connected transport and validate workspace-relative paths;
+  sync additionally requires text content.
+- Done: playground call sites use the public methods; unit tests verify messages and
+  validation, and a browser worker test verifies the VFS write/delete round trip.
+
 ---
 
 ## 5. Summary checklist
@@ -587,7 +596,7 @@ as the source of truth and cover these helpers with worker transport tests.
 | 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | ✅ Done — direct renderer browser coverage |
 | 4.10 | Dispose diagnostic subscriptions with each editor view | Small | No | ✅ Done — view plugin owns and disposes the notification subscription |
 | 4.11 | Implement/export `notifyDocumentClose` | Small | No | ✅ Done — public close helper clears cached diagnostics |
-| 4.12 | Expose worker workspace sync/delete helpers | Small | No | Required for ViperIDE |
+| 4.12 | Expose worker workspace sync/delete helpers | Small | No | ✅ Done — validated public transport methods replace raw worker access |
 | — | Prepare CDN publication (Option B) | Workflow + docs + harness | n/a | ✅ Implemented and locally validated |
 | — | Cut and verify immutable CDN tags | Release operation | n/a | ✅ Done — both coherent `v0.2.0` package-layout tags are live and the tagged-CDN harness passes |
 | — | Add a validated Rollup HTTPS loader for immutable client tags | Small build integration | n/a | Planned for ViperIDE |
