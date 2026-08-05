@@ -6,7 +6,7 @@
  */
 
 import { lintGutter, setDiagnostics, openLintPanel, nextDiagnostic, previousDiagnostic } from '@codemirror/lint';
-import { keymap } from '@codemirror/view';
+import { keymap, ViewPlugin } from '@codemirror/view';
 import { Prec } from '@codemirror/state';
 import {
     convertLSPDiagnostic,
@@ -81,18 +81,17 @@ export function getWorkspaceDiagnostics() {
 }
 
 /**
- * Create CodeMirror diagnostics integration for one LSP document.
+ * Create the disposable notification subscription owned by a diagnostics view plugin.
  *
  * @param {import('./simple-client.js').SimpleLSPClient} client - Connected LSP client.
  * @param {string} fileUri - Document URI.
  * @param {import('@codemirror/view').EditorView} view - Target editor view.
  * @param {(diagnostics: WorkspaceDiagnostic[]) => void} [onDiagnosticsChange] -
  *   Receives a fresh workspace-level snapshot after matching publications.
- * @returns {import('@codemirror/state').Extension[]} CodeMirror lint extensions.
+ * @returns {{destroy: () => void}} Plugin value whose destroy method unsubscribes.
  */
-export function createLSPDiagnostics(client, fileUri, view, onDiagnosticsChange = null) {
-    // Listen for diagnostic notifications from the server
-    client.onNotification((method, params) => {
+export function createDiagnosticsSubscription(client, fileUri, view, onDiagnosticsChange = null) {
+    const unsubscribe = client.onNotification((method, params) => {
         if (method === 'textDocument/publishDiagnostics') {
             if (params.uri === fileUri) {
                 const lspDiagnostics = params.diagnostics || [];
@@ -134,8 +133,28 @@ export function createLSPDiagnostics(client, fileUri, view, onDiagnosticsChange 
         }
     });
 
-    // Return linter extension with gutter
-    return [lintGutter()];
+    return { destroy: unsubscribe };
+}
+
+/**
+ * Create CodeMirror diagnostics integration for one LSP document.
+ *
+ * The notification subscription belongs to the returned view plugin, so
+ * destroying the view or reconfiguring the containing compartment releases it.
+ *
+ * @param {import('./simple-client.js').SimpleLSPClient} client - Connected LSP client.
+ * @param {string} fileUri - Document URI.
+ * @param {import('@codemirror/view').EditorView} view - Target editor view.
+ * @param {(diagnostics: WorkspaceDiagnostic[]) => void} [onDiagnosticsChange] -
+ *   Receives a fresh workspace-level snapshot after matching publications.
+ * @returns {import('@codemirror/state').Extension[]} CodeMirror lint extensions.
+ */
+export function createLSPDiagnostics(client, fileUri, view, onDiagnosticsChange = null) {
+    const subscriptionPlugin = ViewPlugin.define((pluginView) =>
+        createDiagnosticsSubscription(client, fileUri, pluginView, onDiagnosticsChange)
+    );
+
+    return [lintGutter(), subscriptionPlugin];
 }
 
 /**

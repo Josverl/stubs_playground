@@ -536,6 +536,12 @@ ViperIDE's editor tabs therefore leaves a handler retaining the old `EditorView`
 view plugin (or equivalent disposable extension) whose `destroy()` calls the unsubscribe
 function. Add coverage for tab/view destruction and repeated board/client rebinds.
 
+**Implementation progress:**
+- Done: the diagnostics listener is owned by a `ViewPlugin` and unsubscribes from
+  `destroy()`, covering both editor destruction and compartment reconfiguration.
+- Done: unit coverage verifies delivery before destruction, no delivery afterward,
+  idempotent cleanup, and deferred subscription until the plugin is installed.
+
 ### 4.11 Add a public document-close helper
 
 The proposed API in §2.2 includes `notifyDocumentClose`, but the current package only implements and
@@ -573,7 +579,7 @@ as the source of truth and cover these helpers with worker transport tests.
 | 4.7 | Document and publish worker protocol declarations | Small | No | ✅ Done — generated `messages.d.ts` is exposed and drift-checked |
 | 4.8 | Decompose `share.js` utility/UI layers | Small | No | ✅ Done — no further `share-core.js` split planned |
 | 4.9 | Extract `markdown-renderer.js` from `hover.js` | Small | No | ✅ Done — direct renderer browser coverage |
-| 4.10 | Dispose diagnostic subscriptions with each editor view | Small | No | Required for ViperIDE |
+| 4.10 | Dispose diagnostic subscriptions with each editor view | Small | No | ✅ Done — view plugin owns and disposes the notification subscription |
 | 4.11 | Implement/export `notifyDocumentClose` | Small | No | Required for ViperIDE |
 | 4.12 | Expose worker workspace sync/delete helpers | Small | No | Required for ViperIDE |
 | — | Prepare CDN publication (Option B) | Workflow + docs + harness | n/a | ✅ Implemented and locally validated |
