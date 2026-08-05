@@ -383,13 +383,13 @@ def test_load_sample_button_loads_code(editor_page):
 def test_responsive_layout_desktop(page, live_server):
     """Editor container is visible at desktop resolution."""
     page.set_viewport_size({"width": 1920, "height": 1080})
-    _goto_editor(page, live_server)
+    page.goto(f"{live_server}/index.html", wait_until="domcontentloaded")
     expect(page.locator("#editor-container")).to_be_visible()
 
 
 def test_responsive_layout_mobile(page, live_server):
     """Editor container and header are visible at mobile resolution."""
     page.set_viewport_size({"width": 375, "height": 667})
-    _goto_editor(page, live_server)
+    page.goto(f"{live_server}/index.html", wait_until="domcontentloaded")
     expect(page.locator("#editor-container")).to_be_visible()
     expect(page.locator("header")).to_be_visible()
