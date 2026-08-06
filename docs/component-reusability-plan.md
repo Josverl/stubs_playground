@@ -701,7 +701,8 @@ The architecture below is implemented on ViperIDE's `typechecking_1` branch:
 
 1. ViperIDE owns the integration boundary. `typechecking.js` wires the tagged component to
    `TypecheckingService`, while `typechecking_service.js` owns the client/transport, selected stub
-   bundle, document versions, diagnostic status, editor bindings, workspace paths, and lifecycle.
+   bundle, document versions, diagnostic status, editor bindings, persistent workspace files, and
+   lifecycle.
    `typechecking_assets.js` owns immutable runtime asset loading and the session Blob worker URL.
 2. ViperIDE imports the client from the exact `lsp-client-v0.2.5` jsDelivr tag through its
    restricted HTTPS-module loader. The loader handles only remote/relative client modules; bare
@@ -717,9 +718,12 @@ The architecture below is implemented on ViperIDE's `typechecking_1` branch:
    - the existing editor update listener for immediate `didChange`, with draft persistence
      remaining coalesced;
    - `fileRenamed`, `fileRemoved`, and `dirRemoved` for close/delete/reopen operations;
-   - `fsCache.peek()` for known device content and live editor drafts for unsaved content.
-6. Startup does not fetch the complete device filesystem. Open Python tabs are seeded first, then
-   cached Python files are hydrated through `fsCache.knownPaths()` and `fsCache.peek()`.
+   - `fsCache.readFile()` for every regular device `.py` file and live editor drafts for unsaved
+     content.
+6. Each complete device listing is mirrored into Pyright's `/workspace` with the same directory
+   structure. Refreshes add, update, and delete unopened modules; unreadable files retain their
+   previous mirror entry and report a warning. Open editor text takes precedence over device
+   content, `/lib` is an import root, and the full mirror is replayed after worker replacement.
 7. On `deviceConnected`, ViperIDE maps `devInfo` to the best available stub target, including the
    dedicated `webassembly` archive for its VM, and replaces Pyright only when the target changes.
    Transient disconnects retain the worker. Editor binding is serialized with worker replacement so
@@ -739,21 +743,21 @@ The architecture below is implemented on ViperIDE's `typechecking_1` branch:
 | 0. Library readiness | Complete 4.10-4.12, publish a new immutable client version, and verify it with the existing standalone/CDN harnesses. | Destroy/rebind tests show no retained handlers; close/reopen and sync/delete tests pass. | ✅ Done — delayed merge-safe diagnostics and stale-range protection are released as `lsp-client-v0.2.5`. |
 | 1. ViperIDE build integration | Rebase `typechecking_1` on v0.6.2; add the restricted Rollup HTTPS loader; import the exact tagged client; load the pinned worker URL; initialize one type-checking service. | Production IIFE contains the client and only ViperIDE's CodeMirror modules, has no unresolved bare imports, and starts the CDN worker without a vendored fallback. | ✅ Done — `bfaa8a4`, `2c36be9`, `fce95ff`, `790a332`, and `47bc84e`. |
 | 2. One-document vertical slice | Bind the active `.py` tab, display diagnostics/completion/hover, retain Ruff/mpy-cross linting, and add status/error UI. | Existing editor behavior remains intact; a MicroPython sample receives Pyright diagnostics, completion, and hover. | 🟡 Core complete — editor binding, merge-safe 750 ms diagnostic presentation, immediate completion/hover synchronization, and VM MicroPython resolution are implemented; dedicated type-check status/disable UI remains. |
-| 3. Multi-tab/workspace lifecycle | Bind every open Python view; implement close, rename, delete, draft, and cached-file synchronization. | Tests cover two tabs importing each other, unsaved edits, close/reopen, file/folder rename, delete, and repeated board rebinds. | ✅ Implemented — `0fda2b7`, `82dac85`, and `be1a9d1`; service tests cover binding, edits, rename/delete, hydration, rebind, and teardown. |
+| 3. Multi-tab/workspace lifecycle | Bind every open Python view; implement close, rename, delete, draft, and complete device-file synchronization. | Tests cover two tabs importing each other, unsaved edits, close/reopen, file/folder rename, delete, and repeated board rebinds. | ✅ Implemented — `0fda2b7`, `82dac85`, `be1a9d1`, and `784e467`; the persistent mirror now covers unopened modules, updates/removals, unreadable files, drafts, and worker replay. |
 | 4. Device-aware stubs and settings | Map `devInfo` to stubs, add a persistent manual override/type-check mode, and avoid restarts on transient reconnects. | ESP32/RP2 (plus VM) resolve correct APIs; override survives reload; reconnect does not duplicate workers or listeners. | 🟡 Partial — automatic device mapping, reconnect behavior, and dedicated VM stubs are implemented (`1234ccd`, `568d2c1`, `15a09d9`); persistent enable/mode and manual board override settings remain. |
 | 5. Consumer hardening | Add browser exploratory coverage, Pytest + Playwright integration tests under this repository's `tests/`, ViperIDE build/lint tests, and optional MCP diagnostic exposure. | Chromium and Firefox pass the end-to-end flows; failure/offline states are visible and type checking can be disabled without affecting editing/device operations. | 🟡 Partial — Mocha unit/build coverage, lint, production builds, component Playwright coverage in Chromium/Firefox/WebKit, and manual ViperIDE Chromium checks pass. Automated ViperIDE multi-browser/offline coverage and optional MCP exposure remain. |
 
 ### 7.4 Current verified implementation
 
 - ViperIDE integration commits run from the restricted loader (`bfaa8a4`) through runtime
-  hardening (`c5a5a8e`, `24370d6`) and the diagnostics/VM update (`15a09d9`) on
-  `typechecking_1`.
+  hardening (`c5a5a8e`, `24370d6`), the diagnostics/VM update (`15a09d9`), and complete device
+  workspace mirroring (`784e467`) on `typechecking_1`.
 - Shared client commits `a7d424b` and `1673c9b` add display-only debouncing, discard stale
   delayed ranges after edits, and are consumed from immutable tag `lsp-client-v0.2.5`.
 - Worker commit `568d2c1` packages `micropython-webassembly-stubs 1.26.0.post2`; the browser loads
   it with the worker from immutable tag `pyright-worker-v0.2.2`. The current ViperIDE VM reports
   MicroPython 1.28, so the archive is port-correct but older than the runtime.
-- ViperIDE's full suite passes with 199 tests and 7 expected WebAssembly limitations pending.
+- ViperIDE's full suite passes with 204 tests and 7 expected WebAssembly limitations pending.
   `npm run lint` and the production Rollup build also pass.
 - Manual Chromium checks confirm all observed runtime regressions are fixed:
   browser asset loading no longer throws `Illegal invocation`, and opening another Python file while
@@ -761,7 +765,9 @@ The architecture below is implemented on ViperIDE's `typechecking_1` branch:
   `WorkerTransport: not connected`. On the WebAssembly VM, `import micropython` has no diagnostic,
   completion includes `opt_level`, hover shows the port documentation, a transient invalid edit has
   no warning at 300 ms, and the settled warning appears after approximately 772 ms. Correcting the
-  text clears the warning without the prior stale-range console exception.
+  text clears the warning without the prior stale-range console exception. A never-opened `bar.py`
+  created through the device REPL is mirrored after File Manager refresh; `from bar import bar`
+  resolves and `bar(32)` produces only the expected `reportArgumentType` diagnostic.
 
 ### 7.5 Remaining ViperIDE work
 
