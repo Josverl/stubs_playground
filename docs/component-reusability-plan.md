@@ -704,8 +704,8 @@ tabs receive Pyright diagnostics, completion, and hover; diagnostic presentation
 750 ms without delaying document synchronization; MicroPython WebAssembly APIs resolve; and the
 complete device Python tree is mirrored into Pyright so unopened local modules and `/lib` imports
 resolve. Ruff and mpy-cross behavior remains intact. The remaining work is product hardening:
-dedicated status/disable UI, persistent enable/mode/board settings, and ViperIDE-owned automated
-multi-browser coverage.
+persistent type-check mode/board settings and broader ViperIDE-owned automated multi-browser
+coverage.
 
 1. ViperIDE owns the integration boundary. `typechecking.js` wires the tagged component to
    `TypecheckingService`, while `typechecking_service.js` owns the client/transport, selected stub
@@ -750,22 +750,24 @@ multi-browser coverage.
 |---|---|---|---|
 | 0. Library readiness | Complete 4.10-4.12, publish a new immutable client version, and verify it with the existing standalone/CDN harnesses. | Destroy/rebind tests show no retained handlers; close/reopen and sync/delete tests pass. | ✅ Done — delayed merge-safe diagnostics and stale-range protection are released as `lsp-client-v0.2.5`. |
 | 1. ViperIDE build integration | Rebase `typechecking_1` on v0.6.2; add the restricted Rollup HTTPS loader; import the exact tagged client; load the pinned worker URL; initialize one type-checking service. | Production IIFE contains the client and only ViperIDE's CodeMirror modules, has no unresolved bare imports, and starts the CDN worker without a vendored fallback. | ✅ Done — `bfaa8a4`, `2c36be9`, `fce95ff`, `790a332`, and `47bc84e`. |
-| 2. One-document vertical slice | Bind the active `.py` tab, display diagnostics/completion/hover, retain Ruff/mpy-cross linting, and add status/error UI. | Existing editor behavior remains intact; a MicroPython sample receives Pyright diagnostics, completion, and hover. | 🟡 Core complete — editor binding, merge-safe 750 ms diagnostic presentation, immediate completion/hover synchronization, and VM MicroPython resolution are implemented; dedicated type-check status/disable UI remains. |
+| 2. One-document vertical slice | Bind the active `.py` tab, display diagnostics/completion/hover, retain Ruff/mpy-cross linting, and add status/error UI. | Existing editor behavior remains intact; a MicroPython sample receives Pyright diagnostics, completion, and hover. | ✅ Done — editor binding, merge-safe 750 ms diagnostic presentation, immediate completion/hover synchronization, VM MicroPython resolution, and dedicated status/error/disable UI are implemented (`1d5823f`). |
 | 3. Multi-tab/workspace lifecycle | Bind every open Python view; implement close, rename, delete, draft, and complete device-file synchronization. | Tests cover two tabs importing each other, unsaved edits, close/reopen, file/folder rename, delete, and repeated board rebinds. | ✅ Implemented — `0fda2b7`, `82dac85`, `be1a9d1`, and `784e467`; the persistent mirror now covers unopened modules, updates/removals, unreadable files, drafts, and worker replay. |
-| 4. Device-aware stubs and settings | Map `devInfo` to stubs, add a persistent manual override/type-check mode, and avoid restarts on transient reconnects. | ESP32/RP2 (plus VM) resolve correct APIs; override survives reload; reconnect does not duplicate workers or listeners. | 🟡 Partial — automatic device mapping, reconnect behavior, and dedicated VM stubs are implemented (`1234ccd`, `568d2c1`, `15a09d9`); persistent enable/mode and manual board override settings remain. |
-| 5. Consumer hardening | Add browser exploratory coverage, Pytest + Playwright integration tests under this repository's `tests/`, ViperIDE build/lint tests, and optional MCP diagnostic exposure. | Chromium and Firefox pass the end-to-end flows; failure/offline states are visible and type checking can be disabled without affecting editing/device operations. | 🟡 Partial — Mocha unit/build coverage, lint, production builds, component Playwright coverage in Chromium/Firefox/WebKit, and manual ViperIDE Chromium checks pass. Automated ViperIDE multi-browser/offline coverage and optional MCP exposure remain. |
+| 4. Device-aware stubs and settings | Map `devInfo` to stubs, add a persistent manual override/type-check mode, and avoid restarts on transient reconnects. | ESP32/RP2 (plus VM) resolve correct APIs; override survives reload; reconnect does not duplicate workers or listeners. | 🟡 Partial — automatic device mapping, reconnect behavior, dedicated VM stubs, and a persistent enable setting are implemented (`1234ccd`, `568d2c1`, `15a09d9`, `1d5823f`); persistent type-check mode and manual board override settings remain. |
+| 5. Consumer hardening | Add browser exploratory coverage, Pytest + Playwright integration tests under this repository's `tests/`, ViperIDE build/lint tests, and optional MCP diagnostic exposure. | Chromium and Firefox pass the end-to-end flows; failure/offline states are visible and type checking can be disabled without affecting editing/device operations. | 🟡 Partial — Mocha unit/build coverage, lint, production builds, component browser coverage, and ViperIDE-owned disable/re-enable Playwright coverage pass in Chromium, Firefox, and WebKit. Broader startup/tab/device/offline coverage and optional MCP exposure remain. |
 
 ### 7.4 Current verified implementation
 
 - ViperIDE integration commits run from the restricted loader (`bfaa8a4`) through runtime
   hardening (`c5a5a8e`, `24370d6`), the diagnostics/VM update (`15a09d9`), and complete device
-  workspace mirroring (`784e467`) on `typechecking_1`.
+  workspace mirroring (`784e467`) to the dedicated status/disable UI (`1d5823f`) on
+  `typechecking_1`.
 - Shared client commits `a7d424b` and `1673c9b` add display-only debouncing, discard stale
   delayed ranges after edits, and are consumed from immutable tag `lsp-client-v0.2.5`.
 - Worker commit `568d2c1` packages `micropython-webassembly-stubs 1.26.0.post2`; the browser loads
   it with the worker from immutable tag `pyright-worker-v0.2.2`. The current ViperIDE VM reports
   MicroPython 1.28, so the archive is port-correct but older than the runtime.
-- ViperIDE's full suite passes with 204 tests and 7 expected WebAssembly limitations pending.
+- ViperIDE's full suite passes with 209 tests and 7 expected WebAssembly limitations pending.
+  The ViperIDE-owned disable/re-enable Playwright flow passes in Chromium, Firefox, and WebKit;
   `npm run lint` and the production Rollup build also pass.
 - Manual Chromium checks confirm all observed runtime regressions are fixed:
   browser asset loading no longer throws `Illegal invocation`, and opening another Python file while
@@ -775,15 +777,15 @@ multi-browser coverage.
   no warning at 300 ms, and the settled warning appears after approximately 772 ms. Correcting the
   text clears the warning without the prior stale-range console exception. A never-opened `bar.py`
   created through the device REPL is mirrored after File Manager refresh; `from bar import bar`
-  resolves and `bar(32)` produces only the expected `reportArgumentType` diagnostic.
+  resolves and `bar(32)` produces only the expected `reportArgumentType` diagnostic. The toolbar
+  now shows starting, switching, ready with diagnostic counts, disabled, and startup-error states.
+  Disabling removes only the Pyright compartments, retains open editors and Ruff/mpy-cross, persists
+  the setting, and restores all bindings after re-enabling.
 
 ### 7.5 Remaining ViperIDE work
 
-1. Add dedicated status/disable UX so startup, switching, and offline failures are visible without
-   relying only on generic error reporting.
-2. Add persistent type-check enable/mode and manual board override settings through ViperIDE's
-   existing settings system.
-3. Add ViperIDE-owned Pytest + Playwright coverage for startup, fast tab switching, local and
-   multi-tab imports, device/stub changes, offline failures, and disable/re-enable behavior in
-   Chromium and Firefox.
-4. Decide whether to expose type-checking status and diagnostics through ViperIDE's MCP surface.
+1. Add persistent type-check mode and manual board override settings through ViperIDE's existing
+   settings system.
+2. Expand ViperIDE-owned Pytest + Playwright coverage to startup failures, fast tab switching,
+   local and multi-tab imports, device/stub changes, and offline failures.
+3. Decide whether to expose type-checking status and diagnostics through ViperIDE's MCP surface.
