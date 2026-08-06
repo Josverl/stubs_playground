@@ -699,6 +699,14 @@ updates do not require changes to the type-checking architecture.
 
 The architecture below is implemented on ViperIDE's `typechecking_1` branch:
 
+**Current state (2026-08-06):** the functional type-checking path is complete. Editable Python
+tabs receive Pyright diagnostics, completion, and hover; diagnostic presentation is delayed by
+750 ms without delaying document synchronization; MicroPython WebAssembly APIs resolve; and the
+complete device Python tree is mirrored into Pyright so unopened local modules and `/lib` imports
+resolve. Ruff and mpy-cross behavior remains intact. The remaining work is product hardening:
+dedicated status/disable UI, persistent enable/mode/board settings, and ViperIDE-owned automated
+multi-browser coverage.
+
 1. ViperIDE owns the integration boundary. `typechecking.js` wires the tagged component to
    `TypecheckingService`, while `typechecking_service.js` owns the client/transport, selected stub
    bundle, document versions, diagnostic status, editor bindings, persistent workspace files, and
@@ -771,11 +779,11 @@ The architecture below is implemented on ViperIDE's `typechecking_1` branch:
 
 ### 7.5 Remaining ViperIDE work
 
-1. Add persistent type-check enable/mode and manual board override settings through ViperIDE's
-   existing settings system.
-2. Add dedicated status/disable UX so startup, switching, and offline failures are visible without
+1. Add dedicated status/disable UX so startup, switching, and offline failures are visible without
    relying only on generic error reporting.
-3. Add ViperIDE-owned Pytest + Playwright coverage for startup, fast tab switching, multi-tab
-   imports, device/stub changes, offline failures, and disable/re-enable behavior in Chromium and
-   Firefox.
+2. Add persistent type-check enable/mode and manual board override settings through ViperIDE's
+   existing settings system.
+3. Add ViperIDE-owned Pytest + Playwright coverage for startup, fast tab switching, local and
+   multi-tab imports, device/stub changes, offline failures, and disable/re-enable behavior in
+   Chromium and Firefox.
 4. Decide whether to expose type-checking status and diagnostics through ViperIDE's MCP surface.
