@@ -708,7 +708,7 @@ The architecture below is implemented on ViperIDE's `typechecking_1` branch:
 
 **Current state (2026-08-06):** the functional type-checking path and settings are complete. Editable Python
 tabs receive Pyright diagnostics, completion, and hover; diagnostic presentation is delayed by
-750 ms without delaying document synchronization; MicroPython WebAssembly APIs resolve; and the
+300 ms without delaying document synchronization; MicroPython WebAssembly APIs resolve; and the
 complete device Python tree is mirrored into Pyright so unopened local modules and `/lib` imports
 resolve. Ruff and mpy-cross behavior remains intact. Persistent type-check mode and stub-bundle
 override settings are implemented. The remaining work is broader ViperIDE-owned automated
@@ -747,9 +747,11 @@ multi-browser coverage and the optional MCP exposure decision.
    diagnostics use a merge-safe lint source and carry a `Pyright` source label.
 9. Runtime asset fetch uses a global-bound browser `fetch`; this avoids `Illegal invocation` during
    manifest loading while preserving injectable fetch functions for tests.
-10. Pyright document synchronization remains immediate for completion and hover. Diagnostic
-    presentation waits for 750 ms of editor inactivity, drops pending results on further edits, and
-    converts LSP positions against the document visible at publication time.
+10. Pyright document synchronization remains immediate for completion and hover. After worker
+    analysis publishes a result, diagnostic presentation waits for 300 ms, drops pending results on
+    further edits, and converts LSP positions against the document visible at publication time.
+    This shorter delay compensates for worker analysis so results appear near Ruff diagnostics,
+    whose CodeMirror 750 ms debounce starts immediately when the document changes.
 
 ### 7.3 Phased implementation and acceptance gates
 
@@ -757,7 +759,7 @@ multi-browser coverage and the optional MCP exposure decision.
 |---|---|---|---|
 | 0. Library readiness | Complete 4.10-4.12, publish a new immutable client version, and verify it with the existing standalone/CDN harnesses. | Destroy/rebind tests show no retained handlers; close/reopen and sync/delete tests pass. | ✅ Done — delayed merge-safe diagnostics and stale-range protection are released as `lsp-client-v0.2.5`. |
 | 1. ViperIDE build integration | Rebase `typechecking_1` on v0.6.2; add the restricted Rollup HTTPS loader; import the exact tagged client; load the pinned worker URL; initialize one type-checking service. | Production IIFE contains the client and only ViperIDE's CodeMirror modules, has no unresolved bare imports, and starts the CDN worker without a vendored fallback. | ✅ Done — `bfaa8a4`, `2c36be9`, `fce95ff`, `790a332`, and `47bc84e`. |
-| 2. One-document vertical slice | Bind the active `.py` tab, display diagnostics/completion/hover, retain Ruff/mpy-cross linting, and add status/error UI. | Existing editor behavior remains intact; a MicroPython sample receives Pyright diagnostics, completion, and hover. | ✅ Done — editor binding, merge-safe 750 ms diagnostic presentation, immediate completion/hover synchronization, VM MicroPython resolution, and dedicated status/error/disable UI are implemented (`1d5823f`). |
+| 2. One-document vertical slice | Bind the active `.py` tab, display diagnostics/completion/hover, retain Ruff/mpy-cross linting, and add status/error UI. | Existing editor behavior remains intact; a MicroPython sample receives Pyright diagnostics, completion, and hover. | ✅ Done — editor binding, merge-safe 300 ms diagnostic presentation, immediate completion/hover synchronization, VM MicroPython resolution, and dedicated status/error/disable UI are implemented (`1d5823f`). |
 | 3. Multi-tab/workspace lifecycle | Bind every open Python view; implement close, rename, delete, draft, and complete device-file synchronization. | Tests cover two tabs importing each other, unsaved edits, close/reopen, file/folder rename, delete, and repeated board rebinds. | ✅ Implemented — `0fda2b7`, `82dac85`, `be1a9d1`, and `784e467`; the persistent mirror now covers unopened modules, updates/removals, unreadable files, drafts, and worker replay. |
 | 4. Device-aware stubs and settings | Map `devInfo` to stubs, add a persistent manual override/type-check mode, and avoid restarts on transient reconnects. | ESP32/RP2 (plus VM) resolve correct APIs; override survives reload; reconnect does not duplicate workers or listeners. | ✅ Done — automatic mapping uses exact `sys.platform` values, optional `_build` board/variant metadata is retained, basic/standard/strict modes and automatic/manual stub selection persist through ViperIDE's existing settings, and reconfiguration safely restores editors and workspace state. |
 | 5. Consumer hardening | Add browser exploratory coverage, Pytest + Playwright integration tests under this repository's `tests/`, ViperIDE build/lint tests, and optional MCP diagnostic exposure. | Chromium and Firefox pass the end-to-end flows; failure/offline states are visible and type checking can be disabled without affecting editing/device operations. | 🟡 Partial — Mocha unit/build coverage, lint, production builds, component browser coverage, and ViperIDE-owned disable/re-enable Playwright coverage pass in Chromium, Firefox, and WebKit. Broader startup/tab/device/offline coverage and optional MCP exposure remain. |
@@ -790,9 +792,10 @@ multi-browser coverage and the optional MCP exposure decision.
   browser asset loading no longer throws `Illegal invocation`, and opening another Python file while
   device-driven worker replacement is in progress no longer throws
   `WorkerTransport: not connected`. On the WebAssembly VM, `import micropython` has no diagnostic,
-  completion includes `opt_level`, hover shows the port documentation, a transient invalid edit has
-  no warning at 300 ms, and the settled warning appears after approximately 772 ms. Correcting the
-  text clears the warning without the prior stale-range console exception. A never-opened `bar.py`
+  completion includes `opt_level`, and hover shows the port documentation. With the 300 ms Pyright
+  presentation delay, a live timing check displayed Ruff at approximately 865 ms and Pyright at
+  approximately 913 ms after an edit. Correcting text clears warnings without the prior stale-range
+  console exception. A never-opened `bar.py`
   created through the device REPL is mirrored after File Manager refresh; `from bar import bar`
   resolves and `bar(32)` produces only the expected `reportArgumentType` diagnostic. The toolbar
   now shows starting, switching, ready with diagnostic counts, disabled, and startup-error states.
@@ -808,10 +811,20 @@ multi-browser coverage and the optional MCP exposure decision.
 
 3. Improve the dependency version handling - the version changes are still spread across multiple files allowing for simple mistakes. It is not clear if this is a result of the current GitHub artifact publication - if so it should be explained in a comment in the code. If not, it should be fixed to avoid mistakes in the future.
 
-4. Add a diagnostics panel in the UI to list all code diagnostics. It may be possible to add a Tabbed view in the bottom half of the screen to switch between the terminal and the diagnostics panel. The panel should be able to show the diagnostics for all open files. This would be a nice addition to the current implementation which only shows diagnostics in the code editor itself. The panel should also allow filtering by file and by severity (error, warning, info). It should also allow clicking on a diagnostic to jump to the corresponding line in the code editor.
+4. Completed: Add a diagnostics panel in the UI to list all code diagnostics. It may be possible to add a Tabbed view in the bottom half of the screen to switch between the terminal and the diagnostics panel. The panel should be able to show the diagnostics for all open files. This would be a nice addition to the current implementation which only shows diagnostics in the code editor itself. The panel should also allow filtering by file and by severity (error, warning, info). It should also allow clicking on a diagnostic to jump to the corresponding line in the code editor.
 This should replace/integrate the current type-checking display button in the code editor.
 
-5. Allow downloading/using type stubs from PyPI [Advanced mode] 
+5. Allow downloading/using , additional, type stubs from PyPI [Advanced mode]
+   - for instance for emlearn
+   - should there be an option to automagically add the stubs for natmod modules (to the pyproject.toml)  ?  
 
 6. Ability to view the used pyproject.toml [only in advanced mode]
 
+7. Completed: It is not clear which diagnostic was created  by pylance versus ruff. 
+If both show a diag on the same line , then they should be clear.
+
+8. Should it be possible to turn off Ruff diagnostics ?
+How is Ruff configuration handled in ViperIDE ?
+
+9. Completed: Pyright diagnostic presentation now waits 300 ms after worker analysis so it appears
+   near Ruff, whose 750 ms CodeMirror debounce begins earlier, directly after an edit.
