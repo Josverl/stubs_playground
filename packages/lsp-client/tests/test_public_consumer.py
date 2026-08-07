@@ -44,6 +44,10 @@ def test_local_consumer_harness_uses_public_lsp_api(page: Page, project_server: 
         timeout=HARNESS_TIMEOUT,
     )
     page.wait_for_function(
+        "() => window.__lspFailed === true || window.__editorDiagnosticCount?.() > 0",
+        timeout=HARNESS_TIMEOUT,
+    )
+    page.wait_for_function(
         "() => window.__lspFailed === true || window.__probesComplete === true",
         timeout=HARNESS_TIMEOUT,
     )
@@ -54,6 +58,7 @@ def test_local_consumer_harness_uses_public_lsp_api(page: Page, project_server: 
             error: window.__lspError,
             exports: window.__publicExports,
             diagnostics: window.__diagnostics,
+            editorDiagnosticCount: window.__editorDiagnosticCount?.() || 0,
             completionLabels: window.__completionLabels,
             hover: window.__hover,
         })"""
@@ -68,6 +73,7 @@ def test_local_consumer_harness_uses_public_lsp_api(page: Page, project_server: 
         "createLSPDiagnostics",
     } <= set(state["exports"])
     assert len(state["diagnostics"]) == 1
+    assert state["editorDiagnosticCount"] == 1
     assert state["diagnostics"][0]["severity"] == "error"
     assert "not assignable" in state["diagnostics"][0]["message"]
     assert "Pin" in state["completionLabels"]
