@@ -34,6 +34,8 @@ export class SimpleLSPClient {
      * @param {number} [config.timeout=5000] - Request timeout in milliseconds.
      * @param {string} [config.typeCheckingMode] - Pyright type checking mode
      *   (`off`, `basic`, `standard`, `strict`).
+     * @param {string} [config.diagnosticMode='openFilesOnly'] - Pyright diagnostic
+     *   scope (`openFilesOnly` or `workspace`).
      * @param {string} [config.typeshedPath] - Pyright typeshed path.
      * @param {string} [config.pythonVersion] - Pyright python version in `X.Y` format.
      * @param {string[]} [config.extraPaths] - Absolute extra import search paths.
@@ -64,6 +66,7 @@ export class SimpleLSPClient {
                         include: ['/workspace'],
                         extraPaths: analysisExtraPaths,
                         typeCheckingMode: mode,
+                        diagnosticMode: this.config.diagnosticMode || 'openFilesOnly',
                         diagnosticSeverityOverrides: {
                             reportMissingModuleSource: 'none',
                         },
@@ -187,6 +190,7 @@ export class SimpleLSPClient {
                     include: ['/workspace'],
                     extraPaths: this._getAnalysisExtraPaths(),
                     typeCheckingMode: this.config.typeCheckingMode || 'standard',
+                    diagnosticMode: this.config.diagnosticMode || 'openFilesOnly',
                     diagnosticSeverityOverrides: {
                         reportMissingModuleSource: 'none',
                     },

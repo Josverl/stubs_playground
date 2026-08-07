@@ -42,6 +42,15 @@ test('onNotification returns an idempotent unsubscribe callback', () => {
     ]);
 });
 
+test('workspace configuration exposes the requested Pyright diagnostic mode', () => {
+    const client = new SimpleLSPClient({ diagnosticMode: 'workspace' });
+    const configuration = client.requestHandlers.get('workspace/configuration')({
+        items: [{ section: 'python.analysis' }],
+    });
+
+    assert.equal(configuration[0].diagnosticMode, 'workspace');
+});
+
 test('workspace file methods send typed worker protocol messages', () => {
     const messages = [];
     const transport = new WorkerTransport('worker.js');

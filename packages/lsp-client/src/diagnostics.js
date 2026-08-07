@@ -32,6 +32,25 @@ import {
 const _workspaceDiagnostics = new Map();
 const refreshLSPDiagnostics = StateEffect.define();
 
+function workspaceDiagnostic(uri, diagnostic) {
+    const sourceName = diagnostic.source || 'Pyright';
+    return {
+        uri,
+        fileName: uri.replace('file:///workspace/', ''),
+        line: (diagnostic.range?.start?.line ?? 0) + 1,
+        character: (diagnostic.range?.start?.character ?? 0) + 1,
+        endLine: (diagnostic.range?.end?.line ?? diagnostic.range?.start?.line ?? 0) + 1,
+        endCharacter: (diagnostic.range?.end?.character ?? diagnostic.range?.start?.character ?? 0) + 1,
+        message: diagnostic.message || '',
+        severity: lspSeverityToString(diagnostic.severity),
+        source: diagnostic.code ? `${sourceName}: ${diagnostic.code}` : sourceName,
+    };
+}
+
+function flattenWorkspaceDiagnostics(diagnosticsByUri) {
+    return [...diagnosticsByUri.values()].flat();
+}
+
 /**
  * @typedef {Object} WorkspaceDiagnostic
  * @property {string} uri - Source document URI.
@@ -42,6 +61,7 @@ const refreshLSPDiagnostics = StateEffect.define();
  * @property {number} endCharacter - One-based end character.
  * @property {string} message - Diagnostic message.
  * @property {string} severity - CodeMirror severity name.
+ * @property {string} source - Diagnostic producer and optional diagnostic code.
  */
 
 /**
@@ -93,6 +113,45 @@ export function getWorkspaceDiagnostics() {
 }
 
 /**
+ * Subscribe to diagnostics for every file reported by the language server.
+ *
+ * Unlike the per-editor CodeMirror subscription, this includes files that have
+ * no open editor when Pyright runs in `workspace` diagnostic mode.
+ *
+ * @param {import('./simple-client.js').SimpleLSPClient} client - Connected LSP client.
+ * @param {(diagnostics: WorkspaceDiagnostic[]) => void} onDiagnosticsChange -
+ *   Receives a complete workspace snapshot after each publication.
+ * @returns {{destroy: () => void}} Disposable subscription.
+ */
+export function createWorkspaceDiagnosticsSubscription(client, onDiagnosticsChange) {
+    if (typeof onDiagnosticsChange !== 'function') {
+        throw new TypeError('Workspace diagnostics subscription requires a callback');
+    }
+    const diagnosticsByUri = new Map();
+    const unsubscribe = client.onNotification((method, params) => {
+        if (method !== 'textDocument/publishDiagnostics' || typeof params?.uri !== 'string') {
+            return;
+        }
+        const diagnostics = params.diagnostics || [];
+        if (diagnostics.length) {
+            diagnosticsByUri.set(
+                params.uri,
+                diagnostics.map(diagnostic => workspaceDiagnostic(params.uri, diagnostic)),
+            );
+        } else {
+            diagnosticsByUri.delete(params.uri);
+        }
+        onDiagnosticsChange(flattenWorkspaceDiagnostics(diagnosticsByUri));
+    });
+    return {
+        destroy() {
+            unsubscribe();
+            diagnosticsByUri.clear();
+        },
+    };
+}
+
+/**
  * Create the disposable notification subscription owned by a diagnostics view plugin.
  *
  * @param {import('./simple-client.js').SimpleLSPClient} client - Connected LSP client.
@@ -125,16 +184,10 @@ export function createDiagnosticsSubscription(
                 if (lspDiagnostics.length === 0) {
                     _workspaceDiagnostics.delete(fileUri);
                 } else {
-                    _workspaceDiagnostics.set(fileUri, lspDiagnostics.map(d => ({
-                        uri: fileUri,
-                        fileName,
-                        line: (d.range?.start?.line ?? 0) + 1,
-                        character: (d.range?.start?.character ?? 0) + 1,
-                        endLine: (d.range?.end?.line ?? d.range?.start?.line ?? 0) + 1,
-                        endCharacter: (d.range?.end?.character ?? d.range?.start?.character ?? 0) + 1,
-                        message: d.message || '',
-                        severity: lspSeverityToString(d.severity),
-                    })));
+                    _workspaceDiagnostics.set(
+                        fileUri,
+                        lspDiagnostics.map(diagnostic => workspaceDiagnostic(fileUri, diagnostic)),
+                    );
                 }
 
                 if (publishLSPDiagnostics) {
