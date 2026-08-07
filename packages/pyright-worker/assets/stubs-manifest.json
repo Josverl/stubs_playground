@@ -35,7 +35,7 @@
     {
       "id": "webassembly",
       "package": "micropython-webassembly-stubs",
-      "package_version": "1.26.0.post2",
+      "package_version": "1.28.0.post1",
       "file": "stubs-webassembly.zip"
     },
     {
