@@ -8,6 +8,7 @@ import {
     createDeferredDiagnosticsPublisher,
     createDiagnosticsSubscription,
     createLSPDiagnostics,
+    createWorkspaceDiagnosticsSubscription,
 } from '../src/diagnostics.js';
 import {
     getWorkspaceDiagnostics,
@@ -18,6 +19,7 @@ import { SimpleLSPClient } from '../src/simple-client.js';
 
 const FILE_URI = 'file:///workspace/main.py';
 const RENAMED_FILE_URI = 'file:///workspace/app.py';
+const UNOPENED_FILE_URI = 'file:///workspace/lib/unopened.py';
 
 test('diagnostic debounce publishes only the latest result after idle time', () => {
     const scheduled = [];
@@ -138,6 +140,67 @@ test('diagnostics subscription is disposed with its view plugin', () => {
     });
     assert.equal(dispatches.length, 1);
     assert.deepEqual(snapshots, [[]]);
+});
+
+test('workspace diagnostics subscription includes unopened files and clears stale reports', () => {
+    const client = new SimpleLSPClient();
+    const snapshots = [];
+    const subscription = createWorkspaceDiagnosticsSubscription(
+        client,
+        diagnostics => snapshots.push(diagnostics),
+    );
+
+    client.handleNotification('textDocument/publishDiagnostics', {
+        uri: UNOPENED_FILE_URI,
+        diagnostics: [{
+            range: {
+                start: { line: 2, character: 4 },
+                end: { line: 2, character: 11 },
+            },
+            severity: 1,
+            message: '"missing" is not defined',
+            source: 'Pyright',
+            code: 'reportUndefinedVariable',
+        }],
+    });
+    client.handleNotification('textDocument/publishDiagnostics', {
+        uri: FILE_URI,
+        diagnostics: [{
+            range: {
+                start: { line: 0, character: 0 },
+                end: { line: 0, character: 6 },
+            },
+            severity: 2,
+            message: 'Import is not accessed',
+        }],
+    });
+
+    assert.deepEqual(snapshots.at(-1).map(({ fileName, severity, source }) => ({
+        fileName,
+        severity,
+        source,
+    })), [{
+        fileName: 'lib/unopened.py',
+        severity: 'error',
+        source: 'Pyright: reportUndefinedVariable',
+    }, {
+        fileName: 'main.py',
+        severity: 'warning',
+        source: 'Pyright',
+    }]);
+
+    client.handleNotification('textDocument/publishDiagnostics', {
+        uri: UNOPENED_FILE_URI,
+        diagnostics: [],
+    });
+    assert.deepEqual(snapshots.at(-1).map(diagnostic => diagnostic.fileName), ['main.py']);
+
+    subscription.destroy();
+    client.handleNotification('textDocument/publishDiagnostics', {
+        uri: FILE_URI,
+        diagnostics: [],
+    });
+    assert.equal(snapshots.length, 3);
 });
 
 test('diagnostics extensions include a merge-safe lint source and lifecycle plugin', () => {

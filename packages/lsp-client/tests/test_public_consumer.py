@@ -82,6 +82,41 @@ def test_local_consumer_harness_uses_public_lsp_api(page: Page, project_server: 
     assert uncaught_errors == []
 
 
+@requires_worker
+def test_workspace_mode_reports_diagnostics_for_unopened_files(
+    page: Page, project_server: str
+):
+    """Workspace mode publishes diagnostics without opening a CodeMirror editor."""
+    page.goto(
+        f"{project_server}/packages/lsp-client/tests/consumer-harness.html?scope=workspace",
+        wait_until="domcontentloaded",
+    )
+    page.wait_for_function(
+        """() => window.__lspFailed === true ||
+            window.__workspaceDiagnostics.some(
+                (diagnostic) => diagnostic.fileName === 'unopened.py'
+            )""",
+        timeout=HARNESS_TIMEOUT,
+    )
+    state = page.evaluate(
+        """() => ({
+            failed: window.__lspFailed,
+            error: window.__lspError,
+            diagnostics: window.__workspaceDiagnostics,
+        })"""
+    )
+
+    assert state["failed"] is False, state["error"]
+    unopened = [
+        diagnostic
+        for diagnostic in state["diagnostics"]
+        if diagnostic["fileName"] == "unopened.py"
+    ]
+    assert len(unopened) == 1
+    assert unopened[0]["severity"] == "error"
+    assert "not assignable" in unopened[0]["message"]
+
+
 @pytest.mark.parametrize("board", ["esp32", "rp2"])
 @requires_worker
 def test_local_consumer_harness_loads_board_stubs(

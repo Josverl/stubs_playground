@@ -156,7 +156,7 @@ surface):
 - `WorkerTransport.syncWorkspaceFile`, `WorkerTransport.deleteWorkspaceFile`
 - `createLSPClient`, `createLSPPlugin`, `switchBoard`, `isLSPReady`
 - Diagnostics: `createLSPDiagnostics`, `notifyDocumentOpen`, `notifyDocumentChange`,
-  `notifyDocumentClose`,
+  `notifyDocumentClose`, `createWorkspaceDiagnosticsSubscription`,
   `removeWorkspaceDiagnosticsFor`, `getWorkspaceDiagnostics`, `requestDiagnostics`,
   `lintKeymapExtension`
 - Completion: `createCompletionSource`, plus pure helpers from `completion-core.mjs`
@@ -165,6 +165,28 @@ surface):
 
 Consumers must pass an explicit `workerUrl` (see §3); package code does not infer an
 application-specific directory layout.
+
+`createLSPClient` checks opened files by default. To type-check every preloaded Python
+file, request workspace mode and use the client-level callback, which also reports files
+without a CodeMirror editor:
+
+```js
+const result = await createLSPClient({
+  workerUrl,
+  diagnosticMode: 'workspace',
+  workspaceFiles: {
+    'main.py': 'from lib.helpers import answer\n',
+    'lib/helpers.py': 'answer: int = "invalid"\n',
+  },
+  onWorkspaceDiagnosticsChange: (diagnostics) => {
+    console.log('workspace diagnostics', diagnostics);
+  },
+});
+```
+
+Keep `result.workspaceDiagnosticsSubscription` with the client result and destroy it
+during custom teardown. `switchBoard` carries out that cleanup automatically when the
+complete prior result is supplied.
 
 ---
 

@@ -7,7 +7,11 @@
 
 import { EditorState } from '@codemirror/state';
 import { createCompletionSource } from './completion.js';
-import { createLSPDiagnostics, notifyDocumentOpen } from './diagnostics.js';
+import {
+    createLSPDiagnostics,
+    createWorkspaceDiagnosticsSubscription,
+    notifyDocumentOpen,
+} from './diagnostics.js';
 import { createHoverTooltip } from './hover.js';
 import { SimpleLSPClient } from './simple-client.js';
 import { createTransport } from './transport-factory.js';
@@ -21,12 +25,17 @@ import { createTransport } from './transport-factory.js';
  * @property {Object.<string, string>} [workspaceFiles] - Project files to preload
  *   into `/workspace`, keyed by workspace-relative path.
  * @property {string} [typeCheckingMode] - Pyright type-checking mode.
+ * @property {'openFilesOnly'|'workspace'} [diagnosticMode='openFilesOnly'] -
+ *   Analyze opened files or every Python file in the workspace.
  * @property {string} [typeshedPath] - Absolute worker-VFS typeshed path.
  * @property {string} [pythonVersion] - Python version in `X.Y` format.
  * @property {boolean} [verboseOutput] - Enable verbose Pyright output.
  * @property {Array<{packageName: string, files: Object.<string, string>}>}
  *   [extraStubPackages] - Additional type-only stub packages.
  * @property {string[]} [extraPaths] - Absolute extra import search paths.
+ * @property {(diagnostics: import('./diagnostics.js').WorkspaceDiagnostic[]) => void}
+ *   [onWorkspaceDiagnosticsChange] - Receives diagnostics for all files reported
+ *   by Pyright, including unopened files in workspace mode.
  */
 
 /**
@@ -36,6 +45,8 @@ import { createTransport } from './transport-factory.js';
  *   Connected worker transport.
  * @property {string} pyrightVersion - Detected Pyright version, or an empty
  *   string when the worker does not report one.
+ * @property {{destroy: () => void}|null} workspaceDiagnosticsSubscription -
+ *   Client-level diagnostics subscription, when requested.
  */
 
 /**
@@ -69,6 +80,7 @@ export async function createLSPClient(config) {
         boardStubs: config.boardStubs,
         workspaceFiles: config.workspaceFiles,
         typeCheckingMode: config.typeCheckingMode,
+        diagnosticMode: config.diagnosticMode,
         typeshedPath: config.typeshedPath,
         pythonVersion: config.pythonVersion,
         verboseOutput: config.verboseOutput,
@@ -82,18 +94,33 @@ export async function createLSPClient(config) {
         rootUri: 'file:///workspace',
         timeout: config.timeout || 5000,
         typeCheckingMode: config.typeCheckingMode,
+        diagnosticMode: config.diagnosticMode,
         typeshedPath: config.typeshedPath,
         pythonVersion: config.pythonVersion,
         extraPaths: config.extraPaths,
     });
+    const workspaceDiagnosticsSubscription =
+        typeof config.onWorkspaceDiagnosticsChange === 'function'
+            ? createWorkspaceDiagnosticsSubscription(client, config.onWorkspaceDiagnosticsChange)
+            : null;
 
-    await transport.connect();
-    console.log('Transport connected');
+    try {
+        await transport.connect();
+        console.log('Transport connected');
 
-    await client.connect(transport);
-    console.log('LSP Client initialized:', client.serverCapabilities);
+        await client.connect(transport);
+        console.log('LSP Client initialized:', client.serverCapabilities);
+    } catch (error) {
+        workspaceDiagnosticsSubscription?.destroy();
+        throw error;
+    }
 
-    return { client, transport, pyrightVersion: transport.pyrightVersion || "" };
+    return {
+        client,
+        transport,
+        pyrightVersion: transport.pyrightVersion || "",
+        workspaceDiagnosticsSubscription,
+    };
 }
 
 /**
@@ -157,19 +184,17 @@ export function createLSPPlugin(client, view, options = {}) {
  * The caller must reconfigure each editor's LSP extension after this resolves
  * so its documents are reopened with their current content.
  *
- * @param {{client: SimpleLSPClient,
- *   transport: import('./worker-transport.js').WorkerTransport}} current -
- *   Current client and transport.
+ * @param {LSPClientResult} current - Complete current client result, including
+ *   its workspace diagnostics subscription when one was requested.
  * @param {LSPClientConfig} config - New worker configuration, including the
  *   replacement `boardStubs`.
- * @returns {Promise<{client: SimpleLSPClient,
- *   transport: import('./worker-transport.js').WorkerTransport}>} Replacement
- *   client and transport.
+ * @returns {Promise<LSPClientResult>} Complete replacement client result.
  * @throws {TypeError} If `config.workerUrl` is missing.
  * @throws {Error} If the replacement worker or LSP handshake fails.
  */
 export async function switchBoard(current, config) {
     // Tear down old client and transport
+    current.workspaceDiagnosticsSubscription?.destroy();
     try {
         current.client.disconnect();
     } catch (e) { /* ignore shutdown errors */ }
@@ -178,13 +203,13 @@ export async function switchBoard(current, config) {
     } catch (e) { /* ignore close errors */ }
 
     // Create new client with new board stubs
-    const { client, transport } = await createLSPClient(config);
+    const result = await createLSPClient(config);
 
     // Do NOT re-open documents here — the caller is responsible for
     // reconfiguring the CodeMirror LSP compartment (which calls
     // createLSPPlugin → notifyDocumentOpen with the actual content).
 
-    return { client, transport };
+    return result;
 }
 
 /**

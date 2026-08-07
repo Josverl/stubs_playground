@@ -49,6 +49,7 @@
         window.__lspReady = false;
         window.__lspFailed = false;
         window.__diagnostics = [];
+        window.__workspaceDiagnostics = [];
         window.__completionLabels = [];
         window.__hover = null;
 
@@ -139,7 +140,21 @@
             window.__publicExports = Object.keys(lsp).sort();
 
             const boardStubs = await loadBoardStubs(window.__board);
-            const { client, pyrightVersion } = await lsp.createLSPClient({ workerUrl, boardStubs });
+            const workspaceMode = params.get('scope') === 'workspace';
+            const clientConfig = {
+                workerUrl,
+                boardStubs,
+                diagnosticMode: workspaceMode ? 'workspace' : 'openFilesOnly',
+            };
+            if (workspaceMode) {
+                clientConfig.workspaceFiles = {
+                    'unopened.py': 'workspace_error: int = "not an int"\n',
+                };
+                clientConfig.onWorkspaceDiagnosticsChange = (diagnostics) => {
+                    window.__workspaceDiagnostics = diagnostics || [];
+                };
+            }
+            const { client, pyrightVersion } = await lsp.createLSPClient(clientConfig);
 
             const lspCompartment = new Compartment();
             const view = new EditorView({

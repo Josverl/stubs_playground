@@ -19,6 +19,7 @@ export { createLSPClient, createLSPPlugin, switchBoard, isLSPReady } from './cli
 // Diagnostics (pure data layer, no DOM)
 export {
     createLSPDiagnostics,
+    createWorkspaceDiagnosticsSubscription,
     notifyDocumentOpen,
     notifyDocumentChange,
     notifyDocumentClose,
