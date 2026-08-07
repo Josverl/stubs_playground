@@ -1,5 +1,6 @@
 """Application coverage for the public component integration boundary."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -10,10 +11,20 @@ from tests.timing import CDN_TIMEOUT, LSP_TIMEOUT
 
 pytestmark = pytest.mark.worker
 HARNESS_TIMEOUT = CDN_TIMEOUT + LSP_TIMEOUT
+PROJECT_ROOT = Path(__file__).parents[3]
+
+
+def _component_tag(package_path: str) -> str:
+    package = json.loads((PROJECT_ROOT / package_path).read_text())
+    return f"{package['cdn']['tagPrefix']}{package['version']}"
+
+
+CLIENT_TAG = _component_tag("packages/lsp-client/package.json")
+WORKER_TAG = _component_tag("packages/pyright-worker/package.json")
 
 requires_worker = pytest.mark.skipif(
     not (
-        Path(__file__).parents[3]
+        PROJECT_ROOT
         / "packages"
         / "pyright-worker"
         / "dist"
@@ -72,7 +83,7 @@ def test_local_mode_uses_workspace_component_interfaces(
 
 
 def test_cdn_mode_uses_published_component_interfaces(
-    page: Page, project_server: str
+    page: Page, project_server: str, tmp_path: Path
 ):
     requests: list[str] = []
     responses: dict[str, int] = {}
@@ -89,16 +100,16 @@ def test_cdn_mode_uses_published_component_interfaces(
     assert state["failed"] is False
     assert state["activeBoard"] == "esp32"
     assert state["source"]["mode"] == "cdn"
-    assert state["source"]["clientVersion"] == "lsp-client-v0.2.5"
-    assert state["source"]["workerVersion"] == "pyright-worker-v0.2.2"
+    assert state["source"]["clientVersion"] == CLIENT_TAG
+    assert state["source"]["workerVersion"] == WORKER_TAG
     assert "Pyright" in state["status"]
     assert any("/apps/playground/app.js" in url for url in requests)
 
     published_paths = (
-        "@lsp-client-v0.2.5/packages/lsp-client/src/index.js",
-        "@pyright-worker-v0.2.2/packages/pyright-worker/dist/pyright_worker.js",
-        "@pyright-worker-v0.2.2/packages/pyright-worker/assets/stubs-manifest.json",
-        "@pyright-worker-v0.2.2/packages/pyright-worker/assets/stubs-esp32.zip",
+        f"@{CLIENT_TAG}/packages/lsp-client/src/index.js",
+        f"@{WORKER_TAG}/packages/pyright-worker/dist/pyright_worker.js",
+        f"@{WORKER_TAG}/packages/pyright-worker/assets/stubs-manifest.json",
+        f"@{WORKER_TAG}/packages/pyright-worker/assets/stubs-esp32.zip",
     )
     for suffix in published_paths:
         matching = [status for url, status in responses.items() if suffix in url]
@@ -123,6 +134,10 @@ def test_cdn_mode_uses_published_component_interfaces(
             or "/packages/pyright-worker/" in url
         )
         for url in requests
+    )
+    page.screenshot(
+        path=tmp_path / "playground-latest-published-components.png",
+        full_page=True,
     )
 
 
