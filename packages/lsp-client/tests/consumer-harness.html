@@ -66,6 +66,7 @@
         import { EditorView, basicSetup } from 'codemirror';
         import { Compartment } from '@codemirror/state';
         import { python } from '@codemirror/lang-python';
+        import { diagnosticCount } from '@codemirror/lint';
 
         const params = new URLSearchParams(location.search);
         const repo = params.get('repo') || 'Josverl/stubs_playground';
@@ -146,6 +147,7 @@
                 parent: document.getElementById('editor'),
                 extensions: [basicSetup, python(), lspCompartment.of([])],
             });
+            window.__editorDiagnosticCount = () => diagnosticCount(view.state);
 
             view.dispatch({
                 effects: lspCompartment.reconfigure(

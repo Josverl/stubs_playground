@@ -15,7 +15,7 @@ import {
     previousDiagnostic,
 } from '@codemirror/lint';
 import { keymap, ViewPlugin } from '@codemirror/view';
-import { Prec } from '@codemirror/state';
+import { Prec, StateEffect } from '@codemirror/state';
 import {
     createDebouncedPublisher,
     convertLSPDiagnostic,
@@ -30,6 +30,7 @@ import {
  * Used to compute aggregate workspace counts for the status bar.
  */
 const _workspaceDiagnostics = new Map();
+const refreshLSPDiagnostics = StateEffect.define();
 
 /**
  * @typedef {Object} WorkspaceDiagnostic
@@ -37,6 +38,8 @@ const _workspaceDiagnostics = new Map();
  * @property {string} fileName - Workspace-relative file name.
  * @property {number} line - One-based start line.
  * @property {number} character - One-based start character.
+ * @property {number} endLine - One-based end line.
+ * @property {number} endCharacter - One-based end character.
  * @property {string} message - Diagnostic message.
  * @property {string} severity - CodeMirror severity name.
  */
@@ -76,7 +79,7 @@ export function removeWorkspaceDiagnosticsFor(fileUri) {
  * Return a flat snapshot of all currently-known workspace diagnostics,
  * suitable for embedding in a GitHub issue report.
  *
- * Each entry: `{ uri, fileName, line, character, message, severity }`
+ * Each entry: `{ uri, fileName, line, character, endLine, endCharacter, message, severity }`
  * Line and character are 1-based.
  *
  * @returns {WorkspaceDiagnostic[]} New array containing cached diagnostics.
@@ -127,6 +130,8 @@ export function createDiagnosticsSubscription(
                         fileName,
                         line: (d.range?.start?.line ?? 0) + 1,
                         character: (d.range?.start?.character ?? 0) + 1,
+                        endLine: (d.range?.end?.line ?? d.range?.start?.line ?? 0) + 1,
+                        endCharacter: (d.range?.end?.character ?? d.range?.start?.character ?? 0) + 1,
                         message: d.message || '',
                         severity: lspSeverityToString(d.severity),
                     })));
@@ -201,10 +206,14 @@ export function createLSPDiagnostics(
     diagnosticDelayMs = 0,
 ) {
     let currentDiagnostics = [];
-    const diagnosticSource = linter(() => currentDiagnostics);
+    const diagnosticSource = linter(() => currentDiagnostics, {
+        needsRefresh: update => update.transactions.some(transaction =>
+            transaction.effects.some(effect => effect.is(refreshLSPDiagnostics))),
+    });
     const subscriptionPlugin = ViewPlugin.define((pluginView) => {
         const publisher = createDeferredDiagnosticsPublisher(pluginView, (diagnostics) => {
             currentDiagnostics = diagnostics;
+            pluginView.dispatch({ effects: refreshLSPDiagnostics.of(null) });
             forceLinting(pluginView);
         }, diagnosticDelayMs);
         const subscription = createDiagnosticsSubscription(

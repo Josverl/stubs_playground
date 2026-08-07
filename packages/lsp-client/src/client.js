@@ -44,7 +44,8 @@ import { createTransport } from './transport-factory.js';
  * @property {string} [languageId='python'] - LSP language identifier.
  * @property {string} [initialContent=''] - Initial document text.
  * @property {(diagnostics: Array<{uri: string, fileName: string, line: number,
- *   character: number, message: string, severity: string}>) => void}
+ *   character: number, endLine: number, endCharacter: number, message: string,
+ *   severity: string}>) => void}
  *   [onDiagnosticsChange] - Receives a snapshot of workspace diagnostics.
  * @property {number} [diagnosticDelayMs=0] - Idle time before displaying the
  *   latest Pyright diagnostics. Document changes remain immediate.

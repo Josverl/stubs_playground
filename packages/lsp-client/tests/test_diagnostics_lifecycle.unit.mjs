@@ -152,9 +152,13 @@ test('diagnostics extensions include a merge-safe lint source and lifecycle plug
 
 test('document edits clear published Pyright diagnostics before linting again', () => {
     const client = new SimpleLSPClient();
+    const dispatches = [];
     const pluginView = {
         state: EditorState.create({ doc: 'print(missing_name)\n' }),
         plugin: () => null,
+        dispatch(spec) {
+            dispatches.push(spec);
+        },
     };
     const extensions = createLSPDiagnostics(client, FILE_URI, pluginView);
     const diagnosticSource = extensions[1][0].value.source;
@@ -172,6 +176,8 @@ test('document edits clear published Pyright diagnostics before linting again', 
         }],
     });
     assert.equal(diagnosticSource().length, 1);
+    const needsRefresh = extensions[1][0].value.config.needsRefresh;
+    assert.equal(needsRefresh({ transactions: [{ effects: [dispatches[0].effects] }] }), true);
 
     plugin.update({ docChanged: true });
     assert.deepEqual(diagnosticSource(), []);
@@ -241,7 +247,11 @@ test('document close clears cached diagnostics before opening a renamed URI', ()
             source: 'Pyright',
         }],
     });
-    assert.equal(getWorkspaceDiagnostics().length, 1);
+    const { line, character, endLine, endCharacter } = getWorkspaceDiagnostics()[0];
+    assert.deepEqual(
+        { line, character, endLine, endCharacter },
+        { line: 1, character: 9, endLine: 1, endCharacter: 21 },
+    );
 
     notifyDocumentClose(client, FILE_URI);
     assert.deepEqual(getWorkspaceDiagnostics(), []);
