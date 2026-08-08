@@ -39,9 +39,8 @@ Thank you for your interest in contributing to this project! This document provi
 ### Branch Strategy
 
 - `main` - Stable, production-ready code
-- `develop` - Integration branch for features (optional)
 - `feature/feature-name` - Feature branches
-- `bugfix/bug-name` - Bug fix branches
+- `fix/bug-name` - Bug fix branches
 
 ### Making Changes
 
@@ -65,39 +64,18 @@ Thank you for your interest in contributing to this project! This document provi
 4. **Commit your changes:**
    ```bash
    git add .
-   git commit -m "feat: add your feature description"
+   git commit -m "feat: Add your feature description."
    ```
 
 5. **Push to your fork:**
    ```bash
    git push origin feature/your-feature-name
    ```
-
 6. **Create a Pull Request:**
    - Go to the original repository
    - Click "New Pull Request"
    - Select your feature branch
    - Describe your changes clearly
-
-## Commit Message Guidelines
-
-We follow [Conventional Commits](https://www.conventionalcommits.org/) specification:
-
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `docs:` - Documentation changes
-- `style:` - Code style changes (formatting, semicolons, etc.)
-- `refactor:` - Code refactoring
-- `test:` - Adding or updating tests
-- `chore:` - Maintenance tasks
-
-**Examples:**
-```
-feat: add dark mode toggle button
-fix: resolve syntax highlighting issue for multiline strings
-docs: update README with deployment instructions
-test: add tests for editor initialization
-```
 
 ## Code Style Guidelines
 
@@ -180,32 +158,6 @@ uv run pytest packages/pyright-worker/tests -v
 # All Pytest suites with the browser visible
 uv run pytest --headed
 ```
-
-## Adding New Features
-
-### Small Features (CSS, UI tweaks)
-
-1. Make changes directly
-2. Test thoroughly
-3. Submit PR
-
-### Medium Features (New editor capabilities)
-
-1. Check if extension already exists in CodeMirror ecosystem
-2. Import required packages in `index.html` importmap
-3. Add extension to `app.js`
-4. Add tests
-5. Update documentation
-6. Submit PR
-
-### Large Features (LSP, MicroPython stubs)
-
-1. **Discuss first:** Open an issue to discuss the approach
-2. **Plan architecture:** Document your design
-3. **Break into phases:** Create multiple smaller PRs
-4. **Update documentation:** Keep README and instructions updated
-5. **Consider compatibility:** Ensure GitHub Pages deployment still works
-
 ## Documentation
 
 When adding features, update:
@@ -224,55 +176,6 @@ When adding features, update:
 3. Test in multiple browsers
 4. Check browser console for errors
 
-### Bug Report Template
-
-```markdown
-**Describe the bug**
-A clear description of what the bug is.
-
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '...'
-3. See error
-
-**Expected behavior**
-What you expected to happen.
-
-**Screenshots**
-If applicable, add screenshots.
-
-**Environment:**
- - Browser: [e.g., Chrome 120]
- - OS: [e.g., Windows 11]
- - Version: [e.g., commit hash]
-
-**Console errors**
-```
-Paste any error messages from browser console
-```
-```
-
-## Suggesting Features
-
-### Feature Request Template
-
-```markdown
-**Is your feature request related to a problem?**
-A clear description of the problem.
-
-**Describe the solution you'd like**
-What you want to happen.
-
-**Describe alternatives you've considered**
-Other solutions you've thought about.
-
-**Additional context**
-Any other context or screenshots.
-
-**Compatibility concerns**
-Consider GitHub Pages deployment, browser compatibility, etc.
-```
 
 ## Project Structure
 
@@ -295,24 +198,3 @@ mp_codemirror/
 ├── CONTRIBUTING.md                 # This file
 └── README.md                       # Project documentation
 ```
-
-## Questions?
-
-- Open an issue for questions
-- Check [CodeMirror Documentation](https://codemirror.net/6/)
-- Check existing issues and PRs
-
-## License
-
-By contributing, you agree that your contributions will be licensed under the same license as the project.
-
-## Code of Conduct
-
-- Be respectful and inclusive
-- Welcome newcomers
-- Focus on constructive feedback
-- Follow the [Contributor Covenant](https://www.contributor-covenant.org/)
-
----
-
-Thank you for contributing! 🎉

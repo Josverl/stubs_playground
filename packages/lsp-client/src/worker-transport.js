@@ -33,6 +33,37 @@
  * @property {number} [size] - File size in bytes.
  */
 
+/**
+ * @typedef {Object} StubPackageRelease
+ * @property {string} version - PyPI release version.
+ * @property {string} filename - Selected universal wheel filename.
+ * @property {number} size - Wheel size in bytes.
+ * @property {string} uploadTime - PyPI upload timestamp.
+ */
+
+/**
+ * @typedef {Object} StubPackageCatalogEntry
+ * @property {string} id - Stable catalog identifier.
+ * @property {string} packageName - PyPI distribution name.
+ * @property {string} label - Human-readable package label.
+ * @property {'stdlib'|'board'} kind - Package role.
+ * @property {string} latestVersion - Latest stable installable version.
+ * @property {StubPackageRelease[]} versions - Stable universal-wheel releases.
+ * @property {string} [installedVersion] - Active cached version, when installed.
+ * @property {string} [error] - Per-package discovery error; other entries remain usable.
+ */
+
+/**
+ * @typedef {Object} InstalledStubPackage
+ * @property {string} packageName - Normalized PyPI distribution name.
+ * @property {string} version - Installed release version.
+ * @property {string} wheelFilename - Source wheel filename.
+ * @property {string} wheelUrl - Trusted files.pythonhosted.org source URL.
+ * @property {number} installedAt - Installation timestamp in milliseconds since epoch.
+ * @property {number} fileCount - Number of persisted files, including resolved dependencies.
+ * @property {boolean} active - Whether this is the active cached version.
+ */
+
 function validateWorkspacePath(path) {
     if (typeof path !== 'string' || path.length === 0) {
         throw new TypeError('Workspace file path must be a non-empty string');
@@ -563,7 +594,11 @@ export class WorkerTransport {
      * Package identities are worker-defined, while release versions come from
      * PyPI at request time and are not pinned to the worker release.
      *
-     * @returns {Promise<Array<Object>>} Catalog entries and installable versions.
+     * Discovery failures are reported in an entry's `error` property so one
+     * unavailable PyPI project does not discard the rest of the catalog.
+     *
+     * @returns {Promise<StubPackageCatalogEntry[]>} Catalog entries and installable versions.
+     * @throws {Error} If disconnected, the worker rejects the request, or it times out.
      */
     async listStubPackages() {
         const response = await this._requestStubPackage('listStubPackages');
@@ -575,7 +610,13 @@ export class WorkerTransport {
      *
      * @param {string} packageName - PyPI package name.
      * @param {string} [versionSpecifier=''] - Exact or constrained PEP-440-like version.
-     * @returns {Promise<Object>} Installed package metadata.
+     * The cache change becomes visible to Pyright only after the worker is
+     * restarted. Higher-level integrations such as ViperIDE do this automatically.
+     *
+     * @returns {Promise<InstalledStubPackage>} Installed package metadata.
+     * @throws {TypeError} If either argument is invalid.
+     * @throws {Error} If no compatible type-only wheel is available, validation
+     *   fails, the transport is disconnected, or the request times out.
      */
     async installStubPackage(packageName, versionSpecifier = '') {
         if (typeof packageName !== 'string' || packageName.trim() === '') {
@@ -595,7 +636,8 @@ export class WorkerTransport {
     /**
      * List packages persisted by the worker in IndexedDB.
      *
-     * @returns {Promise<Array<Object>>} Cached package metadata.
+     * @returns {Promise<InstalledStubPackage[]>} Cached package metadata.
+     * @throws {Error} If disconnected, the worker rejects the request, or it times out.
      */
     async listInstalledStubPackages() {
         const response = await this._requestStubPackage('listInstalledStubPackages');
@@ -608,6 +650,8 @@ export class WorkerTransport {
      * @param {string} [packageName] - Optional normalized or display package name.
      * @param {string} [version] - Optional exact cached version.
      * @returns {Promise<{removed: number, restartRequired: boolean}>} Removal result.
+     * @throws {TypeError} If a supplied package name or version is empty.
+     * @throws {Error} If disconnected, the worker rejects the request, or it times out.
      */
     async clearStubPackages(packageName, version) {
         if (packageName !== undefined && (typeof packageName !== 'string' || !packageName.trim())) {

@@ -265,9 +265,9 @@ import('/app.js').then(module => {
 
 ## 🤝 Get Help
 
-- Open an [Issue](../../issues)
-- Check [Discussions](../../discussions)
-- Read [Contributing Guide](CONTRIBUTING.md)
+- Open an [Issue](https://github.com/Josverl/stubs_playground/issues)
+- Check [Discussions](https://github.com/Josverl/stubs_playground/discussions)
+- Read the [Contributing Guide](https://github.com/Josverl/stubs_playground/blob/integrate/CONTRIBUTING.md)
 
 ---
 

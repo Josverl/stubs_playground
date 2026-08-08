@@ -83,6 +83,10 @@ cross-origin worker Blob shim, pinned peer-dependency versions, jsDelivr URL sha
 a minimal end-to-end example. Releases are cut with the
 [`Release CDN component`](.github/workflows/release-cdn.yml) workflow.
 
+The complete public API reference, including the worker protocol, runtime PyPI
+stub management, and the ViperIDE lifecycle integration, starts at
+**[docs/index.md](docs/index.md)** and is built with Sphinx for Read the Docs.
+
 ## Repository layout and local development
 
 This repository is an npm workspace containing one application and two independently

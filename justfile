@@ -29,6 +29,10 @@ build-dev:
     npm run generate:component-config
     npx webpack --mode development
 
+# build Sphinx API documentation and fail on warnings
+docs:
+    uv run --with-requirements docs/requirements.txt sphinx-build -W --keep-going -b html docs docs/_build/html
+
 # pack Pyright's typeshed-fallback into a zip for browser use
 pack-typeshed:
     uv run scripts/pack-typeshed.py
