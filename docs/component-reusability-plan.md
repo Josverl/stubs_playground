@@ -804,15 +804,20 @@ multi-browser coverage and the optional MCP exposure decision.
 
 ### 7.5 Remaining ViperIDE work
 
-1. Expand ViperIDE-owned Pytest + Playwright coverage to startup failures, fast tab switching,
+1. DONE: Expand ViperIDE-owned Pytest + Playwright coverage to startup failures, fast tab switching,
    local and multi-tab imports, device/stub changes, and offline failures.
-
-2. Decide whether to expose type-checking status and diagnostics through ViperIDE's MCP surface.
-
-3. Improve the dependency version handling - the version changes are still spread across multiple files allowing for simple mistakes. It is not clear if this is a result of the current GitHub artifact publication - if so it should be explained in a comment in the code. If not, it should be fixed to avoid mistakes in the future.
 
 4. Completed: Add a diagnostics panel in the UI to list all code diagnostics. It may be possible to add a Tabbed view in the bottom half of the screen to switch between the terminal and the diagnostics panel. The panel should be able to show the diagnostics for all open files. This would be a nice addition to the current implementation which only shows diagnostics in the code editor itself. The panel should also allow filtering by file and by severity (error, warning, info). It should also allow clicking on a diagnostic to jump to the corresponding line in the code editor.
 This should replace/integrate the current type-checking display button in the code editor.
+
+
+
+Remaining:
+
+2. Decide whether to expose type-checking status and diagnostics through ViperIDE's MCP surface.
+
+3. Improve the dependency version handling in ViperIDE  - the version changes are still spread across multiple files allowing for simple confusion mistakes. It is not clear if this is a result of the current GitHub artifact publication - if so it should be explained in a comment in the code. If not, it should be fixed to avoid mistakes in the future.
+
 
 5. Allow downloading/using , additional, type stubs from PyPI [Advanced mode]
    - for instance for emlearn
@@ -828,3 +833,28 @@ How is Ruff configuration handled in ViperIDE ?
 
 9. Completed: Pyright diagnostic presentation now waits 300 ms after worker analysis so it appears
    near Ruff, whose 750 ms CodeMirror debounce begins earlier, directly after an edit.
+
+
+10. Completed: Stub package releases are no longer pinned in worker TypeScript.
+    - `assets/stub-package-catalog.json` contains discoverable MicroPython package identities and labels.
+      The worker queries PyPI for current installable universal-wheel versions when requested.
+    - `WorkerTransport.listStubPackages()` exposes the live package/version catalog.
+    - `WorkerTransport.installStubPackage(packageName, versionSpecifier)` downloads a requested
+      wheel, accepts catalogued board packages or unlisted type-only extras, extracts safe `.pyi`
+      content, and persists it in IndexedDB.
+    - `listInstalledStubPackages()` and `clearStubPackages()` expose the persistent cache.
+    - Worker startup hydrates active cached packages before Pyright starts. A selected board can
+      prefer its cached PyPI package while retaining the bundled archive as an offline fallback.
+    - The playground and ViperIDE consume the same transport API. Neither application implements
+      its own PyPI client, wheel extraction, or stub persistence.
+    - Publishing a new stub release requires no worker or client release. Adding a package to the
+      discoverable MicroPython suggestions requires changing the JSON catalog; unlisted type-only
+      extras can be installed directly by name.
+
+
+  - Prio 2: Allow the pyright worker code to be updated without having to update the ViperIDE code and pinned versions.
+
+
+11.  write API documentation for the type-checking API, so that it can be used by other clients. This should include the API for the pyright worker, as well as the API for the ViperIDE integration. The documentation should include examples of how to use the API, as well as a description of the expected behavior of the API.
+- JSDoc
+- Markdown documentation to be published via Sphinx to RTD

@@ -154,6 +154,8 @@ surface):
 
 - `SimpleLSPClient`, `WorkerTransport`, `createWorkerTransport`
 - `WorkerTransport.syncWorkspaceFile`, `WorkerTransport.deleteWorkspaceFile`
+- Stub packages: `WorkerTransport.listStubPackages`, `installStubPackage`,
+  `listInstalledStubPackages`, `clearStubPackages`
 - `createLSPClient`, `createLSPPlugin`, `switchBoard`, `isLSPReady`
 - Diagnostics: `createLSPDiagnostics`, `notifyDocumentOpen`, `notifyDocumentChange`,
   `notifyDocumentClose`, `createWorkspaceDiagnosticsSubscription`,
@@ -249,6 +251,38 @@ To offer port/board switching (ESP32, STM32, CircuitPython, SAMD, …):
    stubs.
 
 Pass `boardStubs: false` for a CPython-only (no MicroPython stubs) configuration.
+
+### Runtime PyPI stub packages
+
+The worker keeps discoverable MicroPython package identities in
+`assets/stub-package-catalog.json`; versions are queried from PyPI at runtime:
+
+```js
+const packages = await transport.listStubPackages();
+const esp32 = packages.find(pkg => pkg.id === 'esp32');
+await transport.installStubPackage(
+  esp32.packageName,
+  `==${esp32.latestVersion}`,
+);
+```
+
+Installs are validated as type-only universal wheels and persisted in IndexedDB.
+Clients may also install an unlisted type-only wheel by package name and version. Unlisted
+dependencies are not downloaded; bundled typeshed continues to supply standard dependency types.
+Unlisted MicroPython board/port packages and CircuitPython are rejected because they require an
+explicit board target rather than a global extra path.
+Restart the worker after a cache change. To prefer the active cached version for a
+board while keeping the bundled archive as an offline fallback, pass:
+
+```js
+{
+  boardStubsUrl: 'https://cdn.example/stubs-esp32.zip',
+  boardStubPackage: {
+    packageName: 'micropython-esp32-stubs',
+    fallbackToBundled: true,
+  },
+}
+```
 
 ---
 

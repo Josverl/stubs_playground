@@ -13,6 +13,9 @@ import { WorkerTransport } from './worker-transport.js';
  * @param {string} options.workerUrl - Worker script or Blob URL.
  * @param {ArrayBuffer|false} [options.boardStubs] - Board-specific stubs zip,
  *   `false` to disable board stubs, or `undefined` for the bundled default.
+ * @param {string} [options.boardStubsUrl] - Absolute fallback archive URL.
+ * @param {{packageName: string, version?: string, fallbackToBundled?: boolean}} [options.boardStubPackage] -
+ *   Cached PyPI package to use as `/typings`.
  * @param {Object.<string, string>} [options.workspaceFiles] - Project files to
  *   preload into `/workspace`, keyed by workspace-relative path.
  * @param {string} [options.typeCheckingMode] - Pyright type-checking mode.
@@ -33,6 +36,8 @@ export function createTransport(options) {
     console.log(`Creating Worker transport → ${url}`);
     return new WorkerTransport(url, {
         boardStubs: options.boardStubs,
+        boardStubsUrl: options.boardStubsUrl,
+        boardStubPackage: options.boardStubPackage,
         workspaceFiles: options.workspaceFiles,
         typeCheckingMode: options.typeCheckingMode,
         typeshedPath: options.typeshedPath,

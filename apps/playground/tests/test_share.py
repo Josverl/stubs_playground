@@ -325,7 +325,7 @@ def test_url_restores_board(page, live_server):
 
 
 def test_url_board_preloads_matching_stubs(page, live_server):
-    """URL board selection must preload stubs for the same board before LSP init."""
+    """URL board selection initializes the LSP for the same board."""
     _goto_editor(page, live_server)
     url = page.evaluate("""async () => {
         const { buildShareableUrl } = await import('./share.js');
@@ -334,15 +334,12 @@ def test_url_board_preloads_matching_stubs(page, live_server):
 
     page.goto(url, wait_until="domcontentloaded")
     page.wait_for_selector(".cm-editor", timeout=CDN_TIMEOUT)
-    page.wait_for_function("() => document.getElementById('boardSelect').value === 'stm32'")
-
     page.wait_for_function(
-        "() => performance.getEntriesByType('resource').some(e => e.name.includes('stubs-stm32.zip'))",
-        timeout=5000,
-    )
-    fetched_resources = page.evaluate("() => performance.getEntriesByType('resource').map(e => e.name)")
-    assert any("stubs-stm32.zip" in url for url in fetched_resources), (
-        "Expected STM32 stubs to be fetched during URL-based board restore."
+        """() =>
+            window.__lspReady === true
+            && window.__activeLspBoard === 'stm32'
+            && document.getElementById('boardSelect').value === 'stm32'""",
+        timeout=CDN_TIMEOUT,
     )
 
 

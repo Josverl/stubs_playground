@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "packages": [
+    {
+      "id": "stdlib",
+      "packageName": "micropython-stdlib-stubs",
+      "label": "MicroPython standard library",
+      "kind": "stdlib"
+    },
+    {
+      "id": "esp32",
+      "packageName": "micropython-esp32-stubs",
+      "label": "MicroPython ESP32",
+      "kind": "board"
+    },
+    {
+      "id": "esp8266",
+      "packageName": "micropython-esp8266-stubs",
+      "label": "MicroPython ESP8266",
+      "kind": "board"
+    },
+    {
+      "id": "rp2",
+      "packageName": "micropython-rp2-stubs",
+      "label": "MicroPython RP2",
+      "kind": "board"
+    },
+    {
+      "id": "stm32",
+      "packageName": "micropython-stm32-stubs",
+      "label": "MicroPython STM32",
+      "kind": "board"
+    },
+    {
+      "id": "samd",
+      "packageName": "micropython-samd-stubs",
+      "label": "MicroPython SAMD",
+      "kind": "board"
+    },
+    {
+      "id": "webassembly",
+      "packageName": "micropython-webassembly-stubs",
+      "label": "MicroPython WebAssembly",
+      "kind": "board"
+    }
+  ]
+}

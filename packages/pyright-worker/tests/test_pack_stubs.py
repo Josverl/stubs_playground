@@ -54,6 +54,26 @@ def test_webassembly_archive_and_manifest_expose_micropython_modules():
     assert {"micropython.pyi", "uasyncio.pyi", "umachine.pyi", "js.pyi"} <= names
 
 
+def test_runtime_stub_catalog_is_versionless_and_covers_packaged_boards():
+    assets = Path(__file__).parents[1] / "assets"
+    manifest = json.loads((assets / "stubs-manifest.json").read_text(encoding="utf-8"))
+    catalog = json.loads(
+        (assets / "stub-package-catalog.json").read_text(encoding="utf-8")
+    )
+
+    catalog_packages = {
+        entry["packageName"]: entry for entry in catalog["packages"]
+    }
+    packaged = {
+        entry["package"]
+        for entry in manifest["boards"]
+        if entry["file"] is not None and entry["package"].startswith("micropython-")
+    }
+
+    assert packaged <= catalog_packages.keys()
+    assert all("version" not in entry for entry in catalog["packages"])
+
+
 def test_targeted_pack_preserves_cached_board_manifest_entries(tmp_path, monkeypatch):
     assets = tmp_path / "assets"
     source = tmp_path / "source"

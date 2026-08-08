@@ -57,20 +57,6 @@ import { DocumentManager } from './editor/document-manager.js';
 import { TabBar } from './ui/tab-bar.js';
 import { FileTree } from './ui/file-tree.js';
 import { Events } from './events.js';
-import {
-    fetchPackageIndex,
-    selectStubWheelRelease,
-    downloadWheelFile,
-    extractTypeStubFilesFromWheel,
-    loadExtraStubsRegistry,
-    saveExtraStubsRegistry,
-    upsertExtraStubEntry,
-    clearExtraStubsRegistry,
-    buildWorkerExtraStubPayload,
-    buildAbsoluteExtraPaths,
-    normalizePackageName,
-    parsePackageSpecifier,
-} from './stubs/index.js';
 
 const basicSetup = [
     lineNumbers(),
@@ -133,13 +119,12 @@ function forgetDocumentVersion(uri) {
 // Board stub state
 let currentBoardId = null;
 let boardManifest = null;
-let stubsCache = new Map(); // boardId → ArrayBuffer
 
 // Pyright version (received from worker on init)
 let pyrightVersion = "";
 
-// Additive extra stub packages installed from PyPI.
-let installedExtraStubs = loadExtraStubsRegistry();
+// PyPI stub packages persisted by the worker in IndexedDB.
+let installedStubPackages = [];
 
 // Type checking mode
 let currentTypeCheckMode = localStorage.getItem('mp_typeCheckMode') || 'standard';
@@ -277,7 +262,8 @@ async function restartLSPWithCurrentSettings(boardId) {
 
     window.__lspReady = false;
     try {
-        const stubs = await fetchBoardStubs(boardId);
+        const boardStubPackage = getPreferredBoardStubPackage(boardId);
+        const boardStubRuntime = getBoardStubRuntime(boardId);
         const activePath = docManager?.activeFile || documentUri.replace('file:///workspace/', '');
         const activeContent = view ? view.state.doc.toString() : null;
         const workspaceFiles = await collectWorkspaceFiles(activePath, activeContent);
@@ -287,14 +273,13 @@ async function restartLSPWithCurrentSettings(boardId) {
             {
                 workerUrl: getWorkerUrl(),
                 timeout: 15000,
-                boardStubs: stubs,
+                ...boardStubRuntime,
+                boardStubPackage,
                 workspaceFiles,
                 typeCheckingMode: currentTypeCheckMode,
                 typeshedPath: currentTypeshedPath,
                 pythonVersion: currentPythonVersion,
                 verboseOutput: currentVerboseOutput,
-                extraStubPackages: getExtraStubPackagesPayload(),
-                extraPaths: getExtraPaths(),
             }
         );
 
@@ -321,6 +306,8 @@ function getSelectedStubsStatusLabel() {
     if (boardManifest?.boards && currentBoardId) {
         const board = boardManifest.boards.find((b) => b.id === currentBoardId);
         if (board) {
+            const cached = getActiveInstalledPackage(board.package);
+            if (cached) return `${cached.packageName} v${cached.version}`;
             if (board.package_version) return `${board.package} v${board.package_version}`;
             if (board.package) return board.package;
             return board.id;
@@ -339,9 +326,10 @@ function getSelectedStubMetadata() {
     if (boardManifest?.boards && currentBoardId) {
         const board = boardManifest.boards.find((b) => b.id === currentBoardId);
         if (board) {
+            const cached = getActiveInstalledPackage(board.package);
             return {
-                package: board.package || board.id || '',
-                version: board.package_version || '',
+                package: cached?.packageName || board.package || board.id || '',
+                version: cached?.version || board.package_version || '',
             };
         }
     }
@@ -355,12 +343,72 @@ function getSelectedStubMetadata() {
     };
 }
 
-function getExtraStubPackagesPayload() {
-    return buildWorkerExtraStubPayload(installedExtraStubs);
+function normalizePackageName(value) {
+    return String(value || '').trim().toLowerCase().replace(/[-_.]+/g, '-');
 }
 
-function getExtraPaths() {
-    return buildAbsoluteExtraPaths(installedExtraStubs);
+function parsePackageSpecifier(value) {
+    const match = /^([A-Za-z0-9][A-Za-z0-9._-]*)(.*)$/.exec(String(value || '').trim());
+    if (!match) throw new Error('Invalid package specifier');
+    const versionSpecifier = match[2].trim();
+    if (versionSpecifier && !/^(==|!=|>=|<=|>|<)/.test(versionSpecifier)) {
+        throw new Error('Version constraints must start with one of: ==, !=, >=, <=, >, <');
+    }
+    return { packageName: match[1], versionSpecifier };
+}
+
+function getActiveInstalledPackage(packageName) {
+    const normalizedName = normalizePackageName(packageName);
+    return installedStubPackages.find((entry) => (
+        entry.active && entry.packageName === normalizedName
+    ));
+}
+
+function getPreferredBoardStubPackage(boardId) {
+    const board = boardManifest?.boards.find((entry) => entry.id === boardId);
+    if (!board?.package || !board.file) return undefined;
+    const installed = getActiveInstalledPackage(board.package);
+    return {
+        packageName: normalizePackageName(board.package),
+        ...(installed ? { version: installed.version } : {}),
+        fallbackToBundled: true,
+    };
+}
+
+async function refreshInstalledStubPackages() {
+    if (!lspTransport) return;
+    installedStubPackages = await lspTransport.listInstalledStubPackages();
+    updateExtraStubsSummaryStatus();
+    updateBoardSelectorPackageVersions();
+}
+
+function updateBoardSelectorPackageVersions() {
+    const select = document.getElementById('boardSelect');
+    if (!select || !boardManifest?.boards) return;
+    for (const option of select.options) {
+        const board = boardManifest.boards.find((entry) => entry.id === option.value);
+        if (!board || board.file === null) continue;
+        const cached = getActiveInstalledPackage(board.package);
+        const version = cached?.version || board.package_version;
+        option.textContent = version ? `${board.package} — ${version}` : board.package;
+    }
+}
+
+async function loadStubPackageCatalog() {
+    if (!lspTransport) return;
+    const catalog = await lspTransport.listStubPackages();
+    const dataList = document.getElementById('stubPackageCatalog');
+    if (!dataList) return;
+    dataList.replaceChildren();
+
+    for (const pkg of catalog) {
+        for (const release of pkg.versions || []) {
+            const option = document.createElement('option');
+            option.value = `${pkg.packageName}==${release.version}`;
+            option.label = pkg.label;
+            dataList.appendChild(option);
+        }
+    }
 }
 
 function setExtraStubsStatus(message, state = 'idle') {
@@ -375,12 +423,13 @@ function setExtraStubsStatus(message, state = 'idle') {
 }
 
 function updateExtraStubsSummaryStatus() {
-    if (!installedExtraStubs.length) {
+    const activePackages = installedStubPackages.filter((entry) => entry.active);
+    if (!activePackages.length) {
         setExtraStubsStatus('No extra stubs installed.');
         return;
     }
 
-    const names = installedExtraStubs.map((entry) => (
+    const names = activePackages.map((entry) => (
         entry.version ? `${entry.packageName}@${entry.version}` : entry.packageName
     ));
     setExtraStubsStatus(`Installed: ${names.join(', ')}`, 'success');
@@ -409,29 +458,13 @@ async function installExtraStubPackage() {
         installBtn.disabled = true;
         setExtraStubsStatus(`Resolving ${normalizedName}...`);
 
-        const indexResult = await fetchPackageIndex(normalizedName);
-        const selected = selectStubWheelRelease(indexResult.data, versionSpecifier);
+        if (!lspTransport) throw new Error('Language server is not ready');
+        await lspTransport.installStubPackage(normalizedName, versionSpecifier);
+        await refreshInstalledStubPackages();
 
-        setExtraStubsStatus(`Downloading ${selected.wheel.filename}...`);
-        const wheelBuffer = await downloadWheelFile(selected.wheel.url);
-
-        setExtraStubsStatus('Extracting .pyi files...');
-        const extracted = await extractTypeStubFilesFromWheel(wheelBuffer);
-
-        installedExtraStubs = upsertExtraStubEntry(installedExtraStubs, {
-            packageName: normalizedName,
-            version: selected.version,
-            wheelUrl: selected.wheel.url,
-            wheelFilename: selected.wheel.filename,
-            installedAt: Date.now(),
-            files: extracted.files,
-        });
-        installedExtraStubs = saveExtraStubsRegistry(installedExtraStubs);
-
-        if (lspClient && lspTransport) {
-            setExtraStubsStatus('Restarting language server...');
-            await restartLSPWithCurrentSettings(currentBoardId);
-        }
+        setExtraStubsStatus('Restarting language server...');
+        await restartLSPWithCurrentSettings(currentBoardId);
+        await refreshInstalledStubPackages();
 
         specifierInput.value = '';
         updateExtraStubsSummaryStatus();
@@ -444,7 +477,7 @@ async function installExtraStubPackage() {
 }
 
 async function clearAllExtraStubs() {
-    if (!installedExtraStubs.length) {
+    if (!installedStubPackages.length) {
         setExtraStubsStatus('No extra stubs to clear.');
         return;
     }
@@ -453,12 +486,14 @@ async function clearAllExtraStubs() {
     if (clearBtn) clearBtn.disabled = true;
 
     try {
-        installedExtraStubs = [];
-        clearExtraStubsRegistry();
+        if (!lspTransport) throw new Error('Language server is not ready');
+        await lspTransport.clearStubPackages();
+        installedStubPackages = [];
 
         if (lspClient && lspTransport) {
             setExtraStubsStatus('Clearing and restarting language server...');
             await restartLSPWithCurrentSettings(currentBoardId);
+            await refreshInstalledStubPackages();
         }
 
         updateExtraStubsSummaryStatus();
@@ -667,24 +702,16 @@ async function initBoardSelector() {
     }
 }
 
-// Fetch board stub zip, using cache
-async function fetchBoardStubs(boardId) {
-    if (stubsCache.has(boardId)) return stubsCache.get(boardId);
-
+function getBoardStubRuntime(boardId) {
     const board = boardManifest?.boards.find(b => b.id === boardId);
     if (!board) throw new Error(`Unknown board: ${boardId}`);
-
-    // No stubs file means CPython-only — pass false to skip MicroPython stubs
     if (!board.file) {
-        stubsCache.set(boardId, false);
-        return false;
+        return { boardStubs: false };
     }
-
-    const resp = await fetch(`${componentAssetsBase}/${board.file}`);
-    if (!resp.ok) throw new Error(`Failed to fetch stubs for ${boardId}: HTTP ${resp.status}`);
-    const data = await resp.arrayBuffer();
-    stubsCache.set(boardId, data);
-    return data;
+    return {
+        boardStubs: undefined,
+        boardStubsUrl: `${componentAssetsBase}/${board.file}`,
+    };
 }
 
 // Handle board selector change
@@ -1302,7 +1329,12 @@ async function initializeEditor() {
             // Early init prioritizes fast worker startup with bundled defaults.
             // Re-apply selected board/workspace settings once UI/OPFS is ready.
             if (currentBoardId) {
+                await refreshInstalledStubPackages();
                 await restartLSPWithCurrentSettings(currentBoardId);
+                await refreshInstalledStubPackages();
+                void loadStubPackageCatalog().catch((error) => {
+                    console.warn('Could not load the PyPI stub package catalog:', error);
+                });
             }
         } catch (error) {
             console.warn('Could not apply final board/workspace settings after early init:', error);
@@ -1567,8 +1599,6 @@ function startEarlyLSPInit() {
                 typeshedPath: currentTypeshedPath,
                 pythonVersion: currentPythonVersion,
                 verboseOutput: currentVerboseOutput,
-                extraStubPackages: getExtraStubPackagesPayload(),
-                extraPaths: getExtraPaths(),
             });
 
             lspClient = lspResult.client;

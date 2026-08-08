@@ -102,3 +102,104 @@ test('workspace file methods reject disconnected and invalid writes', () => {
         /Workspace file content must be a string/,
     );
 });
+
+function connectedTransport() {
+    const messages = [];
+    const transport = new WorkerTransport('worker.js');
+    transport.connected = true;
+    transport.worker = {
+        postMessage(message) {
+            messages.push(message);
+        },
+    };
+    return { transport, messages };
+}
+
+test('stub package methods use correlated worker requests', async () => {
+    const { transport, messages } = connectedTransport();
+
+    const catalogPromise = transport.listStubPackages();
+    const catalogRequest = messages.shift();
+    assert.equal(catalogRequest.type, 'listStubPackages');
+    transport._onSteadyStateMessage({
+        data: {
+            type: 'listStubPackagesResult',
+            requestId: catalogRequest.requestId,
+            ok: true,
+            packages: [{
+                id: 'esp32',
+                packageName: 'micropython-esp32-stubs',
+                versions: [{ version: '1.28.0.post4' }],
+            }],
+        },
+    });
+    const catalog = await catalogPromise;
+    assert.equal(catalog[0].packageName, 'micropython-esp32-stubs');
+
+    const installPromise = transport.installStubPackage(
+        'micropython-esp32-stubs',
+        '==1.28.0.post4',
+    );
+    const installRequest = messages.shift();
+    assert.deepEqual(
+        {
+            type: installRequest.type,
+            packageName: installRequest.packageName,
+            versionSpecifier: installRequest.versionSpecifier,
+        },
+        {
+            type: 'installStubPackage',
+            packageName: 'micropython-esp32-stubs',
+            versionSpecifier: '==1.28.0.post4',
+        },
+    );
+    transport._onSteadyStateMessage({
+        data: {
+            type: 'installStubPackageResult',
+            requestId: installRequest.requestId,
+            ok: true,
+            package: {
+                packageName: 'micropython-esp32-stubs',
+                version: '1.28.0.post4',
+            },
+            restartRequired: true,
+        },
+    });
+    assert.equal((await installPromise).version, '1.28.0.post4');
+
+    const clearPromise = transport.clearStubPackages('micropython-esp32-stubs');
+    const clearRequest = messages.shift();
+    assert.equal(clearRequest.type, 'clearStubPackages');
+    assert.equal(clearRequest.packageName, 'micropython-esp32-stubs');
+    transport._onSteadyStateMessage({
+        data: {
+            type: 'clearStubPackagesResult',
+            requestId: clearRequest.requestId,
+            ok: true,
+            removed: 2,
+            restartRequired: true,
+        },
+    });
+    assert.deepEqual(await clearPromise, { removed: 2, restartRequired: true });
+});
+
+test('stub package methods reject invalid input and worker errors', async () => {
+    const { transport, messages } = connectedTransport();
+    await assert.rejects(
+        transport.installStubPackage(''),
+        /Stub package name must be a non-empty string/,
+    );
+
+    const pending = transport.listInstalledStubPackages();
+    const request = messages.shift();
+    transport._onSteadyStateMessage({
+        data: {
+            type: 'listInstalledStubPackagesResult',
+            requestId: request.requestId,
+            ok: false,
+            packages: [],
+            error: 'IndexedDB unavailable',
+        },
+    });
+    await assert.rejects(pending, /IndexedDB unavailable/);
+});

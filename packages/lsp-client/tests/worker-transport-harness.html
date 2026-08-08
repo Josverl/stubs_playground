@@ -195,6 +195,111 @@ const tests = {
             ),
         };
     },
+
+    async 'stub-package-catalog'() {
+        const t = new WorkerTransport('../../pyright-worker/dist/pyright_worker.js');
+        await t.connect();
+        const packages = await t.listStubPackages();
+        t.close();
+        const esp32 = packages.find((entry) =>
+            entry.packageName === 'micropython-esp32-stubs'
+        );
+        return {
+            success: true,
+            packageCount: packages.length,
+            esp32LatestVersion: esp32?.latestVersion || '',
+            esp32VersionCount: esp32?.versions?.length || 0,
+            errors: packages.filter((entry) => entry.error).map((entry) => entry.error),
+        };
+    },
+
+    async 'stub-package-rejects-uncatalogued'() {
+        const t = new WorkerTransport('../../pyright-worker/dist/pyright_worker.js');
+        await t.connect();
+        try {
+            await t.installStubPackage('circuitpython-stubs');
+            throw new Error('Uncatalogued stub package installation unexpectedly succeeded');
+        } catch (error) {
+            return {
+                success: true,
+                message: error instanceof Error ? error.message : String(error),
+            };
+        } finally {
+            t.close();
+        }
+    },
+
+    async 'stub-package-installs-unlisted-extra'() {
+        const packageName = 'types-requests';
+        const t = new WorkerTransport('../../pyright-worker/dist/pyright_worker.js');
+        await t.connect();
+        await t.clearStubPackages(packageName);
+        const installed = await t.installStubPackage(packageName);
+        const cached = await t.listInstalledStubPackages();
+        await t.clearStubPackages(packageName);
+        t.close();
+        return {
+            success: true,
+            version: installed.version,
+            persisted: cached.some((entry) =>
+                entry.packageName === packageName
+                && entry.version === installed.version
+                && entry.active
+            ),
+        };
+    },
+
+    async 'stub-package-install'() {
+        const packageName = 'micropython-webassembly-stubs';
+        const first = new WorkerTransport('../../pyright-worker/dist/pyright_worker.js');
+        await first.connect();
+        await first.clearStubPackages(packageName);
+        const catalog = await first.listStubPackages();
+        const available = catalog.find((entry) => entry.packageName === packageName);
+        const version = available?.latestVersion;
+        if (!version) throw new Error(`No current PyPI version found for ${packageName}`);
+        const installed = await first.installStubPackage(packageName, `==${version}`);
+        const otherBoard = catalog.find((entry) =>
+            entry.packageName === 'micropython-esp32-stubs'
+        );
+        await first.installStubPackage(
+            otherBoard.packageName,
+            `==${otherBoard.latestVersion}`,
+        );
+        first.close();
+
+        const second = new WorkerTransport('../../pyright-worker/dist/pyright_worker.js', {
+            boardStubs: false,
+            boardStubPackage: { packageName, version },
+        });
+        await second.connect();
+        const cached = await second.listInstalledStubPackages();
+        const filesystem = await second.debugListFs('/typings', 2);
+        const extras = await second.debugListFs('/extra', 2);
+        await second.clearStubPackages(packageName);
+        await second.clearStubPackages(otherBoard.packageName);
+        second.close();
+
+        return {
+            success: true,
+            version: installed.version,
+            persisted: cached.some((entry) =>
+                entry.packageName === packageName
+                && entry.version === version
+                && entry.active
+            ),
+            mounted: filesystem.entries.some((entry) =>
+                entry.kind === 'file' && entry.path.endsWith('/micropython.pyi')
+            ),
+            dependencyMounted: filesystem.entries.some((entry) =>
+                entry.kind === 'file'
+                && entry.path.endsWith('/_mpy_shed/mp_implementation.py')
+            ),
+            otherBoardExcluded: !extras.entries.some((entry) =>
+                entry.path.includes('/micropython-esp32-stubs')
+            ),
+        };
+    },
 };
 
 window.runTest = async function(name) {

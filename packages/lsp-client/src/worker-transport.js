@@ -10,6 +10,10 @@
  * @typedef {Object} WorkerTransportOptions
  * @property {ArrayBuffer|false} [boardStubs] - Board stubs zip, `false` to
  *   disable board stubs, or `undefined` to use the bundled default.
+ * @property {string} [boardStubsUrl] - Absolute fallback archive URL fetched
+ *   by the worker only when the preferred cached package is unavailable.
+ * @property {{packageName: string, version?: string, fallbackToBundled?: boolean}} [boardStubPackage] -
+ *   Cached PyPI package to use as `/typings` instead of `boardStubs`.
  * @property {Object.<string, string>} [workspaceFiles] - Files to preload into
  *   `/workspace`, keyed by workspace-relative path.
  * @property {string} [typeCheckingMode] - Pyright type-checking mode.
@@ -68,6 +72,8 @@ export class WorkerTransport {
         this._messageQueue = [];
         this._connectReject = null;
         this._boardStubs = options.boardStubs; // ArrayBuffer | false | undefined
+        this._boardStubsUrl = options.boardStubsUrl;
+        this._boardStubPackage = options.boardStubPackage;
         this._typeCheckingMode = options.typeCheckingMode; // string | undefined
         this._typeshedPath = options.typeshedPath; // string | undefined
         this._pythonVersion = options.pythonVersion; // string | undefined
@@ -77,6 +83,7 @@ export class WorkerTransport {
         this._workspaceFiles = options.workspaceFiles || {};
         this._debugRequests = new Map(); // requestId -> {resolve,reject,timeout}
         this._generatedConfigRequests = new Map(); // requestId -> {resolve,reject,timeout}
+        this._stubPackageRequests = new Map(); // requestId -> {resolve,reject,timeout}
         this.pyrightVersion = ""; // set when serverInitialized is received
     }
 
@@ -131,6 +138,32 @@ export class WorkerTransport {
         return true;
     }
 
+    _handleStubPackageResponse(msg) {
+        const resultTypes = new Set([
+            'listStubPackagesResult',
+            'installStubPackageResult',
+            'listInstalledStubPackagesResult',
+            'clearStubPackagesResult',
+        ]);
+        if (!msg || !resultTypes.has(msg.type) || !msg.requestId) {
+            return false;
+        }
+
+        const pending = this._stubPackageRequests.get(msg.requestId);
+        if (!pending) {
+            return true;
+        }
+
+        this._stubPackageRequests.delete(msg.requestId);
+        clearTimeout(pending.timeout);
+        if (msg.ok) {
+            pending.resolve(msg);
+        } else {
+            pending.reject(new Error(msg.error || `${msg.type} failed`));
+        }
+        return true;
+    }
+
     /**
      * Create the worker, run the handshake, resolve when ready for LSP.
      *
@@ -173,6 +206,10 @@ export class WorkerTransport {
                     return;
                 }
 
+                if (this._handleStubPackageResponse(msg)) {
+                    return;
+                }
+
                 // --- Control-plane messages (handshake) ---
                 if (msg.type === 'serverLoaded') {
                     phase = 'initializing';
@@ -182,6 +219,8 @@ export class WorkerTransport {
                         workspaceFiles: this._workspaceFiles,
                         typeshedFallback: undefined, // use bundled typeshed
                         boardStubs: this._boardStubs, // use bundled default or override
+                        boardStubsUrl: this._boardStubsUrl,
+                        boardStubPackage: this._boardStubPackage,
                         typeCheckingMode: this._typeCheckingMode,
                         typeshedPath: this._typeshedPath,
                         pythonVersion: this._pythonVersion,
@@ -245,6 +284,10 @@ export class WorkerTransport {
         }
 
         if (this._handleGeneratedConfigResponse(msg)) {
+            return;
+        }
+
+        if (this._handleStubPackageResponse(msg)) {
             return;
         }
 
@@ -371,6 +414,11 @@ export class WorkerTransport {
             pending.reject(new Error('Worker transport closed'));
         }
         this._generatedConfigRequests.clear();
+        for (const pending of this._stubPackageRequests.values()) {
+            clearTimeout(pending.timeout);
+            pending.reject(new Error('Worker transport closed'));
+        }
+        this._stubPackageRequests.clear();
         if (this.worker) {
             this.worker.terminate();
             this.worker = null;
@@ -487,5 +535,94 @@ export class WorkerTransport {
             this._generatedConfigRequests.set(requestId, { resolve, reject, timeout });
             this.worker.postMessage({ type: 'readGeneratedConfig', requestId });
         });
+    }
+
+    _requestStubPackage(type, payload = {}, timeoutMs = 30000) {
+        if (!this.connected || !this.worker) {
+            return Promise.reject(new Error('WorkerTransport: not connected'));
+        }
+
+        const requestId = `stubs_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                if (!this._stubPackageRequests.has(requestId)) {
+                    return;
+                }
+                this._stubPackageRequests.delete(requestId);
+                reject(new Error(`${type} timed out`));
+            }, timeoutMs);
+
+            this._stubPackageRequests.set(requestId, { resolve, reject, timeout });
+            this.worker.postMessage({ type, requestId, ...payload });
+        });
+    }
+
+    /**
+     * Query current installable releases for the worker's supported stub packages.
+     *
+     * Package identities are worker-defined, while release versions come from
+     * PyPI at request time and are not pinned to the worker release.
+     *
+     * @returns {Promise<Array<Object>>} Catalog entries and installable versions.
+     */
+    async listStubPackages() {
+        const response = await this._requestStubPackage('listStubPackages');
+        return Array.isArray(response.packages) ? response.packages : [];
+    }
+
+    /**
+     * Download, validate, and persist a type-stub wheel from PyPI.
+     *
+     * @param {string} packageName - PyPI package name.
+     * @param {string} [versionSpecifier=''] - Exact or constrained PEP-440-like version.
+     * @returns {Promise<Object>} Installed package metadata.
+     */
+    async installStubPackage(packageName, versionSpecifier = '') {
+        if (typeof packageName !== 'string' || packageName.trim() === '') {
+            throw new TypeError('Stub package name must be a non-empty string');
+        }
+        if (typeof versionSpecifier !== 'string') {
+            throw new TypeError('Stub package version specifier must be a string');
+        }
+        const response = await this._requestStubPackage(
+            'installStubPackage',
+            { packageName, versionSpecifier },
+            60000,
+        );
+        return response.package;
+    }
+
+    /**
+     * List packages persisted by the worker in IndexedDB.
+     *
+     * @returns {Promise<Array<Object>>} Cached package metadata.
+     */
+    async listInstalledStubPackages() {
+        const response = await this._requestStubPackage('listInstalledStubPackages');
+        return Array.isArray(response.packages) ? response.packages : [];
+    }
+
+    /**
+     * Remove one version, all versions of a package, or the complete stub cache.
+     *
+     * @param {string} [packageName] - Optional normalized or display package name.
+     * @param {string} [version] - Optional exact cached version.
+     * @returns {Promise<{removed: number, restartRequired: boolean}>} Removal result.
+     */
+    async clearStubPackages(packageName, version) {
+        if (packageName !== undefined && (typeof packageName !== 'string' || !packageName.trim())) {
+            throw new TypeError('Stub package name must be a non-empty string');
+        }
+        if (version !== undefined && (typeof version !== 'string' || !version.trim())) {
+            throw new TypeError('Stub package version must be a non-empty string');
+        }
+        const response = await this._requestStubPackage(
+            'clearStubPackages',
+            { packageName, version },
+        );
+        return {
+            removed: Number(response.removed || 0),
+            restartRequired: response.restartRequired === true,
+        };
     }
 }
