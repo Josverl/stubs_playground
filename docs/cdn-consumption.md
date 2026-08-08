@@ -9,8 +9,9 @@ type checking without npm, a bundler, or a server.
 | `@mp-codemirror/lsp-client` | Reusable LSP bridge for CodeMirror 6 (client, transport, diagnostics, completion, hover, markdown renderer) | `packages/lsp-client/src/index.js` at tag `lsp-client-v<version>` |
 | `@mp-codemirror/pyright-worker` | Pre-built Pyright Web Worker bundle (~9 MB) with typeshed + default MicroPython stubs inlined | `packages/pyright-worker/dist/pyright_worker.js` at tag `pyright-worker-v<version>` |
 
-The currently published v0.2.1 artifacts follow **Option B — CDN-only** from
-[`component-reusability-plan.md`](./component-reusability-plan.md): consumers pin an
+The currently published v0.2.1 artifacts follow **Option B — CDN-only** from the
+[`component-reusability-plan.md`](https://github.com/Josverl/stubs_playground/blob/integrate/docs/component-reusability-plan.md):
+consumers pin an
 **immutable git tag** and load files through [jsDelivr](https://www.jsdelivr.com/).
 No npm publishing is involved in that release.
 
@@ -120,7 +121,7 @@ Pin the same CodeMirror versions the host editor uses to avoid duplicate singlet
 > `@rollup/plugin-node-resolve` and resolve from the host's lockfile. This produces one
 > CodeMirror module graph without npm publication or vendoring. The pre-built worker
 > continues to use the pinned CDN + Blob-shim flow below. See the ViperIDE review in
-> [`component-reusability-plan.md`](./component-reusability-plan.md#7-viperide-integration-review-2026-08-05).
+> [`component-reusability-plan.md`](https://github.com/Josverl/stubs_playground/blob/integrate/docs/component-reusability-plan.md#7-viperide-integration-review-2026-08-05).
 
 The loader must restrict remote IDs to the configured jsDelivr repository and immutable
 `lsp-client-v*` tag, fail on HTTP/content errors, and be covered by a production-build

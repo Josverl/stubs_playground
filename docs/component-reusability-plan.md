@@ -811,28 +811,17 @@ multi-browser coverage and the optional MCP exposure decision.
 This should replace/integrate the current type-checking display button in the code editor.
 
 
-
-Remaining:
-
-2. Decide whether to expose type-checking status and diagnostics through ViperIDE's MCP surface.
-
-3. Improve the dependency version handling in ViperIDE  - the version changes are still spread across multiple files allowing for simple confusion mistakes. It is not clear if this is a result of the current GitHub artifact publication - if so it should be explained in a comment in the code. If not, it should be fixed to avoid mistakes in the future.
-
-
-5. Allow downloading/using , additional, type stubs from PyPI [Advanced mode]
-   - for instance for emlearn
-   - should there be an option to automagically add the stubs for natmod modules (to the pyproject.toml)  ?  
-
-6. Ability to view the used pyproject.toml [only in advanced mode]
-
 7. Completed: It is not clear which diagnostic was created  by pylance versus ruff. 
 If both show a diag on the same line , then they should be clear.
 
-8. Should it be possible to turn off Ruff diagnostics ?
-How is Ruff configuration handled in ViperIDE ?
+
+Allow downloading/using , additional, type stubs from PyPI [Only Advanced mode ?]
 
 9. Completed: Pyright diagnostic presentation now waits 300 ms after worker analysis so it appears
    near Ruff, whose 750 ms CodeMirror debounce begins earlier, directly after an edit.
+
+
+
 
 
 10. Completed: Stub package releases are no longer pinned in worker TypeScript.
@@ -852,9 +841,26 @@ How is Ruff configuration handled in ViperIDE ?
       extras can be installed directly by name.
 
 
+Remaining:
+
+2. Decide whether to expose type-checking status and diagnostics through ViperIDE's MCP surface.
+
+3. Improve the dependency version handling in ViperIDE  - the version changes are still spread across multiple files allowing for simple confusion mistakes. It is not clear if this is a result of the current GitHub artifact publication - if so it should be explained in a comment in the code. If not, it should be fixed to avoid mistakes in the future.
+
+
+5. Should there be an option to automagically add the stubs for natmod modules (to the pyproject.toml)  ?  
+
+6. Ability to view the used pyproject.toml [only in advanced mode]
+
+
+
+8. Should it be possible to turn off Ruff diagnostics ?
+How is Ruff configuration handled in ViperIDE ?
+
+
   - Prio 2: Allow the pyright worker code to be updated without having to update the ViperIDE code and pinned versions.
 
 
-11.  write API documentation for the type-checking API, so that it can be used by other clients. This should include the API for the pyright worker, as well as the API for the ViperIDE integration. The documentation should include examples of how to use the API, as well as a description of the expected behavior of the API.
+11.  write API documentation for the LSP  and type-checking APIs, so that it can be used by other clients. This should include the API for the pyright worker, as well as the API for the ViperIDE integration. The documentation should include examples of how to use the API, as well as a description of the expected behavior of the API.
 - JSDoc
 - Markdown documentation to be published via Sphinx to RTD

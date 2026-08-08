@@ -35,6 +35,7 @@ yarn.lock
 # Build outputs
 /packages/pyright-worker/dist/
 build/
+docs/_build/
 *.bundle.js
 
 # Testing
