@@ -22,6 +22,10 @@ import { createTransport } from './transport-factory.js';
  * @property {number} [timeout=5000] - Request timeout in milliseconds.
  * @property {ArrayBuffer|false} [boardStubs] - Board stubs zip; `false` disables
  *   board stubs and `undefined` uses the worker's bundled default.
+ * @property {string} [boardStubsUrl] - Absolute fallback archive URL fetched
+ *   only when the preferred cached package is unavailable.
+ * @property {{packageName: string, version?: string, fallbackToBundled?: boolean}} [boardStubPackage] -
+ *   Cached PyPI package to materialize as the active board stubs.
  * @property {Object.<string, string>} [workspaceFiles] - Project files to preload
  *   into `/workspace`, keyed by workspace-relative path.
  * @property {string} [typeCheckingMode] - Pyright type-checking mode.
@@ -78,6 +82,8 @@ export async function createLSPClient(config) {
     const transport = createTransport({
         workerUrl: config.workerUrl,
         boardStubs: config.boardStubs,
+        boardStubsUrl: config.boardStubsUrl,
+        boardStubPackage: config.boardStubPackage,
         workspaceFiles: config.workspaceFiles,
         typeCheckingMode: config.typeCheckingMode,
         diagnosticMode: config.diagnosticMode,

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from tests.timing import CDN_TIMEOUT, LSP_TIMEOUT
 
@@ -153,3 +153,52 @@ def test_root_redirect_preserves_component_source_and_fragment(
         timeout=CDN_TIMEOUT,
     )
     assert page.url.endswith("/apps/playground/?components=cdn#shared-section")
+
+
+@requires_worker
+def test_playground_uses_reusable_stub_catalog_and_persistent_cache(
+    page: Page, project_server: str, tmp_path: Path
+):
+    page.goto(
+        f"{project_server}/apps/playground/?components=local",
+        wait_until="domcontentloaded",
+    )
+    _wait_for_playground_lsp(page)
+
+    page.wait_for_function(
+        """() => document.querySelectorAll(
+            '#stubPackageCatalog option[value^="micropython-esp32-stubs=="]'
+        ).length > 0""",
+        timeout=HARNESS_TIMEOUT,
+    )
+    specifier = page.locator(
+        '#stubPackageCatalog option[value^="micropython-esp32-stubs=="]'
+    ).first.get_attribute("value")
+    assert specifier
+
+    package_input = page.locator("#extraStubSpecifier")
+    package_input.fill(specifier)
+    package_input.press("Enter")
+    expect(page.locator("#extraStubsStatus")).to_contain_text(
+        "Installed: micropython-esp32-stubs@",
+        timeout=HARNESS_TIMEOUT,
+    )
+    installed_version = specifier.split("==", 1)[1]
+    expect(page.locator("#boardSelect option:checked")).to_contain_text(installed_version)
+
+    requests_after_install: list[str] = []
+    page.on("request", lambda request: requests_after_install.append(request.url))
+    page.reload(wait_until="domcontentloaded")
+    _wait_for_playground_lsp(page)
+    expect(page.locator("#extraStubsStatus")).to_contain_text(
+        f"micropython-esp32-stubs@{installed_version}",
+        timeout=HARNESS_TIMEOUT,
+    )
+    assert not any(url.endswith("/stubs-esp32.zip") for url in requests_after_install)
+    page.screenshot(path=tmp_path / "playground-persistent-stub-package.png", full_page=True)
+
+    page.evaluate("document.querySelector('#clearExtraStubsBtn').click()")
+    expect(page.locator("#extraStubsStatus")).to_have_text(
+        "No extra stubs installed.",
+        timeout=HARNESS_TIMEOUT,
+    )

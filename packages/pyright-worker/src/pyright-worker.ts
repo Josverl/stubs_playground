@@ -45,12 +45,72 @@ import type {
     MsgDeleteFile,
     MsgDebugListFs,
     MsgReadGeneratedConfig,
+    MsgListStubPackages,
+    MsgInstallStubPackage,
+    MsgListInstalledStubPackages,
+    MsgClearStubPackages,
     ExtraStubPackage,
     UserFolder,
     WorkerMessage,
 } from "./messages";
+import {
+    activeCachedStubPackages,
+    clearStubPackages,
+    installStubPackage,
+    isBoardStubPackage,
+    listAvailableStubPackages,
+    listInstalledStubPackages,
+    selectCachedBoardPackage,
+} from "./stub-packages";
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
+const MAX_BOARD_STUB_ARCHIVE_BYTES = 30 * 1024 * 1024;
+
+function validateBoardStubsUrl(value: string): URL {
+    const url = new URL(value);
+    const localHttp = url.protocol === "http:"
+        && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+    if (url.protocol !== "https:" && !localHttp) {
+        throw new Error("Board stub archive URL must use HTTPS");
+    }
+    return url;
+}
+
+async function fetchBoardStubsArchive(value: string): Promise<ArrayBuffer> {
+    const url = validateBoardStubsUrl(value);
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch board stubs (${response.status})`);
+    }
+    const contentLength = Number(response.headers.get("content-length") || 0);
+    if (contentLength > MAX_BOARD_STUB_ARCHIVE_BYTES) {
+        throw new Error("Board stub archive exceeds the 30 MB limit");
+    }
+    const reader = response.body?.getReader();
+    if (!reader) {
+        throw new Error("Streaming response bodies are required for bounded board stub downloads");
+    }
+
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    while (true) {
+        const { done, value: chunk } = await reader.read();
+        if (done) break;
+        total += chunk.byteLength;
+        if (total > MAX_BOARD_STUB_ARCHIVE_BYTES) {
+            await reader.cancel("Board stub archive exceeds the 30 MB limit");
+            throw new Error("Board stub archive exceeds the 30 MB limit");
+        }
+        chunks.push(chunk);
+    }
+    const data = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+        data.set(chunk, offset);
+        offset += chunk.byteLength;
+    }
+    return data.buffer;
+}
 
 /**
  * Initialize ZenFS virtual filesystem
@@ -66,6 +126,7 @@ async function initFs(
     const mounts: Record<string, any> = {
         "/tmp": { backend: InMemory, name: "tmp" },
         "/workspace": { backend: InMemory, name: "workspace" },
+        "/extra": { backend: InMemory, name: "extra" },
         "/typeshed-fallback": {
             backend: Zip,
             data: typeshedFallbackZip,
@@ -180,21 +241,34 @@ function normalizeExtraPackageName(packageName: string): string {
     return normalized || 'package';
 }
 
+function isSafePackageFilePath(relativePath: string): boolean {
+    if (!relativePath || relativePath.startsWith('/') || relativePath.includes('\\') || relativePath.includes('\0')) {
+        return false;
+    }
+    return relativePath
+        .split('/')
+        .every((segment) => segment !== '' && segment !== '.' && segment !== '..');
+}
+
+function writePackageFiles(base: string, files: Record<string, string>) {
+    fs.mkdirSync(base, { recursive: true });
+    for (const [relativePath, content] of Object.entries(files || {})) {
+        if (!isSafePackageFilePath(relativePath) || typeof content !== 'string') {
+            throw new Error(`Invalid stub package file path: ${relativePath || '<empty>'}`);
+        }
+        const fullPath = path.posix.join(base, relativePath);
+        fs.mkdirSync(path.posix.dirname(fullPath), { recursive: true });
+        fs.writeFileSync(fullPath, content);
+    }
+}
+
 function writeExtraStubPackages(extraStubPackages: ExtraStubPackage[] = []) {
     fs.mkdirSync('/extra', { recursive: true });
 
     for (const pkg of extraStubPackages) {
         const packageName = normalizeExtraPackageName(pkg.packageName);
         const base = `/extra/${packageName}`;
-        fs.mkdirSync(base, { recursive: true });
-
-        for (const [relativePath, content] of Object.entries(pkg.files || {})) {
-            if (!relativePath || relativePath.startsWith('/')) continue;
-            if (typeof content !== 'string') continue;
-            const fullPath = path.posix.join(base, relativePath);
-            fs.mkdirSync(path.posix.dirname(fullPath), { recursive: true });
-            fs.writeFileSync(fullPath, content);
-        }
+        writePackageFiles(base, pkg.files || {});
     }
 }
 
@@ -316,8 +390,48 @@ function writePyprojectToml(options: {
  */
 async function handleInitServer(msg: MsgInitServer) {
     try {
+        let cachedPackages: Awaited<ReturnType<typeof activeCachedStubPackages>> = [];
+        try {
+            cachedPackages = await activeCachedStubPackages();
+        } catch (error) {
+            if (msg.boardStubPackage && msg.boardStubPackage.fallbackToBundled !== true) {
+                throw error;
+            }
+            console.warn(
+                "[pyright-worker] Stub package cache unavailable; using bundled stubs:",
+                error,
+            );
+        }
+        const selectedBoardPackage = selectCachedBoardPackage(
+            cachedPackages,
+            msg.boardStubPackage,
+        );
+        if (
+            msg.boardStubPackage
+            && !selectedBoardPackage
+            && msg.boardStubPackage.fallbackToBundled !== true
+        ) {
+            const requestedVersion = msg.boardStubPackage.version
+                ? `@${msg.boardStubPackage.version}`
+                : '';
+            throw new Error(
+                `Cached board stub package not found: ${msg.boardStubPackage.packageName}${requestedVersion}`,
+            );
+        }
+
         console.log("[pyright-worker] Initializing filesystem...");
-        await initFs(msg.boardStubs);
+        let boardStubs = msg.boardStubs;
+        if (!selectedBoardPackage && msg.boardStubsUrl && boardStubs === undefined) {
+            boardStubs = await fetchBoardStubsArchive(msg.boardStubsUrl);
+        }
+        await initFs(selectedBoardPackage ? false : boardStubs);
+
+        if (selectedBoardPackage) {
+            writePackageFiles("/typings", selectedBoardPackage.files);
+            console.log(
+                `[pyright-worker] Using cached ${selectedBoardPackage.packageName}@${selectedBoardPackage.version}`,
+            );
+        }
 
         // Write user type stubs
         if (msg.userFiles && Object.keys(msg.userFiles).length > 0) {
@@ -328,9 +442,27 @@ async function handleInitServer(msg: MsgInitServer) {
             writeWorkspaceFiles(msg.workspaceFiles);
         }
 
-        if (msg.extraStubPackages && msg.extraStubPackages.length > 0) {
-            writeExtraStubPackages(msg.extraStubPackages);
+        const extraPackagesByName = new Map<string, ExtraStubPackage>();
+        for (const pkg of cachedPackages) {
+            if (pkg !== selectedBoardPackage && !isBoardStubPackage(pkg.packageName)) {
+                extraPackagesByName.set(normalizeExtraPackageName(pkg.packageName), pkg);
+            }
         }
+        for (const pkg of msg.extraStubPackages || []) {
+            if (isBoardStubPackage(pkg.packageName)) {
+                throw new Error(
+                    `Board stub package must be selected through boardStubPackage: ${pkg.packageName}`,
+                );
+            }
+            extraPackagesByName.set(normalizeExtraPackageName(pkg.packageName), pkg);
+        }
+        const extraStubPackages = Array.from(extraPackagesByName.values());
+        if (extraStubPackages.length > 0) {
+            writeExtraStubPackages(extraStubPackages);
+        }
+        const cachedExtraPaths = extraStubPackages.map(
+            (pkg) => `/extra/${normalizeExtraPackageName(pkg.packageName)}`,
+        );
 
         // Write pyproject.toml
         writePyprojectToml({
@@ -338,7 +470,7 @@ async function handleInitServer(msg: MsgInitServer) {
             typeshedPath: msg.typeshedPath,
             pythonVersion: msg.pythonVersion,
             verboseOutput: msg.verboseOutput,
-            extraPaths: msg.extraPaths,
+            extraPaths: [...(msg.extraPaths || []), ...cachedExtraPaths],
         });
 
         console.log("[pyright-worker] Creating Pyright server...");
@@ -376,6 +508,22 @@ async function handleInitServer(msg: MsgInitServer) {
                 }
                 if (data.type === "readGeneratedConfig") {
                     handleReadGeneratedConfig(data as MsgReadGeneratedConfig);
+                    return;
+                }
+                if (data.type === "listStubPackages") {
+                    handleListStubPackages(data as MsgListStubPackages);
+                    return;
+                }
+                if (data.type === "installStubPackage") {
+                    handleInstallStubPackage(data as MsgInstallStubPackage);
+                    return;
+                }
+                if (data.type === "listInstalledStubPackages") {
+                    handleListInstalledStubPackages(data as MsgListInstalledStubPackages);
+                    return;
+                }
+                if (data.type === "clearStubPackages") {
+                    handleClearStubPackages(data as MsgClearStubPackages);
                     return;
                 }
             }
@@ -517,6 +665,92 @@ function handleReadGeneratedConfig(msg: MsgReadGeneratedConfig) {
     }
 }
 
+async function handleListStubPackages(msg: MsgListStubPackages) {
+    try {
+        const packages = await listAvailableStubPackages();
+        ctx.postMessage({
+            type: "listStubPackagesResult",
+            requestId: msg.requestId,
+            ok: true,
+            packages,
+        } as WorkerMessage);
+    } catch (err: any) {
+        ctx.postMessage({
+            type: "listStubPackagesResult",
+            requestId: msg.requestId,
+            ok: false,
+            packages: [],
+            error: err?.message || String(err),
+        } as WorkerMessage);
+    }
+}
+
+async function handleInstallStubPackage(msg: MsgInstallStubPackage) {
+    try {
+        const installedPackage = await installStubPackage(
+            msg.packageName,
+            msg.versionSpecifier,
+        );
+        ctx.postMessage({
+            type: "installStubPackageResult",
+            requestId: msg.requestId,
+            ok: true,
+            package: installedPackage,
+            restartRequired: true,
+        } as WorkerMessage);
+    } catch (err: any) {
+        ctx.postMessage({
+            type: "installStubPackageResult",
+            requestId: msg.requestId,
+            ok: false,
+            restartRequired: false,
+            error: err?.message || String(err),
+        } as WorkerMessage);
+    }
+}
+
+async function handleListInstalledStubPackages(msg: MsgListInstalledStubPackages) {
+    try {
+        const packages = await listInstalledStubPackages();
+        ctx.postMessage({
+            type: "listInstalledStubPackagesResult",
+            requestId: msg.requestId,
+            ok: true,
+            packages,
+        } as WorkerMessage);
+    } catch (err: any) {
+        ctx.postMessage({
+            type: "listInstalledStubPackagesResult",
+            requestId: msg.requestId,
+            ok: false,
+            packages: [],
+            error: err?.message || String(err),
+        } as WorkerMessage);
+    }
+}
+
+async function handleClearStubPackages(msg: MsgClearStubPackages) {
+    try {
+        const removed = await clearStubPackages(msg.packageName, msg.version);
+        ctx.postMessage({
+            type: "clearStubPackagesResult",
+            requestId: msg.requestId,
+            ok: true,
+            removed,
+            restartRequired: removed > 0,
+        } as WorkerMessage);
+    } catch (err: any) {
+        ctx.postMessage({
+            type: "clearStubPackagesResult",
+            requestId: msg.requestId,
+            ok: false,
+            removed: 0,
+            restartRequired: false,
+            error: err?.message || String(err),
+        } as WorkerMessage);
+    }
+}
+
 // --- Worker entry point ---
 
 ctx.onmessage = (event: MessageEvent) => {
@@ -537,6 +771,18 @@ ctx.onmessage = (event: MessageEvent) => {
             break;
         case "readGeneratedConfig":
             handleReadGeneratedConfig(msg as MsgReadGeneratedConfig);
+            break;
+        case "listStubPackages":
+            handleListStubPackages(msg as MsgListStubPackages);
+            break;
+        case "installStubPackage":
+            handleInstallStubPackage(msg as MsgInstallStubPackage);
+            break;
+        case "listInstalledStubPackages":
+            handleListInstalledStubPackages(msg as MsgListInstalledStubPackages);
+            break;
+        case "clearStubPackages":
+            handleClearStubPackages(msg as MsgClearStubPackages);
             break;
         default:
             // LSP messages will be handled by BrowserMessageReader once the

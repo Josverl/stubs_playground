@@ -366,6 +366,7 @@ sizes:
     printf "%-28s %8s (%d files)\n" "on-demand total" \
         "$(human_size "$board_size")" "$board_count"
     print_file "stubs-manifest.json" "packages/pyright-worker/assets/stubs-manifest.json"
+    print_file "stub package catalog" "packages/pyright-worker/assets/stub-package-catalog.json"
 
     echo
     echo "Transfer summary"

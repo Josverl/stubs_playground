@@ -119,7 +119,8 @@
             <div class="extra-stubs-section" aria-label="Install additional type stubs from PyPI">
                 <label for="extraStubSpecifier">Install extra stubs from PyPI:</label>
                 <div class="extra-stubs-controls">
-                    <input id="extraStubSpecifier" type="text" placeholder="package-name-stubs==1.20.0.* (or package only)" aria-label="PyPI package specifier">
+                    <input id="extraStubSpecifier" type="text" list="stubPackageCatalog" placeholder="package-name-stubs==1.20.0.* (or package only)" aria-label="PyPI package specifier">
+                    <datalist id="stubPackageCatalog"></datalist>
                     <div class="extra-stubs-buttons">
                         <button id="installExtraStubBtn" type="button" aria-label="Install extra type stubs">Install</button>
                         <button id="clearExtraStubsBtn" type="button" aria-label="Clear all extra type stubs">Clear all</button>
