@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@mp-codemirror/lsp-client": "0.2.8",
-    "@mp-codemirror/pyright-worker": "0.2.4"
+    "@mp-codemirror/pyright-worker": "0.2.5"
   },
   "componentCdn": {
     "repository": "Josverl/stubs_playground"

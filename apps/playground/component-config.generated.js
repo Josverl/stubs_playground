@@ -7,8 +7,8 @@ export const componentConfig = Object.freeze({
         "entry": "packages/lsp-client/src/index.js"
     },
     "pyrightWorker": {
-        "version": "0.2.4",
-        "tag": "pyright-worker-v0.2.4",
+        "version": "0.2.5",
+        "tag": "pyright-worker-v0.2.5",
         "worker": "packages/pyright-worker/dist/pyright_worker.js",
         "assets": "packages/pyright-worker/assets"
     }
