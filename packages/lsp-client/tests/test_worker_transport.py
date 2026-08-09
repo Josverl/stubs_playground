@@ -8,13 +8,7 @@ from pathlib import Path
 
 import pytest
 
-_worker_js = (
-    Path(__file__).parents[3]
-    / "packages"
-    / "pyright-worker"
-    / "dist"
-    / "pyright_worker.js"
-)
+_worker_js = Path(__file__).parents[3] / "packages" / "pyright-worker" / "dist" / "pyright_worker.js"
 pytestmark = [
     pytest.mark.worker,
     pytest.mark.skipif(
@@ -137,15 +131,18 @@ def test_worker_transport_syncs_and_deletes_workspace_files(page, test_page_url)
 
 
 def test_worker_transport_lists_current_pypi_stub_releases(page, test_page_url):
-    """The reusable worker API resolves versions from PyPI at request time."""
+    """The worker groups post releases and omits dependency-only packages."""
     page.goto(test_page_url, wait_until="domcontentloaded")
 
     result = page.evaluate("""() => window.runTest('stub-package-catalog')""")
 
     assert result["success"] is True
-    assert result["packageCount"] >= 7
+    assert result["packageCount"] >= 6
     assert result["esp32LatestVersion"]
     assert result["esp32VersionCount"] > 1
+    assert result["includesStdlib"] is False
+    assert result["postReleaseVersions"] == []
+    assert result["wildcardVersionCount"] > 0
     assert result["errors"] == []
 
 
@@ -153,9 +150,7 @@ def test_worker_transport_rejects_uncatalogued_stub_packages(page, test_page_url
     """Direct install requests cannot bypass the worker's supported package catalog."""
     page.goto(test_page_url, wait_until="domcontentloaded")
 
-    result = page.evaluate(
-        """() => window.runTest('stub-package-rejects-uncatalogued')"""
-    )
+    result = page.evaluate("""() => window.runTest('stub-package-rejects-uncatalogued')""")
 
     assert result["success"] is True
     assert result["message"] == "Stub package is not supported: circuitpython-stubs"
@@ -165,18 +160,14 @@ def test_worker_transport_installs_unlisted_type_only_packages(page, test_page_u
     """Unlisted type-only PyPI wheels are available as global extra paths."""
     page.goto(test_page_url, wait_until="domcontentloaded")
 
-    result = page.evaluate(
-        """() => window.runTest('stub-package-installs-unlisted-extra')"""
-    )
+    result = page.evaluate("""() => window.runTest('stub-package-installs-unlisted-extra')""")
 
     assert result["success"] is True
     assert result["version"]
     assert result["persisted"] is True
 
 
-def test_worker_transport_installs_persists_and_mounts_stub_package(
-    page, test_page_url, tmp_path
-):
+def test_worker_transport_installs_persists_and_mounts_stub_package(page, test_page_url, tmp_path):
     """A requested PyPI version survives worker replacement and becomes /typings."""
     page.goto(test_page_url, wait_until="domcontentloaded")
 

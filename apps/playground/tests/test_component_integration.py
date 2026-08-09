@@ -1,6 +1,7 @@
 """Application coverage for the public component integration boundary."""
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -23,13 +24,7 @@ CLIENT_TAG = _component_tag("packages/lsp-client/package.json")
 WORKER_TAG = _component_tag("packages/pyright-worker/package.json")
 
 requires_worker = pytest.mark.skipif(
-    not (
-        PROJECT_ROOT
-        / "packages"
-        / "pyright-worker"
-        / "dist"
-        / "pyright_worker.js"
-    ).exists(),
+    not (PROJECT_ROOT / "packages" / "pyright-worker" / "dist" / "pyright_worker.js").exists(),
     reason="Worker bundle not found. Build it first.",
 )
 
@@ -57,9 +52,7 @@ def _wait_for_playground_lsp(page: Page) -> dict:
 
 
 @requires_worker
-def test_local_mode_uses_workspace_component_interfaces(
-    page: Page, project_server: str
-):
+def test_local_mode_uses_workspace_component_interfaces(page: Page, project_server: str):
     requests: list[str] = []
     page.on("request", lambda request: requests.append(request.url))
 
@@ -77,14 +70,10 @@ def test_local_mode_uses_workspace_component_interfaces(
     assert any("/apps/playground/app.js" in url for url in requests)
     assert any("/packages/lsp-client/src/index.js" in url for url in requests)
     assert any("/packages/pyright-worker/dist/pyright_worker.js" in url for url in requests)
-    assert not any(
-        "cdn.jsdelivr.net/gh/Josverl/stubs_playground@" in url for url in requests
-    )
+    assert not any("cdn.jsdelivr.net/gh/Josverl/stubs_playground@" in url for url in requests)
 
 
-def test_cdn_mode_uses_published_component_interfaces(
-    page: Page, project_server: str, tmp_path: Path
-):
+def test_cdn_mode_uses_published_component_interfaces(page: Page, project_server: str, tmp_path: Path):
     requests: list[str] = []
     responses: dict[str, int] = {}
     page.on("request", lambda request: requests.append(request.url))
@@ -128,11 +117,7 @@ def test_cdn_mode_uses_published_component_interfaces(
         )
         assert archive_size > 0
     assert not any(
-        url.startswith(project_server)
-        and (
-            "/packages/lsp-client/" in url
-            or "/packages/pyright-worker/" in url
-        )
+        url.startswith(project_server) and ("/packages/lsp-client/" in url or "/packages/pyright-worker/" in url)
         for url in requests
     )
     page.screenshot(
@@ -141,9 +126,7 @@ def test_cdn_mode_uses_published_component_interfaces(
     )
 
 
-def test_root_redirect_preserves_component_source_and_fragment(
-    page: Page, project_server: str
-):
+def test_root_redirect_preserves_component_source_and_fragment(page: Page, project_server: str):
     page.goto(
         f"{project_server}/?components=cdn#shared-section",
         wait_until="domcontentloaded",
@@ -156,9 +139,7 @@ def test_root_redirect_preserves_component_source_and_fragment(
 
 
 @requires_worker
-def test_playground_uses_reusable_stub_catalog_and_persistent_cache(
-    page: Page, project_server: str, tmp_path: Path
-):
+def test_playground_uses_reusable_stub_catalog_and_persistent_cache(page: Page, project_server: str, tmp_path: Path):
     page.goto(
         f"{project_server}/apps/playground/?components=local",
         wait_until="domcontentloaded",
@@ -171,19 +152,24 @@ def test_playground_uses_reusable_stub_catalog_and_persistent_cache(
         ).length > 0""",
         timeout=HARNESS_TIMEOUT,
     )
-    specifier = page.locator(
-        '#stubPackageCatalog option[value^="micropython-esp32-stubs=="]'
-    ).first.get_attribute("value")
-    assert specifier
+    catalog_values = page.locator("#stubPackageCatalog option").evaluate_all(
+        "options => options.map(option => option.value)"
+    )
+    assert not any(value.startswith("micropython-stdlib-stubs==") for value in catalog_values)
+    assert not any(re.search(r"\.post\d+", value, re.IGNORECASE) for value in catalog_values)
+    specifier = next(
+        value for value in catalog_values if value.startswith("micropython-esp32-stubs==") and value.endswith(".*")
+    )
 
     package_input = page.locator("#extraStubSpecifier")
     package_input.fill(specifier)
     package_input.press("Enter")
-    expect(page.locator("#extraStubsStatus")).to_contain_text(
+    status = page.locator("#extraStubsStatus")
+    expect(status).to_contain_text(
         "Installed: micropython-esp32-stubs@",
         timeout=HARNESS_TIMEOUT,
     )
-    installed_version = specifier.split("==", 1)[1]
+    installed_version = status.inner_text().split("micropython-esp32-stubs@", 1)[1]
     expect(page.locator("#boardSelect option:checked")).to_contain_text(installed_version)
 
     requests_after_install: list[str] = []

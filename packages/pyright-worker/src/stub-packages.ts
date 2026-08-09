@@ -305,6 +305,17 @@ function installableReleases(index: PyPIIndex): StubPackageRelease[] {
         .sort((left, right) => compareVersions(right.version, left.version));
 }
 
+function groupedPostReleases(releases: StubPackageRelease[]): StubPackageRelease[] {
+    const grouped = new Map<string, StubPackageRelease>();
+    for (const release of releases) {
+        const version = release.version.replace(/\.post\d+.*$/i, ".*");
+        if (!grouped.has(version)) {
+            grouped.set(version, { ...release, version });
+        }
+    }
+    return [...grouped.values()];
+}
+
 function selectRelease(
     index: PyPIIndex,
     versionSpecifier = "",
@@ -675,14 +686,16 @@ export async function listAvailableStubPackages(): Promise<StubPackageCatalogRes
             .map((entry) => [entry.packageName, entry.version]),
     );
 
-    return Promise.all(packageCatalog().map(async (catalogEntry) => {
+    const publicCatalog = packageCatalog().filter((entry) => entry.kind === "board");
+    return Promise.all(publicCatalog.map(async (catalogEntry) => {
         try {
             const index = await fetchPyPIIndex(catalogEntry.packageName);
-            const versions = installableReleases(index);
+            const installable = installableReleases(index);
+            const versions = groupedPostReleases(installable);
             const advertisedLatest = index.info?.version || "";
-            const latestVersion = versions.some((release) => release.version === advertisedLatest)
+            const latestVersion = installable.some((release) => release.version === advertisedLatest)
                 ? advertisedLatest
-                : (versions[0]?.version || "");
+                : (installable[0]?.version || "");
             return {
                 ...catalogEntry,
                 latestVersion,
