@@ -20,15 +20,25 @@ test('createTransport preserves the supplied worker URL', () => {
 
 test('informational logging is quiet by default and opt-in', () => {
     const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
     const calls = [];
+    const warnings = [];
+    const errors = [];
     console.log = (...args) => calls.push(args);
+    console.warn = (...args) => warnings.push(args);
+    console.error = (...args) => errors.push(args);
 
     try {
         const quietTransport = createTransport({ workerUrl: 'quiet-worker.js' });
         quietTransport.close();
         const quietClient = new SimpleLSPClient();
         quietClient.handleNotification('test/quiet', { value: 1 });
+        quietClient.handleNotification('window/showMessage', { type: 2, message: 'warning' });
+        quietClient.handleNotification('window/showMessage', { type: 1, message: 'error' });
         assert.deepEqual(calls, []);
+        assert.deepEqual(warnings, [['[LSP WARNING]:', 'warning']]);
+        assert.deepEqual(errors, [['[LSP ERROR]:', 'error']]);
 
         const verboseTransport = createTransport({
             workerUrl: 'verbose-worker.js',
@@ -43,6 +53,8 @@ test('informational logging is quiet by default and opt-in', () => {
         assert.ok(calls.some(args => String(args[0]).includes('test/verbose')));
     } finally {
         console.log = originalLog;
+        console.warn = originalWarn;
+        console.error = originalError;
     }
 });
 

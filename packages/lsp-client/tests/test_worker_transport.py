@@ -58,6 +58,24 @@ def test_worker_transport_is_quiet_by_default(page, test_page_url):
     assert messages == []
 
 
+def test_worker_transport_verbose_output_is_opt_in(page, test_page_url):
+    """The public option enables transport and worker informational logs."""
+    messages = []
+    page.on(
+        "console",
+        lambda message: messages.append(message.text)
+        if message.type in {"log", "info"}
+        else None,
+    )
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate("""() => window.runTest('verbose-logging')""")
+
+    assert result["success"] is True
+    assert any("WorkerTransport: connected and ready" in message for message in messages)
+    assert any("[pyright-worker] Initializing filesystem" in message for message in messages)
+
+
 def test_worker_transport_lsp_initialize(page, test_page_url):
     """Full LSP initialize handshake through WorkerTransport."""
     page.goto(test_page_url, wait_until="domcontentloaded")

@@ -1,6 +1,6 @@
 {
   "name": "@mp-codemirror/lsp-client",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "Reusable LSP bridge for CodeMirror 6",
   "type": "module",
   "main": "./src/index.js",
