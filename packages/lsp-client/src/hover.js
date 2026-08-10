@@ -6,6 +6,7 @@
  */
 
 import { hoverTooltip } from '@codemirror/view';
+import { logVerbose } from './logging.js';
 import { renderMarkdown } from './markdown-renderer.js';
 
 // Backward compatibility for existing hover rendering tests/imports.
@@ -68,7 +69,7 @@ function createHoverContent(hover) {
  */
 export function createHoverTooltip(lspClient, documentUri) {
     return hoverTooltip(async (view, pos, side) => {
-        console.log('LSP hover triggered at position:', pos);
+        logVerbose(lspClient.verboseOutput, 'LSP hover triggered at position:', pos);
 
         try {
             // Get line and character position
@@ -76,7 +77,7 @@ export function createHoverTooltip(lspClient, documentUri) {
             const lineNumber = line.number - 1; // 0-based for LSP
             const character = pos - line.from;
 
-            console.log(`LSP hover at line ${lineNumber + 1}, char ${character}`);
+            logVerbose(lspClient.verboseOutput, `LSP hover at line ${lineNumber + 1}, char ${character}`);
 
             // Send LSP hover request
             const result = await lspClient.request('textDocument/hover', {
@@ -84,7 +85,7 @@ export function createHoverTooltip(lspClient, documentUri) {
                 position: { line: lineNumber, character }
             });
 
-            console.log('LSP hover result:', result);
+            logVerbose(lspClient.verboseOutput, 'LSP hover result:', result);
 
             if (!result || !result.contents) {
                 return null;
@@ -117,7 +118,7 @@ export function createHoverTooltip(lspClient, documentUri) {
                 }
             }
 
-            console.log(`Hover tooltip range: ${from} - ${to}`);
+            logVerbose(lspClient.verboseOutput, `Hover tooltip range: ${from} - ${to}`);
 
             return {
                 pos: from,

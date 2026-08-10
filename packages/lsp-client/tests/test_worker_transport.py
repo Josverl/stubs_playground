@@ -41,6 +41,23 @@ def test_worker_transport_connects(page, test_page_url):
     assert result["connected"] is True
 
 
+def test_worker_transport_is_quiet_by_default(page, test_page_url):
+    """Default component settings suppress informational console output."""
+    messages = []
+    page.on(
+        "console",
+        lambda message: messages.append(message.text)
+        if message.type in {"log", "info"}
+        else None,
+    )
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate("""() => window.runTest('connect')""")
+
+    assert result["success"] is True
+    assert messages == []
+
+
 def test_worker_transport_lsp_initialize(page, test_page_url):
     """Full LSP initialize handshake through WorkerTransport."""
     page.goto(test_page_url, wait_until="domcontentloaded")
@@ -115,6 +132,7 @@ def test_worker_transport_reads_generated_config(page, test_page_url):
     assert result["success"] is True
     assert result["hasToolSection"] is True
     assert result["hasStubPath"] is True
+    assert result["isQuietByDefault"] is True
 
 
 def test_worker_transport_syncs_and_deletes_workspace_files(page, test_page_url):

@@ -23,6 +23,7 @@ import {
     runNextDiagnostic,
     runPreviousDiagnostic,
 } from './diagnostics-core.mjs';
+import { logVerbose } from './logging.js';
 
 /**
  * Workspace-level diagnostics cache: maps fileUri → CodeMirror diagnostics[].
@@ -177,7 +178,7 @@ export function createDiagnosticsSubscription(
         if (method === 'textDocument/publishDiagnostics') {
             if (params.uri === fileUri) {
                 const lspDiagnostics = params.diagnostics || [];
-                console.log('Received diagnostics:', lspDiagnostics);
+                logVerbose(client.verboseOutput, 'Received diagnostics:', lspDiagnostics);
 
                 // Store report-ready snapshot in workspace map (1-based positions)
                 const fileName = fileUri.replace('file:///workspace/', '');
@@ -197,7 +198,7 @@ export function createDiagnosticsSubscription(
                     const cmDiagnostics = lspDiagnostics.map(diag =>
                         convertLSPDiagnostic(diag, view.state.doc));
 
-                    console.log('Converted diagnostics:', cmDiagnostics);
+                    logVerbose(client.verboseOutput, 'Converted diagnostics:', cmDiagnostics);
 
                     if (publishDiagnostics) {
                         // A linter source merges with Ruff and other host lint producers.

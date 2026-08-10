@@ -13,6 +13,7 @@ import {
     notifyDocumentOpen,
 } from './diagnostics.js';
 import { createHoverTooltip } from './hover.js';
+import { logVerbose } from './logging.js';
 import { SimpleLSPClient } from './simple-client.js';
 import { createTransport } from './transport-factory.js';
 
@@ -94,7 +95,7 @@ export async function createLSPClient(config) {
         extraPaths: config.extraPaths,
     });
 
-    console.log('Creating LSP client...');
+    logVerbose(config.verboseOutput, 'Creating LSP client...');
 
     const client = new SimpleLSPClient({
         rootUri: 'file:///workspace',
@@ -103,6 +104,7 @@ export async function createLSPClient(config) {
         diagnosticMode: config.diagnosticMode,
         typeshedPath: config.typeshedPath,
         pythonVersion: config.pythonVersion,
+        verboseOutput: config.verboseOutput,
         extraPaths: config.extraPaths,
     });
     const workspaceDiagnosticsSubscription =
@@ -112,10 +114,10 @@ export async function createLSPClient(config) {
 
     try {
         await transport.connect();
-        console.log('Transport connected');
+        logVerbose(config.verboseOutput, 'Transport connected');
 
         await client.connect(transport);
-        console.log('LSP Client initialized:', client.serverCapabilities);
+        logVerbose(config.verboseOutput, 'LSP Client initialized:', client.serverCapabilities);
     } catch (error) {
         workspaceDiagnosticsSubscription?.destroy();
         throw error;

@@ -6,6 +6,8 @@
  * needed for diagnostics, completion, and hover.
  */
 
+import { logVerbose } from './logging.js';
+
 /**
  * @typedef {Object} LSPTransport
  * @property {(message: string) => void} send - Send a serialized JSON-RPC message.
@@ -38,6 +40,7 @@ export class SimpleLSPClient {
      *   scope (`openFilesOnly` or `workspace`).
      * @param {string} [config.typeshedPath] - Pyright typeshed path.
      * @param {string} [config.pythonVersion] - Pyright python version in `X.Y` format.
+    * @param {boolean} [config.verboseOutput=false] - Enable informational LSP logs.
      * @param {string[]} [config.extraPaths] - Absolute extra import search paths.
      */
     constructor(config = {}) {
@@ -48,6 +51,7 @@ export class SimpleLSPClient {
         this.pendingRequests = new Map();
         this.serverCapabilities = null;
         this.connected = false;
+        this.verboseOutput = config.verboseOutput === true;
         this.initializing = null;
         this.messageHandlers = [];
         this.requestHandlers = new Map();
@@ -201,7 +205,7 @@ export class SimpleLSPClient {
         };
         this.notify('workspace/didChangeConfiguration', { settings: configSettings });
 
-        console.log('LSP initialized, capabilities:', this.serverCapabilities);
+        logVerbose(this.verboseOutput, 'LSP initialized, capabilities:', this.serverCapabilities);
     }
 
     /**
@@ -357,7 +361,7 @@ export class SimpleLSPClient {
      * @returns {void}
      */
     handleNotification(method, params) {
-        console.log(`LSP notification: ${method}`, params);
+        logVerbose(this.verboseOutput, `LSP notification: ${method}`, params);
 
         // Call registered handlers
         this.messageHandlers.forEach(handler => {
@@ -368,7 +372,11 @@ export class SimpleLSPClient {
                 // that no longer exist after the user edited the document.
                 // This is an expected race condition, not a programming error.
                 if (error instanceof RangeError) {
-                    console.info('Notification handler skipped (stale document positions):', error.message);
+                    logVerbose(
+                        this.verboseOutput,
+                        'Notification handler skipped (stale document positions):',
+                        error.message,
+                    );
                 } else {
                     console.error('Error in message handler:', error);
                 }
@@ -378,9 +386,15 @@ export class SimpleLSPClient {
         // Built-in handlers
         if (method === 'window/logMessage') {
             const types = ['', 'ERROR', 'WARNING', 'INFO', 'LOG'];
-            console.log(`[LSP ${types[params.type]}]:`, params.message);
+            if (params.type === 1) {
+                console.error('[LSP ERROR]:', params.message);
+            } else if (params.type === 2) {
+                console.warn('[LSP WARNING]:', params.message);
+            } else {
+                logVerbose(this.verboseOutput, `[LSP ${types[params.type]}]:`, params.message);
+            }
         } else if (method === 'window/showMessage') {
-            console.log('[LSP Message]:', params.message);
+            logVerbose(this.verboseOutput, '[LSP Message]:', params.message);
         }
     }
 

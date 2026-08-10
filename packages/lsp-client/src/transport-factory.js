@@ -4,6 +4,7 @@
  * Creates a WorkerTransport for the in-browser Pyright Web Worker.
  */
 
+import { logVerbose } from './logging.js';
 import { WorkerTransport } from './worker-transport.js';
 
 /**
@@ -33,7 +34,7 @@ export function createTransport(options) {
     if (!url) {
         throw new TypeError('createTransport requires options.workerUrl');
     }
-    console.log(`Creating Worker transport → ${url}`);
+    logVerbose(options.verboseOutput, `Creating Worker transport → ${url}`);
     return new WorkerTransport(url, {
         boardStubs: options.boardStubs,
         boardStubsUrl: options.boardStubsUrl,
