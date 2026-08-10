@@ -394,7 +394,13 @@ export class SimpleLSPClient {
                 logVerbose(this.verboseOutput, `[LSP ${types[params.type]}]:`, params.message);
             }
         } else if (method === 'window/showMessage') {
-            logVerbose(this.verboseOutput, '[LSP Message]:', params.message);
+            if (params.type === 1) {
+                console.error('[LSP ERROR]:', params.message);
+            } else if (params.type === 2) {
+                console.warn('[LSP WARNING]:', params.message);
+            } else {
+                logVerbose(this.verboseOutput, '[LSP Message]:', params.message);
+            }
         }
     }
 

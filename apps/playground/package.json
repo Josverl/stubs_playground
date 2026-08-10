@@ -7,7 +7,7 @@
     "test": "node --test tests/*.unit.mjs"
   },
   "dependencies": {
-    "@mp-codemirror/lsp-client": "0.2.9",
+    "@mp-codemirror/lsp-client": "0.2.10",
     "@mp-codemirror/pyright-worker": "0.2.6"
   },
   "componentCdn": {

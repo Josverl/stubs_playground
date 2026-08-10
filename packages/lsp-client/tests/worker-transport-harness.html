@@ -53,6 +53,15 @@
                 return result;
             },
 
+            async 'verbose-logging'() {
+                const t = new WorkerTransport('../../pyright-worker/dist/pyright_worker.js', {
+                    verboseOutput: true,
+                });
+                await t.connect();
+                t.close();
+                return {success: true};
+            },
+
             async 'lsp-init'() {
                 const t = new WorkerTransport('../../pyright-worker/dist/pyright_worker.js');
                 const {initResponse} = await connectAndInit(t);
