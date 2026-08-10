@@ -2,8 +2,8 @@
 export const componentConfig = Object.freeze({
     "repository": "Josverl/stubs_playground",
     "lspClient": {
-        "version": "0.2.10",
-        "tag": "lsp-client-v0.2.10",
+        "version": "0.2.11",
+        "tag": "lsp-client-v0.2.11",
         "entry": "packages/lsp-client/src/index.js"
     },
     "pyrightWorker": {

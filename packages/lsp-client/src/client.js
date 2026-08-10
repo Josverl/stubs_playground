@@ -65,6 +65,8 @@ import { createTransport } from './transport-factory.js';
  *   [onDiagnosticsChange] - Receives a snapshot of workspace diagnostics.
  * @property {number} [diagnosticDelayMs=0] - Idle time before displaying the
  *   latest Pyright diagnostics. Document changes remain immediate.
+ * @property {number} [completionDelayMs=320] - Delay auto-triggered dotted
+ *   completions when the consumer debounces document synchronization.
  */
 
 /**
@@ -151,6 +153,7 @@ export function createLSPPlugin(client, view, options = {}) {
         initialContent = '',
         onDiagnosticsChange = null,
         diagnosticDelayMs = 0,
+        completionDelayMs,
     } = options;
 
     // Notify server that document is open
@@ -166,7 +169,9 @@ export function createLSPPlugin(client, view, options = {}) {
     );
 
     // Create completion source
-    const completionSource = createCompletionSource(client, fileUri);
+    const completionSource = createCompletionSource(client, fileUri, {
+        autoTriggerDelayMs: completionDelayMs,
+    });
 
     // Provide LSP completions through the language data facet so they
     // integrate with the existing autocompletion() from basicSetup instead
