@@ -79,6 +79,7 @@ const extensions = createLSPPlugin(runtime.client, view, {
   languageId: "python",
   initialContent: view.state.doc.toString(),
   diagnosticDelayMs: 300,
+  completionDelayMs: 0,
   onDiagnosticsChange(diagnostics) {
     updateStatus(diagnostics);
   },
@@ -88,6 +89,10 @@ const extensions = createLSPPlugin(runtime.client, view, {
 Install the result in a CodeMirror `Compartment` so it can be replaced after a
 board switch. Destroying or reconfiguring the extension releases its diagnostic
 subscription.
+
+Set `completionDelayMs` to `0` when document changes are sent immediately. If
+the host debounces `didChange`, set it to at least that debounce interval so
+automatic dotted completions query the synchronized document.
 
 ## Document synchronization
 
