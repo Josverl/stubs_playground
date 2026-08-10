@@ -18,6 +18,34 @@ test('createTransport preserves the supplied worker URL', () => {
     assert.equal(transport.workerUrl, 'https://example.test/worker.js');
 });
 
+test('informational logging is quiet by default and opt-in', () => {
+    const originalLog = console.log;
+    const calls = [];
+    console.log = (...args) => calls.push(args);
+
+    try {
+        const quietTransport = createTransport({ workerUrl: 'quiet-worker.js' });
+        quietTransport.close();
+        const quietClient = new SimpleLSPClient();
+        quietClient.handleNotification('test/quiet', { value: 1 });
+        assert.deepEqual(calls, []);
+
+        const verboseTransport = createTransport({
+            workerUrl: 'verbose-worker.js',
+            verboseOutput: true,
+        });
+        verboseTransport.close();
+        const verboseClient = new SimpleLSPClient({ verboseOutput: true });
+        verboseClient.handleNotification('test/verbose', { value: 2 });
+
+        assert.ok(calls.some(args => String(args[0]).includes('verbose-worker.js')));
+        assert.ok(calls.some(args => String(args[0]).includes('WorkerTransport: closed')));
+        assert.ok(calls.some(args => String(args[0]).includes('test/verbose')));
+    } finally {
+        console.log = originalLog;
+    }
+});
+
 test('createTransport rejects app-specific implicit URL resolution', () => {
     assert.throws(
         () => createTransport(),

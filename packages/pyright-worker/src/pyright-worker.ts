@@ -53,6 +53,7 @@ import type {
     UserFolder,
     WorkerMessage,
 } from "./messages";
+import { logVerbose, setVerboseOutput } from "./logging";
 import {
     activeCachedStubPackages,
     clearStubPackages,
@@ -137,18 +138,18 @@ async function initFs(
         },
     };
 
-    console.log(`[pyright-worker] Mounting /typeshed-fallback (${(typeshedFallbackZip.byteLength / 1024 / 1024).toFixed(1)}MB)`);
-    console.log(`[pyright-worker] Mounting /typeshed-micropython (${(micropythonStdlibZip.byteLength / 1024 / 1024).toFixed(1)}MB)`);
+    logVerbose(`[pyright-worker] Mounting /typeshed-fallback (${(typeshedFallbackZip.byteLength / 1024 / 1024).toFixed(1)}MB)`);
+    logVerbose(`[pyright-worker] Mounting /typeshed-micropython (${(micropythonStdlibZip.byteLength / 1024 / 1024).toFixed(1)}MB)`);
 
     if (boardStubs && boardStubs instanceof ArrayBuffer && boardStubs.byteLength > 0) {
         mounts["/typings"] = {
             backend: Zip,
             data: boardStubs,
         };
-        console.log(`[pyright-worker] Mounting board stubs in /typings (${(boardStubs.byteLength / 1024).toFixed(0)}KB)`);
+        logVerbose(`[pyright-worker] Mounting board stubs in /typings (${(boardStubs.byteLength / 1024).toFixed(0)}KB)`);
     } else {
         mounts["/typings"] = { backend: InMemory, name: "typings" };
-        console.log("[pyright-worker] No board stubs — MicroPython modules will not resolve");
+        logVerbose("[pyright-worker] No board stubs — MicroPython modules will not resolve");
     }
 
     await configure({ mounts });
@@ -286,7 +287,7 @@ function writePyprojectToml(options: {
         typeCheckingMode = "standard",
         typeshedPath = "/typeshed-micropython",
         pythonVersion = "3.10",
-        verboseOutput = true,
+        verboseOutput = false,
         extraPaths = [],
     } = options;
     const normalizedExtraPaths = Array.from(new Set(
@@ -389,6 +390,7 @@ function writePyprojectToml(options: {
  * Handle initialization message from main thread
  */
 async function handleInitServer(msg: MsgInitServer) {
+    setVerboseOutput(msg.verboseOutput);
     try {
         let cachedPackages: Awaited<ReturnType<typeof activeCachedStubPackages>> = [];
         try {
@@ -419,7 +421,7 @@ async function handleInitServer(msg: MsgInitServer) {
             );
         }
 
-        console.log("[pyright-worker] Initializing filesystem...");
+        logVerbose("[pyright-worker] Initializing filesystem...");
         let boardStubs = msg.boardStubs;
         if (!selectedBoardPackage && msg.boardStubsUrl && boardStubs === undefined) {
             boardStubs = await fetchBoardStubsArchive(msg.boardStubsUrl);
@@ -428,7 +430,7 @@ async function handleInitServer(msg: MsgInitServer) {
 
         if (selectedBoardPackage) {
             writePackageFiles("/typings", selectedBoardPackage.files);
-            console.log(
+            logVerbose(
                 `[pyright-worker] Using cached ${selectedBoardPackage.packageName}@${selectedBoardPackage.version}`,
             );
         }
@@ -473,7 +475,7 @@ async function handleInitServer(msg: MsgInitServer) {
             extraPaths: [...(msg.extraPaths || []), ...cachedExtraPaths],
         });
 
-        console.log("[pyright-worker] Creating Pyright server...");
+        logVerbose("[pyright-worker] Creating Pyright server...");
 
         // Set up LSP connection over postMessage
         const reader = new BrowserMessageReader(ctx);
@@ -540,7 +542,7 @@ async function handleInitServer(msg: MsgInitServer) {
         // Create PyrightServer — this is the core Pyright engine
         const server = new PyrightServer(connection as any, 0);
 
-        console.log("[pyright-worker] Pyright server created, signaling ready");
+        logVerbose("[pyright-worker] Pyright server created, signaling ready");
         ctx.postMessage({ type: "serverInitialized", pyrightVersion: __PYRIGHT_VERSION__ } as WorkerMessage);
     } catch (err: any) {
         console.error("[pyright-worker] Init failed:", err);
@@ -792,5 +794,4 @@ ctx.onmessage = (event: MessageEvent) => {
 };
 
 // Signal that the worker script has loaded
-console.log("[pyright-worker] Worker loaded, signaling ready");
 ctx.postMessage({ type: "serverLoaded" } as WorkerMessage);

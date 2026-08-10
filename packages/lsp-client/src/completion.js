@@ -10,6 +10,7 @@ import {
     convertCompletionItem,
     dedupeAndSortCompletionOptions,
 } from './completion-core.mjs';
+import { logVerbose } from './logging.js';
 
 const AUTO_TRIGGER_WAIT_MS = 320;
 
@@ -36,14 +37,14 @@ export function createCompletionSource(lspClient, documentUri, options = {}) {
 
     return async (context) => {
         const requestId = ++latestRequestId;
-        console.log('LSP completion source called, explicit:', context.explicit);
+        logVerbose(lspClient.verboseOutput, 'LSP completion source called, explicit:', context.explicit);
 
         // Try to match dotted attribute access (e.g., "sys.") or just words
         let word = context.matchBefore(/[\w\.]+/);
 
         // Only complete when explicitly requested or when we have something to complete
         if (!word || (word.from === word.to && !context.explicit)) {
-            console.log('LSP completion: Rejected - no match or not explicit');
+            logVerbose(lspClient.verboseOutput, 'LSP completion: Rejected - no match or not explicit');
             return null;
         }
 
@@ -54,7 +55,10 @@ export function createCompletionSource(lspClient, documentUri, options = {}) {
         const character = pos - line.from;
         const lineNumber = context.state.doc.lineAt(pos).number - 1; // 0-based
 
-        console.log(`LSP completion at line ${lineNumber + 1}, char ${character}, word: "${word.text}"`);
+        logVerbose(
+            lspClient.verboseOutput,
+            `LSP completion at line ${lineNumber + 1}, char ${character}, word: "${word.text}"`,
+        );
 
         const shouldWaitForDottedAutoTrigger = !context.explicit
             && autoTriggerDelayMs > 0
@@ -73,7 +77,7 @@ export function createCompletionSource(lspClient, documentUri, options = {}) {
         const from = computeCompletionFrom(word);
 
         try {
-            console.log('Sending textDocument/completion request to LSP...');
+            logVerbose(lspClient.verboseOutput, 'Sending textDocument/completion request to LSP...');
 
             // Send textDocument/completion request to LSP
             const result = await lspClient.request('textDocument/completion', {

@@ -1,11 +1,11 @@
 {
   "name": "@mp-codemirror/pyright-worker",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "private": true,
   "description": "Worker-side protocol contract and packaging metadata",
   "type": "module",
   "scripts": {
-    "test": "node ../../scripts/check-worker-protocol-types.mjs"
+    "test": "node ../../scripts/check-worker-protocol-types.mjs && node --test tests/*.unit.mjs"
   },
   "types": "./src/messages.d.ts",
   "exports": {

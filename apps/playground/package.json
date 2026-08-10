@@ -7,8 +7,8 @@
     "test": "node --test tests/*.unit.mjs"
   },
   "dependencies": {
-    "@mp-codemirror/lsp-client": "0.2.8",
-    "@mp-codemirror/pyright-worker": "0.2.5"
+    "@mp-codemirror/lsp-client": "0.2.9",
+    "@mp-codemirror/pyright-worker": "0.2.6"
   },
   "componentCdn": {
     "repository": "Josverl/stubs_playground"

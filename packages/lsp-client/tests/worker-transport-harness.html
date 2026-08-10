@@ -175,6 +175,7 @@
                     success: true,
                     hasToolSection: content.includes('[tool.pyright]'),
                     hasStubPath: content.includes('stubPath = "/typings"'),
+                    isQuietByDefault: content.includes('verboseOutput = false'),
                 };
             },
 

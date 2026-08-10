@@ -6,6 +6,8 @@
  * internally so SimpleLSPClient only sees LSP JSON-RPC messages.
  */
 
+import { logVerbose } from './logging.js';
+
 /**
  * @typedef {Object} WorkerTransportOptions
  * @property {ArrayBuffer|false} [boardStubs] - Board stubs zip, `false` to
@@ -108,7 +110,7 @@ export class WorkerTransport {
         this._typeCheckingMode = options.typeCheckingMode; // string | undefined
         this._typeshedPath = options.typeshedPath; // string | undefined
         this._pythonVersion = options.pythonVersion; // string | undefined
-        this._verboseOutput = options.verboseOutput; // boolean | undefined
+        this._verboseOutput = options.verboseOutput === true;
         this._extraStubPackages = options.extraStubPackages || [];
         this._extraPaths = options.extraPaths || [];
         this._workspaceFiles = options.workspaceFiles || {};
@@ -281,7 +283,7 @@ export class WorkerTransport {
                     }
                     this._messageQueue = [];
 
-                    console.log('WorkerTransport: connected and ready');
+                    logVerbose(this._verboseOutput, 'WorkerTransport: connected and ready');
                     resolve();
                     return;
                 }
@@ -426,7 +428,7 @@ export class WorkerTransport {
      */
     close() {
         this._cleanup();
-        console.log('WorkerTransport: closed');
+        logVerbose(this._verboseOutput, 'WorkerTransport: closed');
     }
 
     _cleanup() {

@@ -29,8 +29,7 @@ export function positionToOffset(doc, position) {
         }
         const line = doc.line(position.line + 1);
         return Math.min(line.from + position.character, line.to);
-    } catch (error) {
-        console.info('positionToOffset: could not map position (stale diagnostics):', error.message);
+    } catch {
         return 0;
     }
 }
