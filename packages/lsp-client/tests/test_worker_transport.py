@@ -46,9 +46,7 @@ def test_worker_transport_is_quiet_by_default(page, test_page_url):
     messages = []
     page.on(
         "console",
-        lambda message: messages.append(message.text)
-        if message.type in {"log", "info"}
-        else None,
+        lambda message: messages.append(message.text) if message.type in {"log", "info"} else None,
     )
     page.goto(test_page_url, wait_until="domcontentloaded")
 
@@ -63,9 +61,7 @@ def test_worker_transport_verbose_output_is_opt_in(page, test_page_url):
     messages = []
     page.on(
         "console",
-        lambda message: messages.append(message.text)
-        if message.type in {"log", "info"}
-        else None,
+        lambda message: messages.append(message.text) if message.type in {"log", "info"} else None,
     )
     page.goto(test_page_url, wait_until="domcontentloaded")
 
