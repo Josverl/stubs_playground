@@ -2,13 +2,13 @@
 export const componentConfig = Object.freeze({
     "repository": "Josverl/stubs_playground",
     "lspClient": {
-        "version": "0.2.11",
-        "tag": "lsp-client-v0.2.11",
+        "version": "0.3.0",
+        "tag": "lsp-client-v0.3.0",
         "entry": "packages/lsp-client/src/index.js"
     },
     "pyrightWorker": {
-        "version": "0.2.6",
-        "tag": "pyright-worker-v0.2.6",
+        "version": "0.3.0",
+        "tag": "pyright-worker-v0.3.0",
         "worker": "packages/pyright-worker/dist/pyright_worker.js",
         "assets": "packages/pyright-worker/assets"
     }
