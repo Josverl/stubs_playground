@@ -17,7 +17,7 @@ function requireString(value, description) {
     return value;
 }
 
-function requireCdnPath(value, description) {
+function requirePackagePath(value, description) {
     const path = requireString(value, description);
     assert.equal(path.startsWith('/'), false, `${description} must be repository-relative`);
     assert.equal(path.startsWith('./'), false, `${description} must not start with "./"`);
@@ -56,21 +56,26 @@ export async function createComponentConfig() {
         worker,
         '@mp-codemirror/pyright-worker',
     );
-    const clientTagPrefix = requireString(client.cdn?.tagPrefix, 'LSP client CDN tag prefix');
-    const workerTagPrefix = requireString(worker.cdn?.tagPrefix, 'worker CDN tag prefix');
-
     return {
-        repository: requireString(app.componentCdn?.repository, 'component CDN repository'),
         lspClient: {
+            packageName: requireString(client.name, 'LSP client package name'),
             version: clientVersion,
-            tag: `${clientTagPrefix}${clientVersion}`,
-            entry: requireCdnPath(client.cdn?.entry, 'LSP client CDN entry'),
+            entry: requirePackagePath(
+                client.browserDistribution?.entry,
+                'LSP client browser entry',
+            ),
         },
         pyrightWorker: {
+            packageName: requireString(worker.name, 'worker package name'),
             version: workerVersion,
-            tag: `${workerTagPrefix}${workerVersion}`,
-            worker: requireCdnPath(worker.cdn?.worker, 'worker CDN bundle'),
-            assets: requireCdnPath(worker.cdn?.assets, 'worker CDN assets'),
+            worker: requirePackagePath(
+                worker.browserDistribution?.worker,
+                'worker browser bundle',
+            ),
+            assets: requirePackagePath(
+                worker.browserDistribution?.assets,
+                'worker browser assets',
+            ),
         },
     };
 }

@@ -1,27 +1,28 @@
 import { componentConfig } from './component-config.generated.js';
 
 const params = new URLSearchParams(window.location.search);
-const requestedSource = params.get('components') || 'local';
-if (!['local', 'cdn'].includes(requestedSource)) {
-    throw new Error(`Invalid component source "${requestedSource}"; expected "local" or "cdn"`);
+const sourceParam = params.get('components') || 'local';
+const requestedSource = sourceParam === 'cdn' ? 'npm' : sourceParam;
+if (!['local', 'npm'].includes(requestedSource)) {
+    throw new Error(`Invalid component source "${sourceParam}"; expected "local" or "npm"`);
 }
 
-const cdnUrl = (tag, path) =>
-    `https://cdn.jsdelivr.net/gh/${componentConfig.repository}@${tag}/${path}`;
+const npmUrl = ({ packageName, version }, path) =>
+    `https://cdn.jsdelivr.net/npm/${packageName}@${version}/${path}`;
 
-const sourceConfig = requestedSource === 'cdn'
+const sourceConfig = requestedSource === 'npm'
     ? {
-        clientUrl: cdnUrl(componentConfig.lspClient.tag, componentConfig.lspClient.entry),
-        workerUrl: cdnUrl(
-            componentConfig.pyrightWorker.tag,
+        clientUrl: npmUrl(componentConfig.lspClient, componentConfig.lspClient.entry),
+        workerUrl: npmUrl(
+            componentConfig.pyrightWorker,
             componentConfig.pyrightWorker.worker,
         ),
-        assetsBase: cdnUrl(
-            componentConfig.pyrightWorker.tag,
+        assetsBase: npmUrl(
+            componentConfig.pyrightWorker,
             componentConfig.pyrightWorker.assets,
         ),
-        clientVersion: componentConfig.lspClient.tag,
-        workerVersion: componentConfig.pyrightWorker.tag,
+        clientVersion: componentConfig.lspClient.version,
+        workerVersion: componentConfig.pyrightWorker.version,
     }
     : {
         clientUrl: new URL('../../packages/lsp-client/src/index.js', import.meta.url).href,
