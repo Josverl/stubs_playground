@@ -1,9 +1,18 @@
 {
   "name": "@mp-codemirror/pyright-worker",
-  "version": "0.2.6",
-  "private": true,
+  "version": "0.3.0",
   "description": "Worker-side protocol contract and packaging metadata",
+  "license": "MIT",
   "type": "module",
+  "files": [
+    "assets/",
+    "dist/",
+    "src/declarations.d.ts",
+    "src/messages.d.ts"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "node ../../scripts/check-worker-protocol-types.mjs && node --test tests/*.unit.mjs"
   },

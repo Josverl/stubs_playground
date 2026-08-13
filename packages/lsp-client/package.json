@@ -1,9 +1,16 @@
 {
   "name": "@mp-codemirror/lsp-client",
-  "version": "0.2.11",
+  "version": "0.3.0",
   "description": "Reusable LSP bridge for CodeMirror 6",
+  "license": "MIT",
   "type": "module",
   "main": "./src/index.js",
+  "files": [
+    "src/"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "node --test tests/*.unit.mjs"
   },
