@@ -304,9 +304,9 @@ def test_url_restores_multiple_files_with_names(page, live_server):
         return entries.filter(e => e.type === 'file').map(e => e.path).sort();
     }""")
 
-    assert 'main.py' in restored_files
-    assert 'lib/utils.py' in restored_files
-    assert 'drivers/sensor.py' in restored_files
+    assert "main.py" in restored_files
+    assert "lib/utils.py" in restored_files
+    assert "drivers/sensor.py" in restored_files
 
 
 def test_url_restores_board(page, live_server):
@@ -397,10 +397,10 @@ def test_url_params_cleaned_after_restore(page, live_server):
 
 
 def test_component_source_survives_share_restore_and_refresh(page, live_server):
-    """Consuming share state does not silently switch CDN mode back to local."""
+    """Consuming share state does not silently switch npm mode back to local."""
     _goto_editor(page, live_server)
     url = page.evaluate("""async () => {
-        window.history.replaceState({}, '', `${window.location.pathname}?components=cdn`);
+        window.history.replaceState({}, '', `${window.location.pathname}?components=npm`);
         const { buildShareableUrl } = await import('./share.js');
         return await buildShareableUrl({ 'main.py': 'pass' }, '', 'standard');
     }""")
@@ -411,12 +411,12 @@ def test_component_source_survives_share_restore_and_refresh(page, live_server):
         "() => !window.location.search.includes('project=')",
         timeout=5000,
     )
-    assert page.evaluate("() => window.location.search") == "?components=cdn"
-    assert page.evaluate("() => window.__componentSource.mode") == "cdn"
+    assert page.evaluate("() => window.location.search") == "?components=npm"
+    assert page.evaluate("() => window.__componentSource.mode") == "npm"
 
     page.reload(wait_until="domcontentloaded")
     page.wait_for_selector(".cm-editor", timeout=CDN_TIMEOUT)
-    assert page.evaluate("() => window.__componentSource.mode") == "cdn"
+    assert page.evaluate("() => window.__componentSource.mode") == "npm"
 
 
 def test_legacy_code_param_still_decodes(page, live_server):

@@ -107,6 +107,16 @@ def test_editor_container_exists(editor_page):
     expect(editor_page.locator("#editor-container")).to_be_visible()
 
 
+def test_importmap_provides_codemirror_dependencies(editor_page):
+    """The browser import map provides the CodeMirror modules used by the app."""
+    importmap = editor_page.locator('script[type="importmap"]')
+    expect(importmap).to_be_attached()
+
+    content = importmap.inner_text()
+    assert "codemirror" in content
+    assert "@codemirror/lang-python" in content
+
+
 def test_extra_stubs_controls_exist(editor_page):
     """Options panel contains PyPI extra stubs install controls."""
     _open_options_panel(editor_page)

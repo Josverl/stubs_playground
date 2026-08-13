@@ -220,8 +220,8 @@ serve source="local":
     import webbrowser
 
     source = {{quote(source)}}
-    if source not in {"local", "cdn"}:
-        raise SystemExit("source must be either 'local' or 'cdn'")
+    if source not in {"local", "npm"}:
+        raise SystemExit("source must be either 'local' or 'npm'")
 
     subprocess.run(
         ["node", "scripts/generate-component-config.mjs"],

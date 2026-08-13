@@ -1,6 +1,5 @@
 """Application coverage for the public component integration boundary."""
 
-import json
 import re
 from pathlib import Path
 
@@ -13,15 +12,6 @@ from tests.timing import CDN_TIMEOUT, LSP_TIMEOUT
 pytestmark = pytest.mark.worker
 HARNESS_TIMEOUT = CDN_TIMEOUT + LSP_TIMEOUT
 PROJECT_ROOT = Path(__file__).parents[3]
-
-
-def _component_tag(package_path: str) -> str:
-    package = json.loads((PROJECT_ROOT / package_path).read_text())
-    return f"{package['cdn']['tagPrefix']}{package['version']}"
-
-
-CLIENT_TAG = _component_tag("packages/lsp-client/package.json")
-WORKER_TAG = _component_tag("packages/pyright-worker/package.json")
 
 requires_worker = pytest.mark.skipif(
     not (PROJECT_ROOT / "packages" / "pyright-worker" / "dist" / "pyright_worker.js").exists(),
@@ -73,14 +63,14 @@ def test_local_mode_uses_workspace_component_interfaces(page: Page, project_serv
     assert not any("cdn.jsdelivr.net/gh/Josverl/stubs_playground@" in url for url in requests)
 
 
-def test_cdn_mode_uses_published_component_interfaces(page: Page, project_server: str, tmp_path: Path):
+def test_npm_mode_uses_published_component_interfaces(page: Page, project_server: str, tmp_path: Path):
     requests: list[str] = []
     responses: dict[str, int] = {}
     page.on("request", lambda request: requests.append(request.url))
     page.on("response", lambda response: responses.update({response.url: response.status}))
 
     page.goto(
-        f"{project_server}/apps/playground/?components=cdn",
+        f"{project_server}/apps/playground/?components=npm",
         wait_until="domcontentloaded",
     )
     state = _wait_for_playground_lsp(page)
@@ -88,17 +78,17 @@ def test_cdn_mode_uses_published_component_interfaces(page: Page, project_server
     assert state["ready"] is True
     assert state["failed"] is False
     assert state["activeBoard"] == "esp32"
-    assert state["source"]["mode"] == "cdn"
-    assert state["source"]["clientVersion"] == CLIENT_TAG
-    assert state["source"]["workerVersion"] == WORKER_TAG
+    assert state["source"]["mode"] == "npm"
+    assert state["source"]["clientVersion"] == "0.3.0"
+    assert state["source"]["workerVersion"] == "0.3.0"
     assert "Pyright" in state["status"]
     assert any("/apps/playground/app.js" in url for url in requests)
 
     published_paths = (
-        f"@{CLIENT_TAG}/packages/lsp-client/src/index.js",
-        f"@{WORKER_TAG}/packages/pyright-worker/dist/pyright_worker.js",
-        f"@{WORKER_TAG}/packages/pyright-worker/assets/stubs-manifest.json",
-        f"@{WORKER_TAG}/packages/pyright-worker/assets/stubs-esp32.zip",
+        "/npm/@mp-codemirror/lsp-client@0.3.0/src/index.js",
+        "/npm/@mp-codemirror/pyright-worker@0.3.0/dist/pyright_worker.js",
+        "/npm/@mp-codemirror/pyright-worker@0.3.0/assets/stubs-manifest.json",
+        "/npm/@mp-codemirror/pyright-worker@0.3.0/assets/stubs-esp32.zip",
     )
     for suffix in published_paths:
         matching = [status for url, status in responses.items() if suffix in url]
@@ -128,14 +118,14 @@ def test_cdn_mode_uses_published_component_interfaces(page: Page, project_server
 
 def test_root_redirect_preserves_component_source_and_fragment(page: Page, project_server: str):
     page.goto(
-        f"{project_server}/?components=cdn#shared-section",
+        f"{project_server}/?components=npm#shared-section",
         wait_until="domcontentloaded",
     )
     page.wait_for_url(
-        f"{project_server}/apps/playground/?components=cdn#shared-section",
+        f"{project_server}/apps/playground/?components=npm#shared-section",
         timeout=CDN_TIMEOUT,
     )
-    assert page.url.endswith("/apps/playground/?components=cdn#shared-section")
+    assert page.url.endswith("/apps/playground/?components=npm#shared-section")
 
 
 @requires_worker
