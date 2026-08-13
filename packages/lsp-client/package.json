@@ -3,6 +3,11 @@
   "version": "0.3.0",
   "description": "Reusable LSP bridge for CodeMirror 6",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Josverl/stubs_playground.git",
+    "directory": "packages/lsp-client"
+  },
   "type": "module",
   "main": "./src/index.js",
   "files": [
@@ -19,9 +24,8 @@
       "import": "./src/index.js"
     }
   },
-  "cdn": {
-    "tagPrefix": "lsp-client-v",
-    "entry": "packages/lsp-client/src/index.js"
+  "browserDistribution": {
+    "entry": "src/index.js"
   },
   "sideEffects": false,
   "peerDependencies": {
