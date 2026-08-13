@@ -100,10 +100,67 @@ stage-pages output="deploy":
     print(f"Staged GitHub Pages tree at {destination.relative_to(root)}")
 
 # request an LSP client npm release from the current commit
-release-npm-lsp-client: (_release-npm "lsp-client" "packages/lsp-client/package.json")
+release-lsp-client: (_release-npm "lsp-client" "packages/lsp-client/package.json")
 
 # request a Pyright worker npm release from the current commit
-release-npm-pyright-worker: (_release-npm "pyright-worker" "packages/pyright-worker/package.json")
+release-pyright-worker: (_release-npm "pyright-worker" "packages/pyright-worker/package.json")
+
+# bump the LSP client version and synchronize generated package metadata
+bump-lsp-client bump="patch": (_bump-npm "lsp-client" "@mp-codemirror/lsp-client" bump)
+
+# bump the Pyright worker version and synchronize generated package metadata
+bump-pyright-worker bump="patch": (_bump-npm "pyright-worker" "@mp-codemirror/pyright-worker" bump)
+
+[private]
+[script("uv", "run", "python")]
+_bump-npm component package_name bump:
+    from __future__ import annotations
+
+    import json
+    import subprocess
+    from pathlib import Path
+
+    component = "{{component}}"
+    package_name = "{{package_name}}"
+    bump = "{{bump}}"
+    if component not in {"lsp-client", "pyright-worker"}:
+        raise SystemExit(f"Invalid npm component: {component}")
+    if bump not in {"patch", "minor", "major"}:
+        raise SystemExit("bump must be patch, minor, or major")
+
+    package_manifest = Path("packages") / component / "package.json"
+    app_manifest = Path("apps/playground/package.json")
+
+    subprocess.run(
+        [
+            "npm",
+            "version",
+            bump,
+            "--workspace",
+            package_name,
+            "--no-git-tag-version",
+            "--ignore-scripts",
+        ],
+        check=True,
+    )
+
+    version = json.loads(package_manifest.read_text(encoding="utf-8"))["version"]
+    app = json.loads(app_manifest.read_text(encoding="utf-8"))
+    app["dependencies"][package_name] = version
+    app_manifest.write_text(
+        json.dumps(app, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        ["npm", "install", "--package-lock-only", "--ignore-scripts"],
+        check=True,
+    )
+    subprocess.run(
+        ["npm", "run", "generate:component-config"],
+        check=True,
+    )
+    print(f"Bumped {package_name} to {version} and synchronized the playground config.")
 
 [private]
 [script("uv", "run", "python")]
