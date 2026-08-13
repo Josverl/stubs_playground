@@ -99,15 +99,15 @@ stage-pages output="deploy":
 
     print(f"Staged GitHub Pages tree at {destination.relative_to(root)}")
 
-# request an immutable LSP client CDN tag from the current commit
-release-cdn-lsp-client: (_release-cdn "lsp-client" "packages/lsp-client/package.json")
+# request an LSP client npm release from the current commit
+release-npm-lsp-client: (_release-npm "lsp-client" "packages/lsp-client/package.json")
 
-# request an immutable Pyright worker CDN tag from the current commit
-release-cdn-pyright-worker: (_release-cdn "pyright-worker" "packages/pyright-worker/package.json")
+# request a Pyright worker npm release from the current commit
+release-npm-pyright-worker: (_release-npm "pyright-worker" "packages/pyright-worker/package.json")
 
 [private]
 [script("uv", "run", "python")]
-_release-cdn component package_json:
+_release-npm component package_json:
     from __future__ import annotations
 
     import json
@@ -118,7 +118,7 @@ _release-cdn component package_json:
     component = "{{component}}"
     manifest_name = "{{package_json}}"
     if component not in {"lsp-client", "pyright-worker"}:
-        raise SystemExit(f"Invalid CDN component: {component}")
+        raise SystemExit(f"Invalid npm component: {component}")
 
     manifest = Path(manifest_name)
     if not manifest.is_file():
@@ -139,38 +139,62 @@ _release-cdn component package_json:
     if not branch:
         raise SystemExit("Refusing to release from a detached HEAD.")
 
-    version = json.loads(manifest.read_text(encoding="utf-8"))["version"]
+    package = json.loads(manifest.read_text(encoding="utf-8"))
+    package_name = package.get("name")
+    expected_name = f"@mp-codemirror/{component}"
+    if package_name != expected_name:
+        raise SystemExit(
+            f"Unexpected package name {package_name!r} in {manifest}; "
+            f"expected {expected_name!r}."
+        )
+
+    version = package.get("version")
     if not isinstance(version, str) or not re.fullmatch(
         r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", version
     ):
         raise SystemExit(f"Invalid version {version!r} in {manifest}.")
 
-    final_tag = f"{component}-v{version}"
-    request_tag = f"cdn-release/{component}/{version}"
-    for tag, message in (
-        (final_tag, f"Final tag {final_tag} already exists and is immutable."),
-        (request_tag, f"Request tag {request_tag} already exists."),
-    ):
-        result = git(
-            "ls-remote",
-            "--exit-code",
-            "--tags",
-            "origin",
-            f"refs/tags/{tag}",
-            check=False,
+    registry = subprocess.run(
+        ["npm", "view", package_name, "versions", "--json"],
+        text=True,
+        capture_output=True,
+    )
+    if registry.returncode != 0:
+        raise SystemExit(
+            registry.stderr.strip()
+            or f"Unable to query published versions for {package_name}."
         )
-        if result.returncode == 0:
-            raise SystemExit(message)
-        if result.returncode != 2:
-            raise SystemExit(result.stderr.strip() or f"Unable to query remote tag {tag}.")
+    published_versions = json.loads(registry.stdout)
+    if version in published_versions:
+        raise SystemExit(f"{package_name}@{version} is already published and immutable.")
+
+    request_tag = f"npm-release/{component}/{version}"
+    result = git(
+        "ls-remote",
+        "--exit-code",
+        "--tags",
+        "origin",
+        f"refs/tags/{request_tag}",
+        check=False,
+    )
+    if result.returncode == 0:
+        raise SystemExit(f"Request tag {request_tag} already exists.")
+    if result.returncode != 2:
+        raise SystemExit(
+            result.stderr.strip() or f"Unable to query remote tag {request_tag}."
+        )
 
     short_sha = git("rev-parse", "--short", "HEAD").stdout.strip()
-    print(f"Requesting {final_tag} from {branch} at {short_sha}...", flush=True)
+    print(
+        f"Requesting npm release {package_name}@{version} "
+        f"from {branch} at {short_sha}...",
+        flush=True,
+    )
     subprocess.run(
         ["git", "push", "origin", f"HEAD:refs/tags/{request_tag}"],
         check=True,
     )
-    print("Release requested. Follow the 'Release CDN component' workflow in GitHub Actions.")
+    print("Release requested. Follow the 'Release npm package' workflow in GitHub Actions.")
 
 # format Python code with ruff
 format:
