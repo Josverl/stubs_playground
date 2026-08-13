@@ -206,7 +206,7 @@ format:
 http:
     uv run tests/http_server.py 8888 .
 
-# start the real playground with local or published CDN components
+# start the real playground with local or published npm components
 [script("uv", "run", "python")]
 serve source="local":
     from __future__ import annotations

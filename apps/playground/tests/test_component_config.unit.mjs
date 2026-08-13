@@ -7,7 +7,7 @@ import { componentConfig } from '../component-config.generated.js';
 
 const root = new URL('../../../', import.meta.url);
 
-test('generated CDN config matches playground dependencies', async () => {
+test('generated npm config matches playground dependencies', async () => {
     const result = spawnSync(
         process.execPath,
         ['scripts/generate-component-config.mjs', '--check'],
