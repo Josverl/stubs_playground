@@ -1,0 +1,250 @@
+name: Release npm package
+
+# Publishes one independently versioned package through npm trusted publishing.
+# Configure this workflow as the trusted publisher for both packages on npmjs.com.
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: Package to publish
+        type: choice
+        required: true
+        options:
+          - lsp-client
+          - pyright-worker
+      version:
+        description: Semver without prefix; must match the package manifest
+        type: string
+        required: true
+  push:
+    tags:
+      - npm-release/lsp-client/*
+      - npm-release/pyright-worker/*
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-npm-${{ github.event.inputs.component || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.event_name != 'push' || github.event.deleted == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve package and validate inputs
+        id: meta
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          COMPONENT_INPUT: ${{ github.event.inputs.component }}
+          VERSION_INPUT: ${{ github.event.inputs.version }}
+          RELEASE_REF: ${{ github.ref_name }}
+          RELEASE_REF_TYPE: ${{ github.ref_type }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$RELEASE_REF_TYPE" != "branch" ]; then
+              echo "::error::Manual releases must be dispatched from a branch, not $RELEASE_REF_TYPE '$RELEASE_REF'."
+              exit 1
+            fi
+            component="$COMPONENT_INPUT"
+            version="$VERSION_INPUT"
+            source_ref="$RELEASE_REF"
+          else
+            case "$RELEASE_REF" in
+              npm-release/lsp-client/*)
+                component='lsp-client'
+                version="${RELEASE_REF#npm-release/lsp-client/}"
+                ;;
+              npm-release/pyright-worker/*)
+                component='pyright-worker'
+                version="${RELEASE_REF#npm-release/pyright-worker/}"
+                ;;
+              *)
+                echo "::error::Unsupported release request tag '$RELEASE_REF'."
+                exit 1
+                ;;
+            esac
+            source_ref="$RELEASE_REF"
+          fi
+
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Version '$version' is not valid semver."
+            exit 1
+          fi
+          if [[ "$version" == *-* ]]; then
+            npm_tag='next'
+          else
+            npm_tag='latest'
+          fi
+
+          case "$component" in
+            lsp-client)
+              package_dir='packages/lsp-client'
+              package_name='@mp-codemirror/lsp-client'
+              ;;
+            pyright-worker)
+              package_dir='packages/pyright-worker'
+              package_name='@mp-codemirror/pyright-worker'
+              ;;
+            *)
+              echo "::error::Unknown component '$component'."
+              exit 1
+              ;;
+          esac
+
+          manifest_name=$(node -p "require('./$package_dir/package.json').name")
+          manifest_version=$(node -p "require('./$package_dir/package.json').version")
+          repository_url=$(node -p "require('./$package_dir/package.json').repository?.url || ''")
+          if [ "$manifest_name" != "$package_name" ]; then
+            echo "::error::$package_dir/package.json name '$manifest_name' does not match '$package_name'."
+            exit 1
+          fi
+          if [ "$manifest_version" != "$version" ]; then
+            echo "::error::$package_dir/package.json version '$manifest_version' does not match '$version'."
+            exit 1
+          fi
+          if [ "$repository_url" != 'git+https://github.com/Josverl/stubs_playground.git' ]; then
+            echo "::error::$package_name repository.url must match this GitHub repository."
+            exit 1
+          fi
+
+          echo "component=$component" >> "$GITHUB_OUTPUT"
+          echo "package_dir=$package_dir" >> "$GITHUB_OUTPUT"
+          echo "package_name=$package_name" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "npm_tag=$npm_tag" >> "$GITHUB_OUTPUT"
+          echo "source_ref=$source_ref" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node.js for trusted publishing
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Verify npm supports trusted publishing
+        run: |
+          npm_version=$(npm --version)
+          NPM_VERSION="$npm_version" node -e "const [major, minor, patch] = process.env.NPM_VERSION.split('.').map(Number); if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) { console.error('npm 11.5.1 or newer is required for trusted publishing'); process.exit(1); }"
+          echo "npm $npm_version"
+
+      - name: Reject an existing package version
+        env:
+          PACKAGE_NAME: ${{ steps.meta.outputs.package_name }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          if npm view "$PACKAGE_NAME@$VERSION" version --json >/dev/null 2>&1; then
+            echo "::error::$PACKAGE_NAME@$VERSION is already published and immutable."
+            exit 1
+          fi
+
+      - name: Install Node.js dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Test LSP client
+        if: steps.meta.outputs.component == 'lsp-client'
+        run: npm run test:lsp-client:unit
+
+      - name: Install uv
+        if: steps.meta.outputs.component == 'pyright-worker'
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+
+      - name: Test worker protocol
+        if: steps.meta.outputs.component == 'pyright-worker'
+        run: npm run test:pyright-worker:unit
+
+      - name: Pack worker assets
+        if: steps.meta.outputs.component == 'pyright-worker'
+        run: |
+          uv run scripts/pack-typeshed.py
+          uv run scripts/pack-stubs.py
+
+      - name: Build worker
+        if: steps.meta.outputs.component == 'pyright-worker'
+        run: npx webpack --mode production
+
+      - name: Verify package archive
+        env:
+          COMPONENT: ${{ steps.meta.outputs.component }}
+          PACKAGE_DIR: ${{ steps.meta.outputs.package_dir }}
+          PACKAGE_NAME: ${{ steps.meta.outputs.package_name }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          npm pack --dry-run --json "./$PACKAGE_DIR" > "$RUNNER_TEMP/package.json"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const [archive] = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/package.json`, 'utf8'));
+          if (archive.name !== process.env.PACKAGE_NAME || archive.version !== process.env.VERSION) {
+            throw new Error(`Unexpected archive identity: ${archive.name}@${archive.version}`);
+          }
+          const files = new Set(archive.files.map(({ path }) => path));
+          const required = process.env.COMPONENT === 'lsp-client'
+            ? ['src/index.js']
+            : ['dist/pyright_worker.js', 'src/messages.d.ts', 'assets/stubs-manifest.json'];
+          for (const path of required) {
+            if (!files.has(path)) throw new Error(`Required package file is missing: ${path}`);
+          }
+          if ([...files].some(path => path.startsWith('tests/'))) {
+            throw new Error('Tests must not be included in the published archive.');
+          }
+          console.log(`${archive.name}@${archive.version}: ${archive.entryCount} files verified`);
+          NODE
+
+      - name: Publish package through npm OIDC
+        id: publish
+        env:
+          PACKAGE_DIR: ${{ steps.meta.outputs.package_dir }}
+          NPM_TAG: ${{ steps.meta.outputs.npm_tag }}
+        run: npm publish "./$PACKAGE_DIR" --tag "$NPM_TAG"
+
+      - name: Verify published registry version
+        env:
+          PACKAGE_NAME: ${{ steps.meta.outputs.package_name }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            published=$(npm view "$PACKAGE_NAME@$VERSION" version --json 2>/dev/null || true)
+            if [ "$published" = "\"$VERSION\"" ]; then
+              echo "Verified $PACKAGE_NAME@$VERSION on npm."
+              exit 0
+            fi
+            if [ "$attempt" -lt 12 ]; then
+              sleep 5
+            fi
+          done
+          echo "::error::npm did not serve $PACKAGE_NAME@$VERSION after publication."
+          exit 1
+
+      - name: Remove release request tag
+        if: always() && github.event_name == 'push' && steps.publish.outcome == 'success'
+        env:
+          REQUEST_TAG: ${{ github.ref_name }}
+        run: git push origin ":refs/tags/${REQUEST_TAG}"
+
+      - name: Summary
+        if: steps.publish.outcome == 'success'
+        run: |
+          {
+            echo "### Published \`${{ steps.meta.outputs.package_name }}@${{ steps.meta.outputs.version }}\`"
+            echo ""
+            echo "Source: \`${{ steps.meta.outputs.source_ref }}\` at \`${{ steps.meta.outputs.source_sha }}\`"
+            echo ""
+            echo "https://www.npmjs.com/package/${{ steps.meta.outputs.package_name }}/v/${{ steps.meta.outputs.version }}"
+          } >> "$GITHUB_STEP_SUMMARY"

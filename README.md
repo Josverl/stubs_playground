@@ -77,11 +77,11 @@ versioned, reusable components for other CodeMirror 6 editors (e.g.
 Custom worker implementations can use the stable control-plane types published as
 `packages/pyright-worker/src/messages.d.ts`.
 
-They are distributed **CDN-only** via jsDelivr from immutable git tags — no npm needed.
-See **[docs/cdn-consumption.md](docs/cdn-consumption.md)** for the import map, the
-cross-origin worker Blob shim, pinned peer-dependency versions, jsDelivr URL shapes, and
-a minimal end-to-end example. Releases are cut with the
-[`Release CDN component`](.github/workflows/release-cdn.yml) workflow.
+They are published as public packages on npm under the `@mp-codemirror` scope.
+Releases use npm trusted publishing through the
+[`Release npm package`](.github/workflows/release-npm.yml) workflow. The existing
+**[CDN consumption guide](docs/cdn-consumption.md)** documents the legacy jsDelivr
+integration while consumers migrate to npm.
 
 The complete public API reference, including the worker protocol, runtime PyPI
 stub management, and the ViperIDE lifecycle integration, starts at

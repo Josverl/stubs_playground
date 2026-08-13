@@ -329,12 +329,11 @@ This approach was probed against ViperIDE's current lockfile. The client resolve
 an IIFE with no remaining bare CodeMirror import. No npm publication or vendored client copy is
 part of the plan.
 
-> **Published:** Option B is implemented and the independently versioned components are
-> served from jsDelivr at immutable tags (`lsp-client-v*`, `pyright-worker-v*`), cut by the
-> [`Release CDN component`](../.github/workflows/release-cdn.yml) workflow. The consumer
-> integration contract (import map, cross-origin worker Blob shim, pinned peer-dep versions,
-> stub loading) lives in [`cdn-consumption.md`](./cdn-consumption.md). ViperIDE currently
-> pins `lsp-client-v0.2.5` and `pyright-worker-v0.2.2`.
+> **Published:** Both independently versioned components are available from npm under the
+> `@mp-codemirror` scope as of v0.3.0. New releases use npm trusted publishing through the
+> [`Release npm package`](../.github/workflows/release-npm.yml) workflow. The legacy CDN
+> integration contract remains in [`cdn-consumption.md`](./cdn-consumption.md) while
+> consumers migrate from immutable jsDelivr tags.
 
 ---
 
@@ -840,27 +839,31 @@ Allow downloading/using , additional, type stubs from PyPI [Only Advanced mode ?
       discoverable MicroPython suggestions requires changing the JSON catalog; unlisted type-only
       extras can be installed directly by name.
 
-
-Remaining:
-
-2. Decide whether to expose type-checking status and diagnostics through ViperIDE's MCP surface.
-
-3. Improve the dependency version handling in ViperIDE  - the version changes are still spread across multiple files allowing for simple confusion mistakes. It is not clear if this is a result of the current GitHub artifact publication - if so it should be explained in a comment in the code. If not, it should be fixed to avoid mistakes in the future.
-
-
-5. Should there be an option to automagically add the stubs for natmod modules (to the pyproject.toml)  ?  
-
-6. Ability to view the used pyproject.toml [only in advanced mode]
-
-
-
-8. Should it be possible to turn off Ruff diagnostics ?
-How is Ruff configuration handled in ViperIDE ?
-
-
-  - Prio 2: Allow the pyright worker code to be updated without having to update the ViperIDE code and pinned versions.
-
-
 11.  write API documentation for the LSP  and type-checking APIs, so that it can be used by other clients. This should include the API for the pyright worker, as well as the API for the ViperIDE integration. The documentation should include examples of how to use the API, as well as a description of the expected behavior of the API.
 - JSDoc
 - Markdown documentation to be published via Sphinx to RTD
+
+Remaining:
+
+1. Publish to npm or similar package registry.
+2. Improve the dependency version handling in ViperIDE  - the version changes are still spread across multiple files allowing for simple confusion mistakes. It is not clear if this is a result of the current GitHub artifact publication - if so it should be explained in a comment in the code. If not, it should be fixed to avoid mistakes in the future.
+
+3. Decide whether to expose type-checking status and diagnostics through ViperIDE's MCP surface.
+
+4. Should there be an option to automagically add the stubs for natmod modules such as emlean-micropython  ?  
+
+5. Ability to view the used pyproject.toml [only in advanced mode]
+
+6. Other lint sources: 
+    - Should it be possible to enable/disable Ruff diagnostics ?
+    - How about mpy-cross diagnostics ?
+
+7. automatically match stub version to the connected device version. Currently the user has to manually select the correct stub version. This should be automatic based on the connected device version.
+
+
+
+Backend
+
+1. Allow the pyright worker code to be updated without having to update the ViperIDE code and pinned versions.
+2. better filtering and searching on the available package list
+
