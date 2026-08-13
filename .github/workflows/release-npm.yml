@@ -139,6 +139,10 @@ jobs:
         run: |
           npm_version=$(npm --version)
           NPM_VERSION="$npm_version" node -e "const [major, minor, patch] = process.env.NPM_VERSION.split('.').map(Number); if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) { console.error('npm 11.5.1 or newer is required for trusted publishing'); process.exit(1); }"
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || {
+            echo "::error::GitHub OIDC is unavailable; verify id-token: write permission."
+            exit 1
+          }
           echo "npm $npm_version"
 
       - name: Reject an existing package version
