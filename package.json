@@ -1,7 +1,6 @@
 {
   "name": "mp-codemirror-monorepo",
   "version": "0.2.1",
-  "private": true,
   "description": "CodeMirror MicroPython playground and reusable browser LSP packages",
   "workspaces": [
     "apps/*",
