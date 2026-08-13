@@ -1,5 +1,6 @@
 """Application coverage for the public component integration boundary."""
 
+import json
 import re
 from pathlib import Path
 
@@ -12,6 +13,15 @@ from tests.timing import CDN_TIMEOUT, LSP_TIMEOUT
 pytestmark = pytest.mark.worker
 HARNESS_TIMEOUT = CDN_TIMEOUT + LSP_TIMEOUT
 PROJECT_ROOT = Path(__file__).parents[3]
+
+
+def _package_version(package_path: str) -> str:
+    package = json.loads((PROJECT_ROOT / package_path).read_text())
+    return package["version"]
+
+
+CLIENT_VERSION = _package_version("packages/lsp-client/package.json")
+WORKER_VERSION = _package_version("packages/pyright-worker/package.json")
 
 requires_worker = pytest.mark.skipif(
     not (PROJECT_ROOT / "packages" / "pyright-worker" / "dist" / "pyright_worker.js").exists(),
@@ -60,7 +70,7 @@ def test_local_mode_uses_workspace_component_interfaces(page: Page, project_serv
     assert any("/apps/playground/app.js" in url for url in requests)
     assert any("/packages/lsp-client/src/index.js" in url for url in requests)
     assert any("/packages/pyright-worker/dist/pyright_worker.js" in url for url in requests)
-    assert not any("cdn.jsdelivr.net/gh/Josverl/stubs_playground@" in url for url in requests)
+    assert not any("cdn.jsdelivr.net/npm/@mp-codemirror/" in url for url in requests)
 
 
 def test_npm_mode_uses_published_component_interfaces(page: Page, project_server: str, tmp_path: Path):
@@ -79,21 +89,21 @@ def test_npm_mode_uses_published_component_interfaces(page: Page, project_server
     assert state["failed"] is False
     assert state["activeBoard"] == "esp32"
     assert state["source"]["mode"] == "npm"
-    assert state["source"]["clientVersion"] == "0.3.0"
-    assert state["source"]["workerVersion"] == "0.3.0"
+    assert state["source"]["clientVersion"] == CLIENT_VERSION
+    assert state["source"]["workerVersion"] == WORKER_VERSION
     assert "Pyright" in state["status"]
     assert any("/apps/playground/app.js" in url for url in requests)
 
     published_paths = (
-        "/npm/@mp-codemirror/lsp-client@0.3.0/src/index.js",
-        "/npm/@mp-codemirror/pyright-worker@0.3.0/dist/pyright_worker.js",
-        "/npm/@mp-codemirror/pyright-worker@0.3.0/assets/stubs-manifest.json",
-        "/npm/@mp-codemirror/pyright-worker@0.3.0/assets/stubs-esp32.zip",
+        f"/npm/@mp-codemirror/lsp-client@{CLIENT_VERSION}/src/index.js",
+        f"/npm/@mp-codemirror/pyright-worker@{WORKER_VERSION}/dist/pyright_worker.js",
+        f"/npm/@mp-codemirror/pyright-worker@{WORKER_VERSION}/assets/stubs-manifest.json",
+        f"/npm/@mp-codemirror/pyright-worker@{WORKER_VERSION}/assets/stubs-esp32.zip",
     )
     for suffix in published_paths:
         matching = [status for url, status in responses.items() if suffix in url]
         assert matching and all(status == 200 for status in matching), (
-            f"Expected successful CDN response for {suffix}: {matching}"
+            f"Expected successful npm package response for {suffix}: {matching}"
         )
 
     for archive in ("stubs-esp32.zip", "stubs-webassembly.zip"):

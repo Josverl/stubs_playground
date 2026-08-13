@@ -19,7 +19,7 @@ function requireString(value, description) {
 
 function requirePackagePath(value, description) {
     const path = requireString(value, description);
-    assert.equal(path.startsWith('/'), false, `${description} must be repository-relative`);
+    assert.equal(path.startsWith('/'), false, `${description} must be package-relative`);
     assert.equal(path.startsWith('./'), false, `${description} must not start with "./"`);
     assert.equal(path.split('/').includes('..'), false, `${description} must not contain ".."`);
     return path;
