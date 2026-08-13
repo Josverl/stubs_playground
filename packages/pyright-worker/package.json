@@ -3,6 +3,11 @@
   "version": "0.3.0",
   "description": "Worker-side protocol contract and packaging metadata",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Josverl/stubs_playground.git",
+    "directory": "packages/pyright-worker"
+  },
   "type": "module",
   "files": [
     "assets/",
@@ -23,9 +28,8 @@
     "./declarations": "./src/declarations.d.ts"
   },
   "workerBundle": "./dist/pyright_worker.js",
-  "cdn": {
-    "tagPrefix": "pyright-worker-v",
-    "worker": "packages/pyright-worker/dist/pyright_worker.js",
-    "assets": "packages/pyright-worker/assets"
+  "browserDistribution": {
+    "worker": "dist/pyright_worker.js",
+    "assets": "assets"
   }
 }
