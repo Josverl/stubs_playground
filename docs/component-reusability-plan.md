@@ -38,6 +38,10 @@ implemented workspace/package boundaries.
 >   type-check modes and automatic/manual stub-bundle selection through ViperIDE's existing
 >   settings system, with safe worker reconfiguration and cross-browser E2E coverage. The
 >   consumer list excludes the internal `stdlib` debug bundle and shows normalized releases.
+> - *August 2026 npm consumer update* — migrated ViperIDE from tagged GitHub/jsDelivr
+>   artifacts to the published `@mp-codemirror` packages. Exact versions now live only in
+>   ViperIDE's package manifest and lockfile; Rollup resolves the client normally and copies
+>   the installed worker distribution into the static build.
 
 ---
 
@@ -269,14 +273,15 @@ be published as TypeScript declarations.
 
 ## 3. How to share components with projects outside this repo's control
 
-### Option A: npm (not selected)
+### Option A: npm (selected)
 
-Publishing these components to npm would add a second release workflow, registry metadata, and
-consumer path for the same integration goal. The packages are not being presented as
-production-ready npm packages, and ViperIDE will not depend on this option. No npm publication work
-is planned.
+Both components are published under the `@mp-codemirror` scope. Bundled applications install
+exact package versions and commit their lockfile. ViperIDE imports `@mp-codemirror/lsp-client`
+through Rollup's normal node resolver and copies the installed
+`@mp-codemirror/pyright-worker` `dist/` and `assets/` directories into its static build.
+This keeps the package manifest and lockfile as the only version authority.
 
-### Option B: immutable CDN tags (selected)
+### Option B: immutable CDN tags (legacy)
 
 Point consumers at `esm.sh` or `jsDelivr` directly from the GitHub repo (using a tag):
 
@@ -314,26 +319,11 @@ path and no formal contract. ViperIDE will not use this option.
 
 ### Recommendation
 
-Use **Option B only**. Keep publishing the client source, worker, and stub assets through immutable
-component tags and jsDelivr.
-
-ViperIDE's Rollup build must fetch the tagged client source graph and then resolve its bare
-CodeMirror imports from ViperIDE's installed dependencies. This is different from dynamically
-importing the client in the browser: build-time ingestion lets Rollup include the client and
-ViperIDE's CodeMirror modules in one IIFE and therefore preserves one
-`@codemirror/state` / `@codemirror/view` identity set. The worker remains a pinned CDN runtime
-artifact loaded through the documented same-origin Blob shim.
-
-This approach was probed against ViperIDE's current lockfile. The client resolved to ViperIDE's
-`@codemirror/state@6.4.1`, `@codemirror/view@6.28.5`, and `@codemirror/lint@6.8.1`; Rollup produced
-an IIFE with no remaining bare CodeMirror import. No npm publication or vendored client copy is
-part of the plan.
-
-> **Published:** Both independently versioned components are available from npm under the
-> `@mp-codemirror` scope as of v0.3.0. New releases use npm trusted publishing through the
-> [`Release npm package`](../.github/workflows/release-npm.yml) workflow. The legacy CDN
-> integration contract remains in [`cdn-consumption.md`](./cdn-consumption.md) while
-> consumers migrate from immutable jsDelivr tags.
+Use **Option A** for bundled applications. Normal package resolution preserves one
+`@codemirror/state` / `@codemirror/view` module graph, and copying the worker package through the
+host's static-asset pipeline makes the worker same-origin without a Blob shim. The legacy CDN
+integration contract remains in [`cdn-consumption.md`](./cdn-consumption.md) for unbundled
+consumers and older releases.
 
 ---
 
@@ -695,7 +685,7 @@ upstream tip.
 | Tool shortcuts (`ca0a14f`) | Do not add global shortcuts that collide with ViperIDE's Ctrl/Cmd, Alt+Shift, F5, or CodeMirror lint bindings. Prefer settings/menu controls first; reserve F8/Shift-F8 for diagnostic navigation inside CodeMirror. |
 | Reconnection and session teardown (`1d27c20`, v0.6.0) | The LSP worker is independent of the serial/WebREPL transport. Keep it alive across transient reconnects, but re-evaluate stubs after a newly identified device and dispose it only on type-check disable, board change, or application teardown. |
 | Device metadata and ABI-aware package work (`26e1032`, v0.6.0) | Reuse `devInfo` (`machine`, `sysname`, `release`, `version`, `mpy_arch`, `mpy_ver`) as input to board/stub selection. Because those fields do not uniquely identify every board, persist and expose a manual override. |
-| Rollup/IIFE build and CodeMirror dependencies (current v0.6.2) | Fetch the immutable CDN client source during the Rollup build and let bare imports resolve from ViperIDE's `node_modules`. Keep the worker/stub assets as runtime CDN resources. This uses one distribution architecture and one CodeMirror module graph. |
+| Rollup/IIFE build and CodeMirror dependencies (current v0.6.2) | Resolve the published npm client from ViperIDE's `node_modules` and copy the npm worker/stub assets into ViperIDE's static output. This keeps one CodeMirror module graph and makes the worker same-origin. |
 | v0.6.2 editor cleanup (`8771484`, `3a5a331`) | No new type-checking API is introduced, but integration changes to `editor.js` must be based on v0.6.2 to avoid conflicting with the new syntax-tree-driven decoration code. |
 
 WebREPL speedups, QuickInstall, Markdown rendering, virtual-device examples, and the viper-tools
@@ -713,17 +703,17 @@ resolve. Ruff and mpy-cross behavior remains intact. Persistent type-check mode 
 override settings are implemented. The remaining work is broader ViperIDE-owned automated
 multi-browser coverage and the optional MCP exposure decision.
 
-1. ViperIDE owns the integration boundary. `typechecking.js` wires the tagged component to
+1. ViperIDE owns the integration boundary. `typechecking.js` wires the packaged component to
    `TypecheckingService`, while `typechecking_service.js` owns the client/transport, selected stub
    bundle, document versions, diagnostic status, editor bindings, persistent workspace files, and
    lifecycle.
-   `typechecking_assets.js` owns immutable runtime asset loading and the session Blob worker URL.
-2. ViperIDE imports the client from the exact `lsp-client-v0.2.5` jsDelivr tag through its
-   restricted HTTPS-module loader. The loader handles only remote/relative client modules; bare
-   `@codemirror/*` imports fall through to `@rollup/plugin-node-resolve` and use ViperIDE's
-   lockfile versions. No npm package or vendored client copy was added.
-3. ViperIDE loads the `pyright-worker-v0.2.2` script and stub manifest/assets from jsDelivr. It
-   creates one same-origin Blob worker URL per application session and revokes it on final teardown.
+  `typechecking_assets.js` owns runtime asset loading from the static build.
+2. ViperIDE imports `@mp-codemirror/lsp-client` from npm through
+  `@rollup/plugin-node-resolve`, using the exact version declared in ViperIDE's package manifest
+  and lockfile. The former restricted HTTPS-module loader has been removed.
+3. Rollup copies the installed `@mp-codemirror/pyright-worker` `dist/` and `assets/` trees into
+  ViperIDE's build. The browser starts that same-origin worker directly, so no CDN URL, duplicate
+  version pin, or Blob worker shim remains.
 4. Each editable `.py` `EditorView` receives its own LSP `Compartment` and URI derived from the
    current tab path. Non-Python, read-only Python, rendered Markdown, hex, and `.mpy.dis` tabs
    receive no LSP extension.
@@ -757,7 +747,7 @@ multi-browser coverage and the optional MCP exposure decision.
 | Phase | Work | Acceptance gate | Current state |
 |---|---|---|---|
 | 0. Library readiness | Complete 4.10-4.12, publish a new immutable client version, and verify it with the existing standalone/CDN harnesses. | Destroy/rebind tests show no retained handlers; close/reopen and sync/delete tests pass. | ✅ Done — delayed merge-safe diagnostics and stale-range protection are released as `lsp-client-v0.2.5`. |
-| 1. ViperIDE build integration | Rebase `typechecking_1` on v0.6.2; add the restricted Rollup HTTPS loader; import the exact tagged client; load the pinned worker URL; initialize one type-checking service. | Production IIFE contains the client and only ViperIDE's CodeMirror modules, has no unresolved bare imports, and starts the CDN worker without a vendored fallback. | ✅ Done — `bfaa8a4`, `2c36be9`, `fce95ff`, `790a332`, and `47bc84e`. |
+| 1. ViperIDE build integration | Consume both published npm packages; resolve the client with Rollup; copy worker assets into the static build; initialize one type-checking service. | Production IIFE contains the client and only ViperIDE's CodeMirror modules, has no unresolved bare imports, and starts the same-origin packaged worker. | ✅ Done — npm migration supersedes the earlier restricted CDN loader. |
 | 2. One-document vertical slice | Bind the active `.py` tab, display diagnostics/completion/hover, retain Ruff/mpy-cross linting, and add status/error UI. | Existing editor behavior remains intact; a MicroPython sample receives Pyright diagnostics, completion, and hover. | ✅ Done — editor binding, merge-safe 300 ms diagnostic presentation, immediate completion/hover synchronization, VM MicroPython resolution, and dedicated status/error/disable UI are implemented (`1d5823f`). |
 | 3. Multi-tab/workspace lifecycle | Bind every open Python view; implement close, rename, delete, draft, and complete device-file synchronization. | Tests cover two tabs importing each other, unsaved edits, close/reopen, file/folder rename, delete, and repeated board rebinds. | ✅ Implemented — `0fda2b7`, `82dac85`, `be1a9d1`, and `784e467`; the persistent mirror now covers unopened modules, updates/removals, unreadable files, drafts, and worker replay. |
 | 4. Device-aware stubs and settings | Map `devInfo` to stubs, add a persistent manual override/type-check mode, and avoid restarts on transient reconnects. | ESP32/RP2 (plus VM) resolve correct APIs; override survives reload; reconnect does not duplicate workers or listeners. | ✅ Done — automatic mapping uses exact `sys.platform` values, optional `_build` board/variant metadata is retained, basic/standard/strict modes and automatic/manual stub selection persist through ViperIDE's existing settings, and reconfiguration safely restores editors and workspace state. |
@@ -843,24 +833,27 @@ Allow downloading/using , additional, type stubs from PyPI [Only Advanced mode ?
 - JSDoc
 - Markdown documentation to be published via Sphinx to RTD
 
+
+1. Completed: publish both packages to npm as `@mp-codemirror/lsp-client` and
+  `@mp-codemirror/pyright-worker`.
+2. Completed: ViperIDE declares exact package versions only in `package.json`; `package-lock.json`
+  records the resolved artifacts. Source and Rollup configuration contain no duplicated version
+  constants. Rollup resolves the client package and copies the installed worker package by name.
 Remaining:
 
-1. Publish to npm or similar package registry.
-2. Improve the dependency version handling in ViperIDE  - the version changes are still spread across multiple files allowing for simple confusion mistakes. It is not clear if this is a result of the current GitHub artifact publication - if so it should be explained in a comment in the code. If not, it should be fixed to avoid mistakes in the future.
+Advanced mode options
+- hide pypi stub installation unless in advanced mode 
+6. disable Other lint sources [advanced mode]: 
+    - enable/disable Ruff diagnostics , default on
+    - enable/disable mpy-cross diagnostics, default on
+5. Ability to view the used pyproject.toml [only in advanced mode]
+
 
 3. Decide whether to expose type-checking status and diagnostics through ViperIDE's MCP surface.
 
 4. Should there be an option to automagically add the stubs for natmod modules such as emlean-micropython  ?  
 
-5. Ability to view the used pyproject.toml [only in advanced mode]
-
-6. Other lint sources: 
-    - Should it be possible to enable/disable Ruff diagnostics ?
-    - How about mpy-cross diagnostics ?
-
 7. automatically match stub version to the connected device version. Currently the user has to manually select the correct stub version. This should be automatic based on the connected device version.
-
-
 
 Backend
 

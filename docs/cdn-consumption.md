@@ -1,5 +1,11 @@
 # Reusing these components (CDN)
 
+> **Legacy distribution path:** The CDN instructions below remain available for unbundled
+> applications and older releases. Bundled applications such as ViperIDE should install
+> `@mp-codemirror/lsp-client` and `@mp-codemirror/pyright-worker` from npm, resolve the client
+> normally, and copy the worker package's `dist/` and `assets/` directories into their static
+> output. Package versions should be owned by the application's manifest and lockfile.
+
 This repository prepares two independently versioned, framework-agnostic building
 blocks so standalone CodeMirror 6 editors can embed in-browser Python/MicroPython
 type checking without npm, a bundler, or a server.
