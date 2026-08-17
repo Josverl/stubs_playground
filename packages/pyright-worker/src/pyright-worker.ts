@@ -56,7 +56,9 @@ import type {
 import { logVerbose, setVerboseOutput } from "./logging";
 import {
     activeCachedStubPackages,
+    availableRuntimeVersions,
     clearStubPackages,
+    defaultRuntimeVersion,
     installStubPackage,
     isBoardStubPackage,
     listAvailableStubPackages,
@@ -682,12 +684,14 @@ function handleReadGeneratedConfig(msg: MsgReadGeneratedConfig) {
 
 async function handleListStubPackages(msg: MsgListStubPackages) {
     try {
-        const packages = await listAvailableStubPackages();
+        const packages = await listAvailableStubPackages(msg.filters);
         ctx.postMessage({
             type: "listStubPackagesResult",
             requestId: msg.requestId,
             ok: true,
             packages,
+            availableRuntimeVersions: availableRuntimeVersions(),
+            defaultRuntimeVersion: defaultRuntimeVersion(),
         } as WorkerMessage);
     } catch (err: any) {
         ctx.postMessage({
@@ -695,6 +699,8 @@ async function handleListStubPackages(msg: MsgListStubPackages) {
             requestId: msg.requestId,
             ok: false,
             packages: [],
+            availableRuntimeVersions: [],
+            defaultRuntimeVersion: "",
             error: err?.message || String(err),
         } as WorkerMessage);
     }

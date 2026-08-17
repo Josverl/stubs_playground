@@ -48,7 +48,11 @@ import { logVerbose } from './logging.js';
  * @property {string} id - Stable catalog identifier.
  * @property {string} packageName - PyPI distribution name.
  * @property {string} label - Human-readable package label.
- * @property {'stdlib'|'board'} kind - Package role.
+ * @property {'stdlib'|'runtime'} kind - Package role.
+ * @property {'micropython'|'circuitpython'} family - Runtime family.
+ * @property {string[]} runtimeVersions - Compatible runtime releases.
+ * @property {string} port - MicroPython port, when applicable.
+ * @property {string} board - MicroPython board, when applicable.
  * @property {string} latestVersion - Latest stable installable version.
  * @property {StubPackageRelease[]} versions - Stable universal-wheel releases.
  * @property {string} [installedVersion] - Active cached version, when installed.
@@ -599,12 +603,37 @@ export class WorkerTransport {
      * Discovery failures are reported in an entry's `error` property so one
      * unavailable PyPI project does not discard the rest of the catalog.
      *
-     * @returns {Promise<StubPackageCatalogEntry[]>} Catalog entries and installable versions.
+    * @param {{family?: string, version?: string, port?: string, board?: string}} [filters={}] -
+    *   Runtime metadata used to limit package and PyPI release discovery.
+    * @returns {Promise<StubPackageCatalogEntry[]>} Catalog entries and installable versions.
      * @throws {Error} If disconnected, the worker rejects the request, or it times out.
      */
-    async listStubPackages() {
-        const response = await this._requestStubPackage('listStubPackages');
-        return Array.isArray(response.packages) ? response.packages : [];
+    async getStubPackageCatalog(filters = {}) {
+        if (!filters || typeof filters !== 'object' || Array.isArray(filters)) {
+            throw new TypeError('Stub package filters must be an object');
+        }
+        const response = await this._requestStubPackage('listStubPackages', { filters });
+        return {
+            packages: Array.isArray(response.packages) ? response.packages : [],
+            availableRuntimeVersions: Array.isArray(response.availableRuntimeVersions)
+                ? response.availableRuntimeVersions
+                : [],
+            defaultRuntimeVersion: typeof response.defaultRuntimeVersion === 'string'
+                ? response.defaultRuntimeVersion
+                : '',
+        };
+    }
+
+    /**
+     * Query packages matching the supplied runtime filters. When family and
+     * version are omitted, the worker uses MicroPython and its highest stable
+     * available runtime version.
+     *
+     * @param {{family?: string, version?: string, port?: string, board?: string}} [filters={}]
+     * @returns {Promise<StubPackageCatalogEntry[]>}
+     */
+    async listStubPackages(filters = {}) {
+        return (await this.getStubPackageCatalog(filters)).packages;
     }
 
     /**

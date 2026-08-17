@@ -57,6 +57,13 @@ import { DocumentManager } from './editor/document-manager.js';
 import { TabBar } from './ui/tab-bar.js';
 import { FileTree } from './ui/file-tree.js';
 import { Events } from './events.js';
+import {
+    availableStubFilterValues,
+    availableRuntimeVersionOptions,
+    DEFAULT_STUB_FILTERS,
+    detectedDefaultRuntimeVersion,
+    filterStubPackages,
+} from './stub-package-filters.js';
 
 const basicSetup = [
     lineNumbers(),
@@ -119,6 +126,17 @@ function forgetDocumentVersion(uri) {
 // Board stub state
 let currentBoardId = null;
 let boardManifest = null;
+let stubPackageCatalog = [];
+let micropythonVersionOptions = [];
+let defaultMicropythonVersion = '';
+
+const savedStubVersion = localStorage.getItem('mp_stubVersion');
+let currentStubFilters = {
+    family: localStorage.getItem('mp_stubFamily') || DEFAULT_STUB_FILTERS.family,
+    version: savedStubVersion || DEFAULT_STUB_FILTERS.version,
+    port: localStorage.getItem('mp_stubPort') || 'esp32',
+    board: localStorage.getItem('mp_stubBoard') || 'GENERIC',
+};
 
 // Pyright version (received from worker on init)
 let pyrightVersion = "";
@@ -242,6 +260,10 @@ function initPythonVersionSelector() {
 
 function setLSPControlsDisabled(disabled) {
     const ids = [
+        'stubFamily',
+        'stubVersion',
+        'stubPort',
+        'stubBoard',
         'boardSelect',
         'typeCheckMode',
         'typeshedPathToggle',
@@ -303,15 +325,11 @@ async function restartLSPWithCurrentSettings(boardId) {
 }
 
 function getSelectedStubsStatusLabel() {
-    if (boardManifest?.boards && currentBoardId) {
-        const board = boardManifest.boards.find((b) => b.id === currentBoardId);
-        if (board) {
-            const cached = getActiveInstalledPackage(board.package);
-            if (cached) return `${cached.packageName} v${cached.version}`;
-            if (board.package_version) return `${board.package} v${board.package_version}`;
-            if (board.package) return board.package;
-            return board.id;
-        }
+    const target = getCurrentStubTarget();
+    if (target) {
+        const cached = getActiveInstalledPackage(target.packageName);
+        if (cached) return `${cached.packageName} v${cached.version}`;
+        return target.packageName;
     }
 
     const select = document.getElementById('boardSelect');
@@ -323,15 +341,13 @@ function getSelectedStubsStatusLabel() {
 }
 
 function getSelectedStubMetadata() {
-    if (boardManifest?.boards && currentBoardId) {
-        const board = boardManifest.boards.find((b) => b.id === currentBoardId);
-        if (board) {
-            const cached = getActiveInstalledPackage(board.package);
-            return {
-                package: cached?.packageName || board.package || board.id || '',
-                version: cached?.version || board.package_version || '',
-            };
-        }
+    const target = getCurrentStubTarget();
+    if (target) {
+        const cached = getActiveInstalledPackage(target.packageName);
+        return {
+            package: cached?.packageName || target.packageName,
+            version: cached?.version || currentStubFilters.version || '',
+        };
     }
 
     const select = document.getElementById('boardSelect');
@@ -364,15 +380,42 @@ function getActiveInstalledPackage(packageName) {
     ));
 }
 
+function getCurrentStubTarget(targetId = currentBoardId) {
+    return stubPackageCatalog.find((entry) => entry.id === targetId);
+}
+
+function getBundledStubTarget(target = getCurrentStubTarget()) {
+    if (!target) return null;
+    return boardManifest?.boards?.find((entry) => (
+        normalizePackageName(entry.package) === normalizePackageName(target.packageName)
+    )) || null;
+}
+
 function getPreferredBoardStubPackage(boardId) {
-    const board = boardManifest?.boards.find((entry) => entry.id === boardId);
-    if (!board?.package || !board.file) return undefined;
-    const installed = getActiveInstalledPackage(board.package);
+    const target = getCurrentStubTarget(boardId);
+    if (!target?.packageName) return undefined;
+    const installed = getActiveInstalledPackage(target.packageName);
+    const bundled = getBundledStubTarget(target);
     return {
-        packageName: normalizePackageName(board.package),
+        packageName: normalizePackageName(target.packageName),
         ...(installed ? { version: installed.version } : {}),
-        fallbackToBundled: true,
+        fallbackToBundled: Boolean(bundled?.file),
     };
+}
+
+async function ensureSelectedStubPackage(targetId = currentBoardId) {
+    const target = getCurrentStubTarget(targetId);
+    if (!target || getActiveInstalledPackage(target.packageName) || getBundledStubTarget(target)?.file) {
+        return;
+    }
+
+    const majorMinor = /^(\d+\.\d+)/.exec(currentStubFilters.version)?.[1];
+    const versionSpecifier = target.family === 'micropython' && majorMinor
+        ? `==${majorMinor}.*`
+        : '';
+    setExtraStubsStatus(`Installing ${target.packageName}...`);
+    await lspTransport.installStubPackage(target.packageName, versionSpecifier);
+    await refreshInstalledStubPackages();
 }
 
 async function refreshInstalledStubPackages() {
@@ -384,19 +427,23 @@ async function refreshInstalledStubPackages() {
 
 function updateBoardSelectorPackageVersions() {
     const select = document.getElementById('boardSelect');
-    if (!select || !boardManifest?.boards) return;
+    if (!select) return;
     for (const option of select.options) {
-        const board = boardManifest.boards.find((entry) => entry.id === option.value);
-        if (!board || board.file === null) continue;
-        const cached = getActiveInstalledPackage(board.package);
-        const version = cached?.version || board.package_version;
-        option.textContent = version ? `${board.package} — ${version}` : board.package;
+        const target = getCurrentStubTarget(option.value);
+        if (!target) continue;
+        const cached = getActiveInstalledPackage(target.packageName);
+        const targetName = target.family === 'circuitpython'
+            ? 'CircuitPython'
+            : `${target.port} / ${target.board}`;
+        option.textContent = cached
+            ? `${targetName} — ${cached.version}`
+            : `${targetName} — ${target.packageName}`;
     }
 }
 
 async function loadStubPackageCatalog() {
     if (!lspTransport) return;
-    const catalog = await lspTransport.listStubPackages();
+    const catalog = await lspTransport.listStubPackages(currentStubFilters);
     const dataList = document.getElementById('stubPackageCatalog');
     if (!dataList) return;
     dataList.replaceChildren();
@@ -658,39 +705,141 @@ function scheduleActiveDocumentRefresh(activeUri, content) {
     }, STARTUP_REANALYZE_DELAY_MS);
 }
 
-// Fetch board stubs manifest and populate the board selector
+function replaceSelectOptions(select, values, selectedValue, emptyLabel = 'Not applicable') {
+    select.replaceChildren();
+    for (const value of values.length ? values : ['']) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value || emptyLabel;
+        select.appendChild(option);
+    }
+    select.value = values.includes(selectedValue) ? selectedValue : (values[0] || '');
+    return select.value;
+}
+
+function setStubFilterApplicability() {
+    const isMicroPython = currentStubFilters.family === 'micropython';
+    for (const id of ['stubVersion', 'stubPort', 'stubBoard']) {
+        const select = document.getElementById(id);
+        if (select) select.disabled = !isMicroPython;
+    }
+}
+
+function populateStubTargetControls(preferredTargetId = currentBoardId) {
+    const familySelect = document.getElementById('stubFamily');
+    familySelect.value = currentStubFilters.family;
+
+    const versionSelect = document.getElementById('stubVersion');
+    if (currentStubFilters.family === 'micropython') {
+        currentStubFilters.version = replaceSelectOptions(
+            versionSelect,
+            micropythonVersionOptions,
+            currentStubFilters.version,
+        );
+        const ports = availableStubFilterValues(
+            stubPackageCatalog,
+            { ...currentStubFilters, port: '', board: '' },
+            'port',
+        );
+        currentStubFilters.port = replaceSelectOptions(
+            document.getElementById('stubPort'),
+            ports,
+            currentStubFilters.port,
+        );
+        const boards = availableStubFilterValues(
+            stubPackageCatalog,
+            { ...currentStubFilters, board: '' },
+            'board',
+        );
+        const preferredBoard = boards.includes(currentStubFilters.board)
+            ? currentStubFilters.board
+            : (boards.includes('GENERIC') ? 'GENERIC' : boards[0]);
+        currentStubFilters.board = replaceSelectOptions(
+            document.getElementById('stubBoard'),
+            boards,
+            preferredBoard,
+        );
+    } else {
+        currentStubFilters.version = replaceSelectOptions(versionSelect, [], '');
+        currentStubFilters.port = replaceSelectOptions(document.getElementById('stubPort'), [], '');
+        currentStubFilters.board = replaceSelectOptions(document.getElementById('stubBoard'), [], '');
+    }
+
+    const targets = filterStubPackages(stubPackageCatalog, currentStubFilters);
+    const select = document.getElementById('boardSelect');
+    select.replaceChildren();
+    for (const target of targets) {
+        const option = document.createElement('option');
+        option.value = target.id;
+        select.appendChild(option);
+    }
+    currentBoardId = targets.some((target) => target.id === preferredTargetId)
+        ? preferredTargetId
+        : (targets[0]?.id || '');
+    select.value = currentBoardId;
+    if (!targets.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No matching package';
+        select.appendChild(option);
+    }
+    updateBoardSelectorPackageVersions();
+    setStubFilterApplicability();
+}
+
+function persistStubTargetSelection() {
+    localStorage.setItem('mp_stubFamily', currentStubFilters.family);
+    localStorage.setItem('mp_stubVersion', currentStubFilters.version);
+    localStorage.setItem('mp_stubPort', currentStubFilters.port);
+    localStorage.setItem('mp_stubBoard', currentStubFilters.board);
+    localStorage.setItem('mp_board', currentBoardId);
+}
+
+function inferFiltersFromTarget(target) {
+    if (!target) return;
+    currentStubFilters.family = target.family;
+    currentStubFilters.port = target.port;
+    currentStubFilters.board = target.board;
+    if (target.family !== 'micropython') {
+        currentStubFilters.version = '';
+        return;
+    }
+    const selectedLine = /^(\d+\.\d+)/.exec(currentStubFilters.version)?.[1];
+    if (target.runtimeVersions.some((version) => version.startsWith(`${selectedLine}.`))) return;
+    currentStubFilters.version = micropythonVersionOptions.find((versionOption) => {
+        const line = /^(\d+\.\d+)/.exec(versionOption)?.[1];
+        return target.runtimeVersions.some((version) => version.startsWith(`${line}.`));
+    }) || defaultMicropythonVersion;
+}
+
+// Fetch bundled archives and the published package catalog, then populate the target selectors.
 async function initBoardSelector() {
     const select = document.getElementById('boardSelect');
     try {
-        const resp = await fetch(`${componentAssetsBase}/stubs-manifest.json`);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        boardManifest = await resp.json();
-        const selectableBoards = (boardManifest.boards || []).filter((b) => b.id !== 'stdlib');
-
-        select.innerHTML = '';
-        for (const board of selectableBoards) {
-            const opt = document.createElement('option');
-            opt.value = board.id;
-            // Virtual boards (file === null) show their name; real boards show package — version
-            if (board.file === null) {
-                opt.textContent = board.package || board.id;
-            } else {
-                opt.textContent = board.package_version
-                    ? `${board.package} — ${board.package_version}`
-                    : board.package;
-            }
-            select.appendChild(opt);
+        const [manifestResponse, catalogResponse] = await Promise.all([
+            fetch(`${componentAssetsBase}/stubs-manifest.json`),
+            fetch(`${componentAssetsBase}/stub-package-catalog.json`),
+        ]);
+        if (!manifestResponse.ok) throw new Error(`Stub manifest HTTP ${manifestResponse.status}`);
+        if (!catalogResponse.ok) throw new Error(`Stub catalog HTTP ${catalogResponse.status}`);
+        boardManifest = await manifestResponse.json();
+        const catalogDocument = await catalogResponse.json();
+        micropythonVersionOptions = availableRuntimeVersionOptions(catalogDocument);
+        defaultMicropythonVersion = detectedDefaultRuntimeVersion(catalogDocument);
+        if (!micropythonVersionOptions.length || !defaultMicropythonVersion) {
+            throw new Error('Stub catalog has no stable MicroPython runtime versions');
         }
+        if (!micropythonVersionOptions.includes(currentStubFilters.version)) {
+            currentStubFilters.version = defaultMicropythonVersion;
+        }
+        stubPackageCatalog = (catalogDocument.packages || []).filter((entry) => entry.kind === 'runtime');
 
-        // Restore saved selection or use manifest default
         const saved = localStorage.getItem('mp_board');
-        const defaultBoardId = selectableBoards.some((b) => b.id === boardManifest.default)
-            ? boardManifest.default
-            : (selectableBoards[0]?.id || '');
-        currentBoardId = saved && selectableBoards.some((b) => b.id === saved)
+        const preferredTargetId = stubPackageCatalog.some((entry) => entry.id === saved)
             ? saved
-            : defaultBoardId;
-        select.value = currentBoardId;
+            : boardManifest.default;
+        inferFiltersFromTarget(getCurrentStubTarget(preferredTargetId));
+        populateStubTargetControls(preferredTargetId);
 
         // Ensure status line reflects selected stubs immediately.
         updateDiagnosticsStatus([], pyrightVersion, getSelectedStubsStatusLabel());
@@ -703,14 +852,15 @@ async function initBoardSelector() {
 }
 
 function getBoardStubRuntime(boardId) {
-    const board = boardManifest?.boards.find(b => b.id === boardId);
-    if (!board) throw new Error(`Unknown board: ${boardId}`);
-    if (!board.file) {
+    const target = getCurrentStubTarget(boardId);
+    if (!target) throw new Error(`Unknown stub package target: ${boardId}`);
+    const bundled = getBundledStubTarget(target);
+    if (!bundled?.file) {
         return { boardStubs: false };
     }
     return {
         boardStubs: undefined,
-        boardStubsUrl: `${componentAssetsBase}/${board.file}`,
+        boardStubsUrl: `${componentAssetsBase}/${bundled.file}`,
     };
 }
 
@@ -726,11 +876,12 @@ async function handleBoardChange(event) {
         loading.hidden = false;
         setLSPControlsDisabled(true);
 
+        await ensureSelectedStubPackage(newBoardId);
         await restartLSPWithCurrentSettings(newBoardId);
         currentBoardId = newBoardId;
-        localStorage.setItem('mp_board', newBoardId);
+        persistStubTargetSelection();
 
-        console.log(`Switched to board: ${newBoardId}`);
+        console.log(`Switched to stub package target: ${newBoardId}`);
     } catch (err) {
         console.error(`Board switch failed:`, err);
         // Revert UI to current board
@@ -738,6 +889,54 @@ async function handleBoardChange(event) {
     } finally {
         loading.hidden = true;
         setLSPControlsDisabled(false);
+        setStubFilterApplicability();
+    }
+}
+
+async function handleStubFilterChange(event) {
+    const fields = {
+        stubFamily: 'family',
+        stubVersion: 'version',
+        stubPort: 'port',
+        stubBoard: 'board',
+    };
+    const field = fields[event.target.id];
+    if (!field) return;
+
+    const previousFilters = { ...currentStubFilters };
+    const previousTargetId = currentBoardId;
+    currentStubFilters[field] = event.target.value;
+    if (field === 'family') {
+        currentStubFilters.version = event.target.value === 'micropython'
+            ? defaultMicropythonVersion
+            : '';
+        currentStubFilters.port = event.target.value === 'micropython' ? 'esp32' : '';
+        currentStubFilters.board = event.target.value === 'micropython' ? 'GENERIC' : '';
+    } else if (field === 'port') {
+        currentStubFilters.board = 'GENERIC';
+    }
+    populateStubTargetControls(null);
+
+    const loading = document.getElementById('boardLoading');
+    try {
+        loading.hidden = false;
+        setLSPControlsDisabled(true);
+        if (lspClient && lspTransport && currentBoardId) {
+            await ensureSelectedStubPackage(currentBoardId);
+            await restartLSPWithCurrentSettings(currentBoardId);
+        }
+        persistStubTargetSelection();
+        void loadStubPackageCatalog().catch((error) => {
+            console.warn('Could not refresh the filtered PyPI package catalog:', error);
+        });
+    } catch (error) {
+        console.error('Stub package filter change failed:', error);
+        currentStubFilters = previousFilters;
+        populateStubTargetControls(previousTargetId);
+    } finally {
+        loading.hidden = true;
+        setLSPControlsDisabled(false);
+        setStubFilterApplicability();
     }
 }
 
@@ -1330,6 +1529,7 @@ async function initializeEditor() {
             // Re-apply selected board/workspace settings once UI/OPFS is ready.
             if (currentBoardId) {
                 await refreshInstalledStubPackages();
+                await ensureSelectedStubPackage(currentBoardId);
                 await restartLSPWithCurrentSettings(currentBoardId);
                 await refreshInstalledStubPackages();
                 void loadStubPackageCatalog().catch((error) => {
@@ -1878,6 +2078,9 @@ document.getElementById('helpBtn').addEventListener('click', () => {
     panel.hidden = !panel.hidden;
 });
 document.getElementById('loadSampleBtn').addEventListener('click', loadSample);
+for (const id of ['stubFamily', 'stubVersion', 'stubPort', 'stubBoard']) {
+    document.getElementById(id).addEventListener('change', handleStubFilterChange);
+}
 document.getElementById('typeCheckMode').addEventListener('change', handleTypeCheckModeChange);
 document.getElementById('typeshedPathToggle').addEventListener('change', handleTypeshedPathToggleChange);
 document.getElementById('pythonVersion').addEventListener('change', handlePythonVersionChange);

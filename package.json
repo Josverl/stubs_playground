@@ -10,6 +10,7 @@
     "build:worker": "webpack --mode production",
     "build:worker:dev": "webpack --mode development",
     "build:typeshed": "uv run scripts/pack-typeshed.py",
+    "sync:stub-package-catalog": "uv run python scripts/sync-stub-package-catalog.py",
     "generate:component-config": "node scripts/generate-component-config.mjs",
     "check:component-config": "node scripts/generate-component-config.mjs --check",
     "check:worker-protocol-types": "node scripts/check-worker-protocol-types.mjs",
