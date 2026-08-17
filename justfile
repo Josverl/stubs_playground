@@ -24,10 +24,12 @@ build:
     just pack
     npx webpack --mode production
 
-# build the Pyright web worker (development, with source maps)
+# build the Pyright web worker (development, unminified); overwrites the tracked dist/ artifact
 build-dev:
     npm run generate:component-config
     npx webpack --mode development
+    @echo "NOTE: dist/pyright_worker.js is now an unminified DEVELOPMENT build."
+    @echo "      Run 'just build' before committing or releasing."
 
 # build Sphinx API documentation and fail on warnings
 docs:
@@ -50,6 +52,7 @@ pack:
 rebuild:
     npm install --ignore-scripts
     npm run generate:component-config
+    just pack
     npx webpack --mode production
 
 # stage the static GitHub Pages tree
@@ -240,6 +243,19 @@ _release-npm component package_json:
         raise SystemExit(
             result.stderr.strip() or f"Unable to query remote tag {request_tag}."
         )
+
+    # The workflow tags the release as <component>-v<version> and those tags are immutable.
+    version_tag = f"{component}-v{version}"
+    existing = git(
+        "ls-remote",
+        "--exit-code",
+        "--tags",
+        "origin",
+        f"refs/tags/{version_tag}",
+        check=False,
+    )
+    if existing.returncode == 0:
+        raise SystemExit(f"Version tag {version_tag} already exists; cut a new version.")
 
     short_sha = git("rev-parse", "--short", "HEAD").stdout.strip()
     print(

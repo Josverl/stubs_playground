@@ -120,11 +120,19 @@ jobs:
             exit 1
           fi
 
+          # Version tags are immutable, matching the historical release-cdn.yml convention.
+          tag="${component}-v${version}"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "::error::Tag ${tag} already exists — tags are immutable. Cut a new version."
+            exit 1
+          fi
+
           echo "component=$component" >> "$GITHUB_OUTPUT"
           echo "package_dir=$package_dir" >> "$GITHUB_OUTPUT"
           echo "package_name=$package_name" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "npm_tag=$npm_tag" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "source_ref=$source_ref" >> "$GITHUB_OUTPUT"
           echo "source_sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
 
@@ -236,6 +244,45 @@ jobs:
           echo "::error::npm did not serve $PACKAGE_NAME@$VERSION after publication."
           exit 1
 
+      - name: Create and push the immutable version tag
+        if: steps.publish.outcome == 'success'
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          PACKAGE_NAME: ${{ steps.meta.outputs.package_name }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git tag -a "$TAG" -m "$PACKAGE_NAME@$VERSION"
+          git push origin "refs/tags/${TAG}"
+
+      - name: Create draft GitHub release
+        if: steps.publish.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          PACKAGE_NAME: ${{ steps.meta.outputs.package_name }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          NPM_TAG: ${{ steps.meta.outputs.npm_tag }}
+          SOURCE_REF: ${{ steps.meta.outputs.source_ref }}
+          SOURCE_SHA: ${{ steps.meta.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          notes=$(printf '%s\n' \
+            "Published [\`$PACKAGE_NAME@$VERSION\`](https://www.npmjs.com/package/$PACKAGE_NAME/v/$VERSION) to npm under the \`$NPM_TAG\` tag." \
+            "" \
+            "Source: \`$SOURCE_REF\` at \`$SOURCE_SHA\`" \
+            "" \
+            "\`\`\`bash" \
+            "npm install $PACKAGE_NAME@$VERSION" \
+            "\`\`\`")
+          gh release create "$TAG" \
+            --draft \
+            --title "$PACKAGE_NAME@$VERSION" \
+            --notes "$notes" \
+            --target "$SOURCE_SHA"
+
       - name: Remove release request tag
         if: always() && github.event_name == 'push' && steps.publish.outcome == 'success'
         env:
@@ -250,5 +297,7 @@ jobs:
             echo ""
             echo "Source: \`${{ steps.meta.outputs.source_ref }}\` at \`${{ steps.meta.outputs.source_sha }}\`"
             echo ""
-            echo "https://www.npmjs.com/package/${{ steps.meta.outputs.package_name }}/v/${{ steps.meta.outputs.version }}"
+            echo "- npm: https://www.npmjs.com/package/${{ steps.meta.outputs.package_name }}/v/${{ steps.meta.outputs.version }}"
+            echo "- tag: \`${{ steps.meta.outputs.tag }}\`"
+            echo "- release: draft created for \`${{ steps.meta.outputs.tag }}\` (review and publish it)"
           } >> "$GITHUB_STEP_SUMMARY"
