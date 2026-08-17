@@ -48,9 +48,9 @@ import { logVerbose } from './logging.js';
  * @property {string} id - Stable catalog identifier.
  * @property {string} packageName - PyPI distribution name.
  * @property {string} label - Human-readable package label.
- * @property {'stdlib'|'runtime'} kind - Package role.
- * @property {'micropython'|'circuitpython'} family - Runtime family.
- * @property {string[]} runtimeVersions - Compatible runtime releases.
+ * @property {'stdlib'|'firmware'} kind - Package role.
+ * @property {'micropython'|'circuitpython'} family - Firmware family.
+ * @property {string[]} firmwareVersions - Compatible firmware releases.
  * @property {string} port - MicroPython port, when applicable.
  * @property {string} board - MicroPython board, when applicable.
  * @property {string} latestVersion - Latest stable installable version.
@@ -604,7 +604,7 @@ export class WorkerTransport {
      * unavailable PyPI project does not discard the rest of the catalog.
      *
     * @param {{family?: string, version?: string, port?: string, board?: string}} [filters={}] -
-    *   Runtime metadata used to limit package and PyPI release discovery.
+    *   Firmware metadata used to limit package and PyPI release discovery.
     * @returns {Promise<StubPackageCatalogEntry[]>} Catalog entries and installable versions.
      * @throws {Error} If disconnected, the worker rejects the request, or it times out.
      */
@@ -625,9 +625,9 @@ export class WorkerTransport {
     }
 
     /**
-     * Query packages matching the supplied runtime filters. When family and
+     * Query packages matching the supplied firmware filters. When family and
      * version are omitted, the worker uses MicroPython and its highest stable
-     * available runtime version.
+     * available firmware version.
      *
      * @param {{family?: string, version?: string, port?: string, board?: string}} [filters={}]
      * @returns {Promise<StubPackageCatalogEntry[]>}

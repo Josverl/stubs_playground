@@ -52,7 +52,7 @@ def test_build_catalog_includes_circuitpython_placeholder():
         "id": "circuitpython",
         "packageName": "circuitpython-stubs",
         "label": "CircuitPython",
-        "kind": "runtime",
+        "kind": "firmware",
         "family": "circuitpython",
         "runtimeVersions": [],
         "port": "",

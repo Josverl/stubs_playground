@@ -12,7 +12,7 @@ const packages = [
     {
         id: 'micropython-rp2-rpi-pico-stubs',
         packageName: 'micropython-rp2-rpi-pico-stubs',
-        kind: 'runtime',
+        kind: 'firmware',
         family: 'micropython',
         runtimeVersions: ['1.27.0', '1.28.0'],
         port: 'rp2',
@@ -21,7 +21,7 @@ const packages = [
     {
         id: 'micropython-rp2-stubs',
         packageName: 'micropython-rp2-stubs',
-        kind: 'runtime',
+        kind: 'firmware',
         family: 'micropython',
         runtimeVersions: ['1.26.1', '1.27.0', '1.28.0'],
         port: 'rp2',
@@ -30,7 +30,7 @@ const packages = [
     {
         id: 'circuitpython-stubs',
         packageName: 'circuitpython-stubs',
-        kind: 'runtime',
+        kind: 'firmware',
         family: 'circuitpython',
         runtimeVersions: [],
         port: '',

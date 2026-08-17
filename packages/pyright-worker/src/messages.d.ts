@@ -46,8 +46,6 @@ export interface StubPackageCatalogEntry {
     id: string;
     packageName: string;
     label: string;
-    kind: "stdlib" | "runtime";
-    family: "micropython" | "circuitpython";
     runtimeVersions: string[];
     port: string;
     board: string;

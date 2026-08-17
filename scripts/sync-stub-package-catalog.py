@@ -66,7 +66,7 @@ def build_catalog(source_data: dict, source: str = DEFAULT_SOURCE) -> dict:
             {
                 "packageName": normalized_name,
                 "label": package_name.removesuffix("-stubs"),
-                "kind": "runtime",
+                "kind": "firmware",
                 "family": "micropython",
                 "runtimeVersions": set(),
                 "port": normalized_port,
@@ -116,7 +116,7 @@ def build_catalog(source_data: dict, source: str = DEFAULT_SOURCE) -> dict:
             "id": "circuitpython",
             "packageName": "circuitpython-stubs",
             "label": "CircuitPython",
-            "kind": "runtime",
+            "kind": "firmware",
             "family": "circuitpython",
             "runtimeVersions": [],
             "port": "",

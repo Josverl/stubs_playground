@@ -100,7 +100,7 @@ function packageCatalog(): StubPackageCatalogEntry[] {
             typeof candidate.id !== "string"
             || typeof candidate.packageName !== "string"
             || typeof candidate.label !== "string"
-            || (kind !== "stdlib" && kind !== "runtime")
+            || (kind !== "stdlib" && kind !== "firmware")
             || (family !== "micropython" && family !== "circuitpython")
             || !Array.isArray(candidate.runtimeVersions)
             || !candidate.runtimeVersions.every((version) => typeof version === "string")
@@ -386,7 +386,7 @@ function parseCatalogDependency(requirement: string): {
 
     const entry = catalogEntry(match[1]);
     if (!entry) return undefined;
-    if (entry.kind === "runtime") {
+    if (entry.kind === "firmware") {
         throw new Error(`Board stub package cannot be installed as a dependency: ${entry.packageName}`);
     }
     return {
@@ -700,7 +700,7 @@ async function saveCachedPackage(record: CachedStubPackage, deadlineAt: number):
 export function isBoardStubPackage(packageName: string): boolean {
     const normalizedName = normalizePackageName(packageName);
     return isReservedBoardPackageName(normalizedName) || packageCatalog().some((entry) => (
-        entry.kind === "runtime" && entry.packageName === normalizedName
+        entry.kind === "firmware" && entry.packageName === normalizedName
     ));
 }
 
@@ -712,7 +712,7 @@ function matchesCatalogFilters(
     entry: StubPackageCatalogEntry,
     filters: StubPackageFilters,
 ): boolean {
-    if (entry.kind !== "runtime") return false;
+    if (entry.kind !== "firmware") return false;
     if (filters.family && entry.family !== filters.family) return false;
     const requestedVersion = majorMinorVersion(filters.version || "");
     if (

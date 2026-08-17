@@ -188,7 +188,7 @@ def test_worker_transport_defaults_to_highest_stable_runtime(page, test_page_url
     """Unfiltered discovery uses the catalog's highest stable MicroPython release."""
     page.goto(test_page_url, wait_until="domcontentloaded")
 
-    result = page.evaluate("""() => window.runTest('stub-package-default-runtime')""")
+    result = page.evaluate("""() => window.runTest('stub-package-default-firmware')""")
 
     assert result["success"] is True
     assert result["defaultRuntimeVersion"] == result["availableRuntimeVersions"][0]

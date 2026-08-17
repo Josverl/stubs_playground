@@ -47,7 +47,7 @@ export function filterStubPackages(packages, filters = {}) {
     const selectedVersion = majorMinor(selected.version);
 
     return (packages || []).filter((entry) => {
-        if (entry.kind !== 'runtime' || !sameValue(entry.family, selected.family)) return false;
+        if (entry.kind !== 'firmware' || !sameValue(entry.family, selected.family)) return false;
         if (selectedVersion && !entry.runtimeVersions?.some(
             version => majorMinor(version) === selectedVersion,
         )) return false;

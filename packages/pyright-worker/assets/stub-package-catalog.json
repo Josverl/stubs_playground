@@ -32,7 +32,7 @@
     {
       "packageName": "micropython-esp32-esp32-generic-c3-stubs",
       "label": "micropython-esp32-esp32_generic_c3",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -46,7 +46,7 @@
     {
       "packageName": "micropython-esp32-esp32-generic-c5-stubs",
       "label": "micropython-esp32-esp32_generic_c5",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0"
@@ -58,7 +58,7 @@
     {
       "packageName": "micropython-esp32-esp32-generic-c6-stubs",
       "label": "micropython-esp32-esp32_generic_c6",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -74,7 +74,7 @@
     {
       "packageName": "micropython-esp32-esp32-generic-s2-stubs",
       "label": "micropython-esp32-esp32_generic_s2",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -89,7 +89,7 @@
     {
       "packageName": "micropython-esp32-esp32-generic-s3-stubs",
       "label": "micropython-esp32-esp32_generic_s3",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -106,7 +106,7 @@
     {
       "packageName": "micropython-esp32-esp32-generic-stubs",
       "label": "micropython-esp32-esp32_generic",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -125,7 +125,7 @@
     {
       "packageName": "micropython-esp32-generic-ota-stubs",
       "label": "micropython-esp32-generic_ota",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.20.0"
@@ -137,7 +137,7 @@
     {
       "packageName": "micropython-esp32-generic-s3-stubs",
       "label": "micropython-esp32-generic_s3",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.20.0",
@@ -150,7 +150,7 @@
     {
       "packageName": "micropython-esp32-generic-spiram-stubs",
       "label": "micropython-esp32-generic_spiram",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.19.1"
@@ -162,7 +162,7 @@
     {
       "packageName": "micropython-esp32-ota-stubs",
       "label": "micropython-esp32-ota",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.20.0"
@@ -174,7 +174,7 @@
     {
       "packageName": "micropython-esp32-s3-stubs",
       "label": "micropython-esp32-s3",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.20.0",
@@ -187,7 +187,7 @@
     {
       "packageName": "micropython-esp32-stubs",
       "label": "micropython-esp32",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -210,7 +210,7 @@
     {
       "packageName": "micropython-esp32-um-tinypico-stubs",
       "label": "micropython-esp32-um_tinypico",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.19.1"
@@ -222,7 +222,7 @@
     {
       "packageName": "micropython-esp8266-esp8266-generic-stubs",
       "label": "micropython-esp8266-esp8266_generic",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -238,7 +238,7 @@
     {
       "packageName": "micropython-esp8266-stubs",
       "label": "micropython-esp8266",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -258,7 +258,7 @@
     {
       "packageName": "micropython-mimxrt-mimxrt1010-evk-stubs",
       "label": "micropython-mimxrt-mimxrt1010_evk",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.26.1"
@@ -270,7 +270,7 @@
     {
       "packageName": "micropython-mimxrt-seeed-arch-mix-stubs",
       "label": "micropython-mimxrt-seeed_arch_mix",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.26.1"
@@ -282,7 +282,7 @@
     {
       "packageName": "micropython-mimxrt-stubs",
       "label": "micropython-mimxrt",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.26.1"
@@ -294,7 +294,7 @@
     {
       "packageName": "micropython-rp2-arduino-nano-rp2040-connect-stubs",
       "label": "micropython-rp2-arduino_nano_rp2040_connect",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -309,7 +309,7 @@
     {
       "packageName": "micropython-rp2-pico-stubs",
       "label": "micropython-rp2-pico",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.20.0"
@@ -321,7 +321,7 @@
     {
       "packageName": "micropython-rp2-pico-w-stubs",
       "label": "micropython-rp2-pico_w",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.20.0"
@@ -333,7 +333,7 @@
     {
       "packageName": "micropython-rp2-pimoroni-picolipo-16mb-stubs",
       "label": "micropython-rp2-pimoroni_picolipo_16mb",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.20.0"
@@ -345,7 +345,7 @@
     {
       "packageName": "micropython-rp2-pimoroni-picolipo-16mb-stubs",
       "label": "micropython-rp2-pimoroni_picolipo_16mb",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.22.0"
@@ -357,7 +357,7 @@
     {
       "packageName": "micropython-rp2-pimoroni-picolipo-stubs",
       "label": "micropython-rp2-pimoroni_picolipo",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.27.0",
@@ -370,7 +370,7 @@
     {
       "packageName": "micropython-rp2-rpi-pico-stubs",
       "label": "micropython-rp2-rpi_pico",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -390,7 +390,7 @@
     {
       "packageName": "micropython-rp2-rpi-pico-w-stubs",
       "label": "micropython-rp2-rpi_pico_w",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -409,7 +409,7 @@
     {
       "packageName": "micropython-rp2-rpi-pico2-stubs",
       "label": "micropython-rp2-rpi_pico2",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -425,7 +425,7 @@
     {
       "packageName": "micropython-rp2-rpi-pico2-w-stubs",
       "label": "micropython-rp2-rpi_pico2_w",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -440,7 +440,7 @@
     {
       "packageName": "micropython-rp2-stubs",
       "label": "micropython-rp2",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -464,7 +464,7 @@
     {
       "packageName": "micropython-rp2-waveshare-rp2040-zero-stubs",
       "label": "micropython-rp2-waveshare_rp2040_zero",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0"
@@ -476,7 +476,7 @@
     {
       "packageName": "micropython-samd-adafruit-feather-m4-express-stubs",
       "label": "micropython-samd-adafruit_feather_m4_express",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.20.0"
@@ -488,7 +488,7 @@
     {
       "packageName": "micropython-samd-adafruit-itsybitsy-m4-express-stubs",
       "label": "micropython-samd-adafruit_itsybitsy_m4_express",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.20.0"
@@ -500,7 +500,7 @@
     {
       "packageName": "micropython-samd-minisam-m4-stubs",
       "label": "micropython-samd-minisam_m4",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.20.0"
@@ -512,7 +512,7 @@
     {
       "packageName": "micropython-samd-seeed-wio-terminal-stubs",
       "label": "micropython-samd-seeed_wio_terminal",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -533,7 +533,7 @@
     {
       "packageName": "micropython-samd-stubs",
       "label": "micropython-samd",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -554,7 +554,7 @@
     {
       "packageName": "micropython-stdlib-stubs",
       "label": "micropython-stdlib",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.26.0"
@@ -566,7 +566,7 @@
     {
       "packageName": "micropython-stm32-pybv11-stubs",
       "label": "micropython-stm32-pybv11",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -586,7 +586,7 @@
     {
       "packageName": "micropython-stm32-stubs",
       "label": "micropython-stm32",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -609,7 +609,7 @@
     {
       "packageName": "micropython-unix-stubs",
       "label": "micropython-unix",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -626,7 +626,7 @@
     {
       "packageName": "micropython-webassembly-stubs",
       "label": "micropython-webassembly",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -642,7 +642,7 @@
     {
       "packageName": "micropython-windows-stubs",
       "label": "micropython-windows",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "micropython",
       "runtimeVersions": [
         "1.28.0",
@@ -658,7 +658,7 @@
       "id": "circuitpython",
       "packageName": "circuitpython-stubs",
       "label": "CircuitPython",
-      "kind": "runtime",
+      "kind": "firmware",
       "family": "circuitpython",
       "runtimeVersions": [],
       "port": "",

@@ -832,7 +832,7 @@ async function initBoardSelector() {
         if (!micropythonVersionOptions.includes(currentStubFilters.version)) {
             currentStubFilters.version = defaultMicropythonVersion;
         }
-        stubPackageCatalog = (catalogDocument.packages || []).filter((entry) => entry.kind === 'runtime');
+        stubPackageCatalog = (catalogDocument.packages || []).filter((entry) => entry.kind === 'firmware');
 
         const saved = localStorage.getItem('mp_board');
         const preferredTargetId = stubPackageCatalog.some((entry) => entry.id === saved)
