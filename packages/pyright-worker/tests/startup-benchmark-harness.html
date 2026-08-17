@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Pyright worker startup benchmark</title>
+</head>
+
+<body>
+    <div id="status">idle</div>
+    <script>
+        /*
+         * SPDX-FileCopyrightText: 2026 Jos Verlinde
+         * SPDX-License-Identifier: MIT
+         *
+         * Drives the worker over its own published control-plane + LSP protocol so the
+         * measurement stays independent of any client library.
+         */
+
+        const WORKER_URL = '../dist/pyright_worker.js';
+
+        function initializeParams(rootUri) {
+            return {
+                processId: null,
+                rootUri,
+                rootPath: '/workspace',
+                workspaceFolders: [{uri: rootUri, name: 'workspace'}],
+                capabilities: {
+                    workspace: {
+                        configuration: true,
+                        didChangeConfiguration: {dynamicRegistration: false},
+                    },
+                    textDocument: {
+                        synchronization: {
+                            dynamicRegistration: false,
+                            willSave: false,
+                            willSaveWaitUntil: false,
+                            didSave: false,
+                        },
+                        hover: {dynamicRegistration: false, contentFormat: ['plaintext', 'markdown']},
+                        diagnostic: {dynamicRegistration: false},
+                    },
+                },
+            };
+        }
+
+        function analysisSettings({typeshedPath, typeCheckingMode, pythonVersion}) {
+            return {
+                python: {
+                    analysis: {
+                        typeshedPaths: [typeshedPath],
+                        stubPath: '/typings',
+                        include: ['/workspace'],
+                        extraPaths: [],
+                        typeCheckingMode,
+                        diagnosticMode: 'openFilesOnly',
+                        diagnosticSeverityOverrides: {reportMissingModuleSource: 'none'},
+                    },
+                    pythonVersion,
+                    pythonPlatform: 'Linux',
+                },
+            };
+        }
+
+        window.measureWorkerStartup = function measureWorkerStartup(options = {}) {
+            const {
+                typeCheckingMode = 'standard',
+                typeshedPath = '/typeshed-fallback',
+                pythonVersion = '3.11',
+                code = 'import machine\n\nled = machine.Pin(2, machine.Pin.OUT)\n',
+                fileUri = 'file:///workspace/main.py',
+                timeoutMs = 180000,
+            } = options;
+
+            return new Promise((resolve, reject) => {
+                const marks = {};
+                const started = performance.now();
+                let initSent = 0;
+                let lspSent = 0;
+                let analysisSent = 0;
+                let worker;
+
+                const timer = setTimeout(() => {
+                    worker?.terminate();
+                    reject(new Error(`startup benchmark timed out after ${timeoutMs}ms`));
+                }, timeoutMs);
+
+                const fail = (message) => {
+                    clearTimeout(timer);
+                    worker?.terminate();
+                    reject(new Error(message));
+                };
+
+                worker = new Worker(WORKER_URL);
+
+                worker.onerror = (event) => fail(event.message || 'worker error');
+
+                worker.onmessage = (event) => {
+                    const msg = event.data;
+
+                    if (msg && msg.type === 'serverLoaded') {
+                        marks.workerLoad = performance.now() - started;
+                        initSent = performance.now();
+                        worker.postMessage({
+                            type: 'initServer',
+                            userFiles: {},
+                            workspaceFiles: {},
+                            typeshedFallback: undefined,
+                            boardStubs: undefined,
+                            typeCheckingMode,
+                            typeshedPath,
+                            pythonVersion,
+                            // Startup timings are only reported in verbose mode.
+                            verboseOutput: true,
+                        });
+                        return;
+                    }
+
+                    if (msg && msg.type === 'serverInitialized') {
+                        marks.initServer = performance.now() - initSent;
+                        if (msg.startupTimings) {marks.startupTimings = msg.startupTimings;}
+                        lspSent = performance.now();
+                        worker.postMessage({
+                            jsonrpc: '2.0',
+                            id: 1,
+                            method: 'initialize',
+                            params: initializeParams('file:///workspace'),
+                        });
+                        return;
+                    }
+
+                    if (msg && msg.type === 'serverError') {
+                        fail(msg.error || 'server error');
+                        return;
+                    }
+
+                    if (!msg || msg.jsonrpc !== '2.0') {return;}
+
+                    if (msg.id === 1 && msg.result) {
+                        marks.lspInitialize = performance.now() - lspSent;
+                        worker.postMessage({jsonrpc: '2.0', method: 'initialized', params: {}});
+                        worker.postMessage({
+                            jsonrpc: '2.0',
+                            method: 'workspace/didChangeConfiguration',
+                            params: {settings: analysisSettings({typeshedPath, typeCheckingMode, pythonVersion})},
+                        });
+                        analysisSent = performance.now();
+                        worker.postMessage({
+                            jsonrpc: '2.0',
+                            method: 'textDocument/didOpen',
+                            params: {
+                                textDocument: {uri: fileUri, languageId: 'python', version: 1, text: code},
+                            },
+                        });
+                        return;
+                    }
+
+                    // Server-to-client request: mirror the production client and answer null.
+                    if (msg.id !== undefined && msg.method) {
+                        worker.postMessage({jsonrpc: '2.0', id: msg.id, result: null});
+                        return;
+                    }
+
+                    if (msg.method === 'textDocument/publishDiagnostics' && msg.params?.uri === fileUri) {
+                        marks.firstAnalysis = performance.now() - analysisSent;
+                        marks.total = performance.now() - started;
+                        marks.diagnosticCount = msg.params.diagnostics.length;
+                        marks.diagnostics = msg.params.diagnostics.map((d) => ({
+                            message: d.message,
+                            severity: d.severity,
+                            line: d.range?.start?.line,
+                        }));
+                        clearTimeout(timer);
+                        worker.terminate();
+                        resolve(marks);
+                    }
+                };
+            });
+        };
+
+        window.__benchmarkReady = true;
+    </script>
+</body>
+
+</html>

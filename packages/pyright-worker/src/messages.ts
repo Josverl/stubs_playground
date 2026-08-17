@@ -140,6 +140,8 @@ export interface MsgClearStubPackagesResult {
 export interface MsgServerInitialized {
     type: "serverInitialized";
     pyrightVersion: string;
+    /** Per-phase init timings in ms; only sent when `verboseOutput` is enabled */
+    startupTimings?: Record<string, number>;
 }
 
 export interface MsgServerError {

@@ -391,10 +391,19 @@ function writePyprojectToml(options: {
  */
 async function handleInitServer(msg: MsgInitServer) {
     setVerboseOutput(msg.verboseOutput);
+    const startupTimings: Record<string, number> = {};
+    const timePhase = async <T>(name: string, run: () => T | Promise<T>): Promise<T> => {
+        const start = performance.now();
+        try {
+            return await run();
+        } finally {
+            startupTimings[name] = Math.round(performance.now() - start);
+        }
+    };
     try {
         let cachedPackages: Awaited<ReturnType<typeof activeCachedStubPackages>> = [];
         try {
-            cachedPackages = await activeCachedStubPackages();
+            cachedPackages = await timePhase("stubCache", () => activeCachedStubPackages());
         } catch (error) {
             if (msg.boardStubPackage && msg.boardStubPackage.fallbackToBundled !== true) {
                 throw error;
@@ -426,7 +435,7 @@ async function handleInitServer(msg: MsgInitServer) {
         if (!selectedBoardPackage && msg.boardStubsUrl && boardStubs === undefined) {
             boardStubs = await fetchBoardStubsArchive(msg.boardStubsUrl);
         }
-        await initFs(selectedBoardPackage ? false : boardStubs);
+        await timePhase("mountFs", () => initFs(selectedBoardPackage ? false : boardStubs));
 
         if (selectedBoardPackage) {
             writePackageFiles("/typings", selectedBoardPackage.files);
@@ -540,10 +549,14 @@ async function handleInitServer(msg: MsgInitServer) {
         const connection = createConnection(reader, writer);
 
         // Create PyrightServer — this is the core Pyright engine
-        const server = new PyrightServer(connection as any, 0);
+        const server = await timePhase("createServer", () => new PyrightServer(connection as any, 0));
 
         logVerbose("[pyright-worker] Pyright server created, signaling ready");
-        ctx.postMessage({ type: "serverInitialized", pyrightVersion: __PYRIGHT_VERSION__ } as WorkerMessage);
+        ctx.postMessage({
+            type: "serverInitialized",
+            pyrightVersion: __PYRIGHT_VERSION__,
+            ...(msg.verboseOutput ? { startupTimings } : {}),
+        } as WorkerMessage);
     } catch (err: any) {
         console.error("[pyright-worker] Init failed:", err);
         ctx.postMessage({

@@ -18,7 +18,10 @@ TYPESHED_SRC = ROOT / "node_modules/pyright/packages/pyright-internal/typeshed-f
 ASSETS_DIR = ROOT / "packages" / "pyright-worker" / "assets"
 OUT_FILE = ASSETS_DIR / "typeshed-fallback.zip"
 
-INCLUDE_DIRS = ["stdlib", "stubs"]
+# typeshed's third-party `stubs/` tree is 4043 of 4627 entries but only covers CPython
+# packages (requests, PyYAML, ...) that cannot run on a microcontroller. Excluding it
+# cuts the browser mount from ~409 ms to ~29 ms.
+INCLUDE_DIRS = ["stdlib"]
 INCLUDE_FILES = ["LICENSE"]
 
 
