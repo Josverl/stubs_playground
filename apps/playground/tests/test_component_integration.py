@@ -3,7 +3,7 @@
 import json
 import re
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 import pytest
@@ -36,7 +36,12 @@ def _published_component_available(url: str, timeout: float = 8.0) -> bool:
         try:
             request = Request(url, method=method)
             with urlopen(request, timeout=timeout) as response:
-                return response.status == 200
+                if response.status == 200:
+                    return True
+                continue
+        except HTTPError as error:
+            if method == "HEAD" and error.code in {403, 405}:
+                continue
         except (URLError, TimeoutError, ValueError):
             continue
     return False
