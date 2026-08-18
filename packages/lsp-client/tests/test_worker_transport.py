@@ -4,11 +4,17 @@ Verifies that the WorkerTransport correctly wraps the Pyright Web Worker
 and provides the same transport interface.
 """
 
+import json
 from pathlib import Path
 
 import pytest
 
 _worker_js = Path(__file__).parents[3] / "packages" / "pyright-worker" / "dist" / "pyright_worker.js"
+_catalog = json.loads(
+    (Path(__file__).parents[3] / "packages" / "pyright-worker" / "assets" / "stub-package-catalog.json").read_text(
+        encoding="utf-8"
+    )
+)
 pytestmark = [
     pytest.mark.worker,
     pytest.mark.skipif(
@@ -178,6 +184,19 @@ def test_worker_transport_lists_current_pypi_stub_releases(page, test_page_url):
     assert result["errors"] == []
 
 
+def test_worker_transport_defaults_to_highest_stable_runtime(page, test_page_url):
+    """Unfiltered discovery uses the catalog's highest stable MicroPython release."""
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate("""() => window.runTest('stub-package-default-firmware')""")
+
+    assert result["success"] is True
+    assert result["defaultRuntimeVersion"] == result["availableRuntimeVersions"][0]
+    assert result["defaultRuntimeVersion"] == _catalog["defaultRuntimeVersion"]
+    assert result["packageCount"] > 0
+    assert result["allPackagesMatchDefault"] is True
+
+
 def test_worker_transport_rejects_uncatalogued_stub_packages(page, test_page_url):
     """Direct install requests cannot bypass the worker's supported package catalog."""
     page.goto(test_page_url, wait_until="domcontentloaded")
@@ -185,7 +204,7 @@ def test_worker_transport_rejects_uncatalogued_stub_packages(page, test_page_url
     result = page.evaluate("""() => window.runTest('stub-package-rejects-uncatalogued')""")
 
     assert result["success"] is True
-    assert result["message"] == "Stub package is not supported: circuitpython-stubs"
+    assert result["message"] == "Stub package is not supported: micropython-not-a-real-port-stubs"
 
 
 def test_worker_transport_installs_unlisted_type_only_packages(page, test_page_url):

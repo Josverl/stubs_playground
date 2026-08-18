@@ -211,7 +211,11 @@
             async 'stub-package-catalog'() {
                 const t = new WorkerTransport('../../pyright-worker/dist/pyright_worker.js');
                 await t.connect();
-                const packages = await t.listStubPackages();
+                const packages = await t.listStubPackages({
+                    family: 'micropython',
+                    version: '1.28.0',
+                    port: 'esp32',
+                });
                 t.close();
                 const esp32 = packages.find((entry) =>
                     entry.packageName === 'micropython-esp32-stubs'
@@ -233,11 +237,34 @@
                 };
             },
 
+            async 'stub-package-default-firmware'() {
+                const t = new WorkerTransport('../../pyright-worker/dist/pyright_worker.js');
+                await t.connect();
+                try {
+                    const catalog = await t.getStubPackageCatalog();
+                    const defaultLine = catalog.defaultRuntimeVersion.split('.').slice(0, 2).join('.');
+                    return {
+                        success: true,
+                        availableRuntimeVersions: catalog.availableRuntimeVersions,
+                        defaultRuntimeVersion: catalog.defaultRuntimeVersion,
+                        packageCount: catalog.packages.length,
+                        allPackagesMatchDefault: catalog.packages.every((entry) =>
+                            entry.family === 'micropython'
+                            && entry.runtimeVersions.some((version) =>
+                                version.split('.').slice(0, 2).join('.') === defaultLine
+                            )
+                        ),
+                    };
+                } finally {
+                    t.close();
+                }
+            },
+
             async 'stub-package-rejects-uncatalogued'() {
                 const t = new WorkerTransport('../../pyright-worker/dist/pyright_worker.js');
                 await t.connect();
                 try {
-                    await t.installStubPackage('circuitpython-stubs');
+                    await t.installStubPackage('micropython-not-a-real-port-stubs');
                     throw new Error('Uncatalogued stub package installation unexpectedly succeeded');
                 } catch (error) {
                     return {

@@ -91,6 +91,15 @@ test('workspace configuration exposes the requested Pyright diagnostic mode', ()
     assert.equal(configuration[0].diagnosticMode, 'workspace');
 });
 
+test('workspace configuration defaults to the MicroPython typeshed', () => {
+    const client = new SimpleLSPClient();
+    const configuration = client.requestHandlers.get('workspace/configuration')({
+        items: [{ section: 'python.analysis' }],
+    });
+
+    assert.deepEqual(configuration[0].typeshedPaths, ['/typeshed-micropython']);
+});
+
 test('workspace file methods send typed worker protocol messages', () => {
     const messages = [];
     const transport = new WorkerTransport('worker.js');
@@ -158,9 +167,11 @@ function connectedTransport() {
 test('stub package methods use correlated worker requests', async () => {
     const { transport, messages } = connectedTransport();
 
-    const catalogPromise = transport.listStubPackages();
+    const filters = { family: 'micropython', version: '1.28.0', port: 'esp32' };
+    const catalogPromise = transport.listStubPackages(filters);
     const catalogRequest = messages.shift();
     assert.equal(catalogRequest.type, 'listStubPackages');
+    assert.deepEqual(catalogRequest.filters, filters);
     transport._onSteadyStateMessage({
         data: {
             type: 'listStubPackagesResult',
@@ -171,10 +182,29 @@ test('stub package methods use correlated worker requests', async () => {
                 packageName: 'micropython-esp32-stubs',
                 versions: [{ version: '1.28.0.post4' }],
             }],
+            availableRuntimeVersions: ['1.28.0', '1.27.0', '1.26.1'],
+            defaultRuntimeVersion: '1.28.0',
         },
     });
     const catalog = await catalogPromise;
     assert.equal(catalog[0].packageName, 'micropython-esp32-stubs');
+
+    const metadataPromise = transport.getStubPackageCatalog();
+    const metadataRequest = messages.shift();
+    assert.deepEqual(metadataRequest.filters, {});
+    transport._onSteadyStateMessage({
+        data: {
+            type: 'listStubPackagesResult',
+            requestId: metadataRequest.requestId,
+            ok: true,
+            packages: [],
+            availableRuntimeVersions: ['1.28.0', '1.27.0', '1.26.1'],
+            defaultRuntimeVersion: '1.28.0',
+        },
+    });
+    const metadata = await metadataPromise;
+    assert.equal(metadata.defaultRuntimeVersion, '1.28.0');
+    assert.deepEqual(metadata.availableRuntimeVersions.slice(0, 3), ['1.28.0', '1.27.0', '1.26.1']);
 
     const installPromise = transport.installStubPackage(
         'micropython-esp32-stubs',
