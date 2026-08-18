@@ -282,6 +282,10 @@ body.light-theme .file-tree__header { color: #555; }
     overflow: visible;
 }
 
+#options-panel .stub-family-selector,
+#options-panel .stub-version-selector,
+#options-panel .stub-port-selector,
+#options-panel .stub-board-selector,
 #options-panel .board-selector,
 #options-panel .typecheck-selector,
 #options-panel .typeshed-toggle,
@@ -300,6 +304,10 @@ body.light-theme .file-tree__header { color: #555; }
     grid-template-columns: 1fr auto;
 }
 
+#options-panel .stub-family-selector label,
+#options-panel .stub-version-selector label,
+#options-panel .stub-port-selector label,
+#options-panel .stub-board-selector label,
 #options-panel .board-selector label,
 #options-panel .typecheck-selector label,
 #options-panel .typeshed-toggle label,
@@ -383,6 +391,10 @@ body.light-theme #options-panel .extra-stubs-status {
 }
 
 #options-panel .sample-selector select,
+#options-panel .stub-family-selector select,
+#options-panel .stub-version-selector select,
+#options-panel .stub-port-selector select,
+#options-panel .stub-board-selector select,
 #options-panel .board-selector select,
 #options-panel .typecheck-selector select,
 #options-panel .python-version-selector select {
@@ -530,12 +542,20 @@ body.light-theme #options-panel .generated-config-viewer button:hover {
     white-space: nowrap;
 }
 
+.stub-family-selector,
+.stub-version-selector,
+.stub-port-selector,
+.stub-board-selector,
 .board-selector {
     display: flex;
     gap: 4px;
     align-items: center;
 }
 
+.stub-family-selector label,
+.stub-version-selector label,
+.stub-port-selector label,
+.stub-board-selector label,
 .board-selector label,
 .typecheck-selector label,
 .typeshed-toggle label,
@@ -1689,7 +1709,7 @@ body.dark-theme .cm-hover-cpython-ref {
         --header-height: 90px;
         --footer-height: 0px;
         --panel-tabbar-offset: 40px;
-        --options-panel-width: min(92vw, 360px);
+        --options-panel-width: 100vw;
     }
 
     #helpBtn,
@@ -1757,6 +1777,7 @@ body.dark-theme .cm-hover-cpython-ref {
     #options-panel {
         top: calc(var(--header-height) + var(--panel-tabbar-offset));
         bottom: 10px;
+        z-index: 70;
     }
 }
 
