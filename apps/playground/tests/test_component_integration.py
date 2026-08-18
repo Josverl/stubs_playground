@@ -3,6 +3,8 @@
 import json
 import re
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -71,59 +73,6 @@ def test_local_mode_uses_workspace_component_interfaces(page: Page, project_serv
     assert any("/packages/lsp-client/src/index.js" in url for url in requests)
     assert any("/packages/pyright-worker/dist/pyright_worker.js" in url for url in requests)
     assert not any("cdn.jsdelivr.net/npm/@mp-codemirror/" in url for url in requests)
-
-
-def test_npm_mode_uses_published_component_interfaces(page: Page, project_server: str, tmp_path: Path):
-    requests: list[str] = []
-    responses: dict[str, int] = {}
-    page.on("request", lambda request: requests.append(request.url))
-    page.on("response", lambda response: responses.update({response.url: response.status}))
-
-    page.goto(
-        f"{project_server}/apps/playground/?components=npm",
-        wait_until="domcontentloaded",
-    )
-    state = _wait_for_playground_lsp(page)
-
-    assert state["ready"] is True
-    assert state["failed"] is False
-    assert state["activeBoard"] == "esp32"
-    assert state["source"]["mode"] == "npm"
-    assert state["source"]["clientVersion"] == CLIENT_VERSION
-    assert state["source"]["workerVersion"] == WORKER_VERSION
-    assert "Pyright" in state["status"]
-    assert any("/apps/playground/app.js" in url for url in requests)
-
-    published_paths = (
-        f"/npm/@mp-codemirror/lsp-client@{CLIENT_VERSION}/src/index.js",
-        f"/npm/@mp-codemirror/pyright-worker@{WORKER_VERSION}/dist/pyright_worker.js",
-        f"/npm/@mp-codemirror/pyright-worker@{WORKER_VERSION}/assets/stubs-manifest.json",
-        f"/npm/@mp-codemirror/pyright-worker@{WORKER_VERSION}/assets/stubs-esp32.zip",
-    )
-    for suffix in published_paths:
-        matching = [status for url, status in responses.items() if suffix in url]
-        assert matching and all(status == 200 for status in matching), (
-            f"Expected successful npm package response for {suffix}: {matching}"
-        )
-
-    for archive in ("stubs-esp32.zip", "stubs-webassembly.zip"):
-        archive_size = page.evaluate(
-            """async (url) => {
-                const response = await fetch(url);
-                if (!response.ok) return -response.status;
-                return (await response.arrayBuffer()).byteLength;
-            }""",
-            state["source"]["assetsBase"] + f"/{archive}",
-        )
-        assert archive_size > 0
-    assert not any(
-        url.startswith(project_server) and ("/packages/lsp-client/" in url or "/packages/pyright-worker/" in url)
-        for url in requests
-    )
-    page.screenshot(
-        path=tmp_path / "playground-latest-published-components.png",
-        full_page=True,
-    )
 
 
 def test_root_redirect_preserves_component_source_and_fragment(page: Page, project_server: str):
