@@ -6,6 +6,7 @@ import type {
     InstalledStubPackage,
     StubPackageCatalogEntry,
     StubPackageCatalogResultEntry,
+    StubPackageFilters,
     StubPackageRelease,
     StubPackageSelection,
 } from "./messages";
@@ -63,8 +64,27 @@ interface CachedStubPackage extends ExtraStubPackage {
     active: boolean;
 }
 
+interface StubPackageCatalogDocument {
+    packages: unknown;
+    availableRuntimeVersions: string[];
+    defaultRuntimeVersion: string;
+}
+
+function packageCatalogDocument(): StubPackageCatalogDocument {
+    const candidate = stubPackageCatalog as Record<string, unknown>;
+    if (
+        !Array.isArray(candidate.availableRuntimeVersions)
+        || !candidate.availableRuntimeVersions.every((version) => typeof version === "string")
+        || typeof candidate.defaultRuntimeVersion !== "string"
+        || candidate.availableRuntimeVersions[0] !== candidate.defaultRuntimeVersion
+    ) {
+        throw new Error("Stub package catalog runtime version metadata is invalid");
+    }
+    return candidate as unknown as StubPackageCatalogDocument;
+}
+
 function packageCatalog(): StubPackageCatalogEntry[] {
-    const packages = (stubPackageCatalog as { packages?: unknown }).packages;
+    const packages = packageCatalogDocument().packages;
     if (!Array.isArray(packages)) {
         throw new Error("Stub package catalog must contain a packages array");
     }
@@ -75,11 +95,17 @@ function packageCatalog(): StubPackageCatalogEntry[] {
         }
         const candidate = entry as Record<string, unknown>;
         const kind = candidate.kind;
+        const family = candidate.family;
         if (
             typeof candidate.id !== "string"
             || typeof candidate.packageName !== "string"
             || typeof candidate.label !== "string"
-            || (kind !== "stdlib" && kind !== "board")
+            || (kind !== "stdlib" && kind !== "firmware")
+            || (family !== "micropython" && family !== "circuitpython")
+            || !Array.isArray(candidate.runtimeVersions)
+            || !candidate.runtimeVersions.every((version) => typeof version === "string")
+            || typeof candidate.port !== "string"
+            || typeof candidate.board !== "string"
         ) {
             throw new Error(`Stub package catalog entry ${index} is invalid`);
         }
@@ -88,8 +114,20 @@ function packageCatalog(): StubPackageCatalogEntry[] {
             packageName: normalizePackageName(candidate.packageName),
             label: candidate.label,
             kind,
+            family,
+            runtimeVersions: candidate.runtimeVersions,
+            port: candidate.port,
+            board: candidate.board,
         };
     });
+}
+
+export function availableRuntimeVersions(): string[] {
+    return [...packageCatalogDocument().availableRuntimeVersions];
+}
+
+export function defaultRuntimeVersion(): string {
+    return packageCatalogDocument().defaultRuntimeVersion;
 }
 
 function normalizePackageName(name: string): string {
@@ -348,7 +386,7 @@ function parseCatalogDependency(requirement: string): {
 
     const entry = catalogEntry(match[1]);
     if (!entry) return undefined;
-    if (entry.kind === "board") {
+    if (entry.kind === "firmware") {
         throw new Error(`Board stub package cannot be installed as a dependency: ${entry.packageName}`);
     }
     return {
@@ -662,8 +700,28 @@ async function saveCachedPackage(record: CachedStubPackage, deadlineAt: number):
 export function isBoardStubPackage(packageName: string): boolean {
     const normalizedName = normalizePackageName(packageName);
     return isReservedBoardPackageName(normalizedName) || packageCatalog().some((entry) => (
-        entry.kind === "board" && entry.packageName === normalizedName
+        entry.kind === "firmware" && entry.packageName === normalizedName
     ));
+}
+
+function majorMinorVersion(version: string): string {
+    return /^\d+\.\d+/.exec(String(version || "").trim())?.[0] || "";
+}
+
+function matchesCatalogFilters(
+    entry: StubPackageCatalogEntry,
+    filters: StubPackageFilters,
+): boolean {
+    if (entry.kind !== "firmware") return false;
+    if (filters.family && entry.family !== filters.family) return false;
+    const requestedVersion = majorMinorVersion(filters.version || "");
+    if (
+        requestedVersion
+        && !entry.runtimeVersions.some((version) => majorMinorVersion(version) === requestedVersion)
+    ) return false;
+    if (filters.port && entry.port.toLowerCase() !== filters.port.toLowerCase()) return false;
+    if (filters.board && entry.board.toLowerCase() !== filters.board.toLowerCase()) return false;
+    return true;
 }
 
 function publicInstalledPackage(record: CachedStubPackage): InstalledStubPackage {
@@ -678,7 +736,9 @@ function publicInstalledPackage(record: CachedStubPackage): InstalledStubPackage
     };
 }
 
-export async function listAvailableStubPackages(): Promise<StubPackageCatalogResultEntry[]> {
+export async function listAvailableStubPackages(
+    filters: StubPackageFilters = {},
+): Promise<StubPackageCatalogResultEntry[]> {
     const installed = await cachedPackages();
     const activeVersions = new Map(
         installed
@@ -686,7 +746,13 @@ export async function listAvailableStubPackages(): Promise<StubPackageCatalogRes
             .map((entry) => [entry.packageName, entry.version]),
     );
 
-    const publicCatalog = packageCatalog().filter((entry) => entry.kind === "board");
+    const resolvedFamily = filters.family || "micropython";
+    const resolvedFilters = {
+        ...filters,
+        family: resolvedFamily,
+        version: filters.version ?? (resolvedFamily === "micropython" ? defaultRuntimeVersion() : ""),
+    };
+    const publicCatalog = packageCatalog().filter((entry) => matchesCatalogFilters(entry, resolvedFilters));
     return Promise.all(publicCatalog.map(async (catalogEntry) => {
         try {
             const index = await fetchPyPIIndex(catalogEntry.packageName);

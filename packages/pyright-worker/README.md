@@ -32,7 +32,7 @@ import type { WorkerMessage } from "@mp-codemirror/pyright-worker/messages";
 ```
 
 See the [worker API documentation](https://github.com/Josverl/stubs_playground/blob/main/docs/api/pyright-worker.md)
-for initialization, workspace files, board stubs, and runtime stub packages.
+for initialization, workspace files, board stubs, and firmware stub packages.
 
 ## License
 

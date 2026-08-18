@@ -12,6 +12,7 @@
   "files": [
     "assets/",
     "dist/",
+    "changelog.md",
     "src/declarations.d.ts",
     "src/messages.d.ts"
   ],

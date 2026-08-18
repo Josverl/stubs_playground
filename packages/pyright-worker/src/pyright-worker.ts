@@ -56,7 +56,9 @@ import type {
 import { logVerbose, setVerboseOutput } from "./logging";
 import {
     activeCachedStubPackages,
+    availableRuntimeVersions,
     clearStubPackages,
+    defaultRuntimeVersion,
     installStubPackage,
     isBoardStubPackage,
     listAvailableStubPackages,
@@ -430,6 +432,17 @@ async function handleInitServer(msg: MsgInitServer) {
             );
         }
 
+        // Deactivate/clear any previously cached board stub packages to prevent them
+        // from leaking into the 'extra stubs' state and piling up after a board switch.
+        for (const pkg of cachedPackages) {
+            if (pkg !== selectedBoardPackage && isBoardStubPackage(pkg.packageName)) {
+                logVerbose(`[pyright-worker] Automatically clearing old board stub target: ${pkg.packageName}`);
+                clearStubPackages(pkg.packageName).catch(err => {
+                    console.warn(`[pyright-worker] Failed to clear old board stub ${pkg.packageName}:`, err);
+                });
+            }
+        }
+
         logVerbose("[pyright-worker] Initializing filesystem...");
         let boardStubs = msg.boardStubs;
         if (!selectedBoardPackage && msg.boardStubsUrl && boardStubs === undefined) {
@@ -682,12 +695,14 @@ function handleReadGeneratedConfig(msg: MsgReadGeneratedConfig) {
 
 async function handleListStubPackages(msg: MsgListStubPackages) {
     try {
-        const packages = await listAvailableStubPackages();
+        const packages = await listAvailableStubPackages(msg.filters);
         ctx.postMessage({
             type: "listStubPackagesResult",
             requestId: msg.requestId,
             ok: true,
             packages,
+            availableRuntimeVersions: availableRuntimeVersions(),
+            defaultRuntimeVersion: defaultRuntimeVersion(),
         } as WorkerMessage);
     } catch (err: any) {
         ctx.postMessage({
@@ -695,6 +710,8 @@ async function handleListStubPackages(msg: MsgListStubPackages) {
             requestId: msg.requestId,
             ok: false,
             packages: [],
+            availableRuntimeVersions: [],
+            defaultRuntimeVersion: "",
             error: err?.message || String(err),
         } as WorkerMessage);
     }
