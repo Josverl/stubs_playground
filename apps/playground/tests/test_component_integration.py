@@ -3,6 +3,8 @@
 import json
 import re
 from pathlib import Path
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -27,6 +29,17 @@ requires_worker = pytest.mark.skipif(
     not (PROJECT_ROOT / "packages" / "pyright-worker" / "dist" / "pyright_worker.js").exists(),
     reason="Worker bundle not found. Build it first.",
 )
+
+
+def _published_component_available(url: str, timeout: float = 8.0) -> bool:
+    for method in ("HEAD", "GET"):
+        try:
+            request = Request(url, method=method)
+            with urlopen(request, timeout=timeout) as response:
+                return response.status == 200
+        except (URLError, TimeoutError, ValueError):
+            continue
+    return False
 
 
 def _wait_for_playground_lsp(page: Page) -> dict:
@@ -74,6 +87,19 @@ def test_local_mode_uses_workspace_component_interfaces(page: Page, project_serv
 
 
 def test_npm_mode_uses_published_component_interfaces(page: Page, project_server: str, tmp_path: Path):
+    published_urls = (
+        f"https://cdn.jsdelivr.net/npm/@mp-codemirror/lsp-client@{CLIENT_VERSION}/src/index.js",
+        f"https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@{WORKER_VERSION}/dist/pyright_worker.js",
+        f"https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@{WORKER_VERSION}/assets/stubs-manifest.json",
+        f"https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@{WORKER_VERSION}/assets/stubs-esp32.zip",
+    )
+    unavailable = [url for url in published_urls if not _published_component_available(url)]
+    if unavailable:
+        pytest.skip(
+            "Published npm component artifacts are unavailable; skipping npm integration check: "
+            + ", ".join(unavailable)
+        )
+
     requests: list[str] = []
     responses: dict[str, int] = {}
     page.on("request", lambda request: requests.append(request.url))
