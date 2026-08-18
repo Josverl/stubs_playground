@@ -155,13 +155,17 @@ useful for workspace and package management:
 | `connect()` | `Promise<void>` | Resolves after worker initialization. |
 | `syncWorkspaceFile(path, content)` | `void` | Writes complete text under `/workspace`. |
 | `deleteWorkspaceFile(path)` | `void` | Removes one workspace file. |
-| `listStubPackages()` | catalog array | Queries current stable PyPI releases. |
+| `getStubPackageCatalog(filters?)` | catalog result | Returns matching packages plus available/default runtime version metadata. |
+| `listStubPackages(filters?)` | catalog array | Convenience wrapper returning only matching packages. |
 | `installStubPackage(name, specifier)` | installed package | Persists a validated universal wheel. Restart afterward. |
 | `listInstalledStubPackages()` | installed package array | Reads IndexedDB metadata. |
 | `clearStubPackages(name?, version?)` | removal result | Restart when `restartRequired` is true. |
 | `readGeneratedConfig()` | `Promise<string>` | Inspection/debug API. |
 | `debugListFs(root?, depth?)` | filesystem snapshot | Inspection/debug API. |
 | `close()` | `void` | Terminates worker and rejects pending control requests. |
+
+When family and version are omitted, catalog discovery defaults to
+MicroPython and the highest stable value in `availableRuntimeVersions`.
 
 ## `SimpleLSPClient`
 

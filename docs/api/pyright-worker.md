@@ -84,13 +84,23 @@ provides timeouts, correlation, validation, and teardown.
 
 ### Discovery
 
-`listStubPackages()` reads package identities from the worker catalog and asks
-PyPI for current releases. The worker prefers stable releases with compatible
-universal wheels. Versions are not pinned to the worker release.
+`listStubPackages(filters?)` reads package identities from the worker catalog
+and asks PyPI for current releases. Filters may include `family`, `version`,
+`port`, and `board`. MicroPython version matching compares major and minor
+only, so `1.28.0` also selects package metadata for patch and post releases in
+the `1.28` line. If family and version are omitted, the worker selects
+MicroPython and the highest non-preview value in `availableRuntimeVersions`.
+The worker prefers stable releases with compatible universal wheels. Versions
+are not pinned to the worker release.
+
+`getStubPackageCatalog(filters?)` returns `packages`,
+`availableRuntimeVersions`, and `defaultRuntimeVersion`. `listStubPackages()`
+is the package-array convenience wrapper.
 
 Each catalog item includes:
 
 - `id`, `packageName`, `label`, and `kind`
+- `family`, `runtimeVersions`, `port`, and `board`
 - `latestVersion`
 - compatible `versions`, including filename, byte size, and upload timestamp
 - `installedVersion` when an active cached version exists
@@ -99,7 +109,11 @@ Each catalog item includes:
 ### Installation
 
 ```js
-const catalog = await transport.listStubPackages();
+const catalog = await transport.listStubPackages({
+  family: "micropython",
+  version: "1.28.0",
+  port: "rp2",
+});
 const rp2 = catalog.find(item => item.id === "rp2");
 
 const installed = await transport.installStubPackage(
