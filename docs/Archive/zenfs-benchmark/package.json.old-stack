@@ -1,0 +1,10 @@
+{
+  "name": "zenfs-bench-old",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@zenfs/archives": "1.0.5",
+    "@zenfs/core": "1.11.4",
+    "fflate": "^0.8.2"
+  }
+}
