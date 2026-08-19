@@ -19,13 +19,7 @@ from tests.timing import CDN_TIMEOUT, LSP_TIMEOUT, UI_TIMEOUT, SHORT_SETTLE, LSP
 # Module-level skip marker — evaluated at collection time
 # ---------------------------------------------------------------------------
 
-_worker_available = (
-    Path(__file__).parents[3]
-    / "packages"
-    / "pyright-worker"
-    / "dist"
-    / "pyright_worker.js"
-).exists()
+_worker_available = (Path(__file__).parents[3] / "packages" / "pyright-worker" / "dist" / "pyright_worker.js").exists()
 
 requires_lsp = pytest.mark.skipif(
     not _worker_available,
@@ -33,6 +27,7 @@ requires_lsp = pytest.mark.skipif(
 )
 
 pytestmark = pytest.mark.worker
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -242,12 +237,12 @@ def test_webassembly_bundle_resolves_micropython_module(page, live_server):
         "() => window.__lspReady === true || window.__lspFailed === true",
         timeout=LSP_TIMEOUT,
     )
-    page.locator("#boardSelect option[value='webassembly']").wait_for(
+    page.locator("#stubPort option[value='webassembly']").wait_for(
         state="attached",
         timeout=UI_TIMEOUT,
     )
 
-    page.locator("#boardSelect").select_option("webassembly")
+    page.locator("#stubPort").select_option("webassembly")
     page.wait_for_function(
         """() => {
             const select = document.getElementById('boardSelect');
@@ -261,9 +256,7 @@ def test_webassembly_bundle_resolves_micropython_module(page, live_server):
     _type_in_editor(page, "import micropython\nlevel = micropython.opt_level()")
     time.sleep(LSP_ROUND_TRIP)
 
-    diagnostics = page.evaluate(
-        "() => import('./component-source.js').then(m => m.getWorkspaceDiagnostics())"
-    )
+    diagnostics = page.evaluate("() => import('./component-source.js').then(m => m.getWorkspaceDiagnostics())")
     messages = [item["message"] for item in diagnostics]
     assert not any("micropython" in message and "resolved" in message for message in messages), messages
 
@@ -435,6 +428,5 @@ def test_status_bar_shows_workspace_totals_on_document_switch(page, live_server)
     # The status bar must still show the workspace error count from main.py
     status_after = page.locator("#diagnostics-status").inner_text()
     assert "Errors: 0" not in status_after or "Warnings: 0" not in status_after, (
-        f"Status bar should still show main.py errors after switching to clean.py, "
-        f"but got: {status_after!r}"
+        f"Status bar should still show main.py errors after switching to clean.py, but got: {status_after!r}"
     )

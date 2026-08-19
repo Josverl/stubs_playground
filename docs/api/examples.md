@@ -94,18 +94,23 @@ rebindOpenEditors(replacement.client);
 If the host uses `TypecheckingService`, call its `installStubPackage()` instead;
 the restart and editor rebinding are automatic.
 
-## Select the latest catalog board package
+## Select the latest matching runtime stub package
 
 ```js
-const catalog = await runtime.transport.listStubPackages();
-const board = catalog.find(entry => entry.id === "esp32");
+const catalog = await runtime.transport.getStubPackageCatalog({
+  port: "esp32",
+  board: "GENERIC",
+});
+const target = catalog.packages[0];
 
-if (!board) throw new Error("ESP32 stubs are unavailable");
-if (board.error) throw new Error(board.error);
+if (!target) throw new Error("ESP32 stubs are unavailable");
+if (target.error) throw new Error(target.error);
+
+console.log(`Using MicroPython ${catalog.defaultRuntimeVersion}`);
 
 await runtime.transport.installStubPackage(
-  board.packageName,
-  `==${board.latestVersion}`,
+  target.packageName,
+  `==${target.latestVersion}`,
 );
 
 // On the replacement runtime:

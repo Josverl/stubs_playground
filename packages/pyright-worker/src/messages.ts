@@ -52,7 +52,18 @@ export interface StubPackageCatalogEntry {
     id: string;
     packageName: string;
     label: string;
-    kind: "stdlib" | "board";
+    kind: "stdlib" | "firmware";
+    family: "micropython" | "circuitpython";
+    runtimeVersions: string[];
+    port: string;
+    board: string;
+}
+
+export interface StubPackageFilters {
+    family?: "micropython" | "circuitpython";
+    version?: string;
+    port?: string;
+    board?: string;
 }
 
 export interface StubPackageRelease {
@@ -82,6 +93,7 @@ export interface InstalledStubPackage {
 export interface MsgListStubPackages {
     type: "listStubPackages";
     requestId: string;
+    filters?: StubPackageFilters;
 }
 
 export interface MsgListStubPackagesResult {
@@ -89,6 +101,8 @@ export interface MsgListStubPackagesResult {
     requestId: string;
     ok: boolean;
     packages: StubPackageCatalogResultEntry[];
+    availableRuntimeVersions: string[];
+    defaultRuntimeVersion: string;
     error?: string;
 }
 

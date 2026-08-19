@@ -51,6 +51,9 @@ pack:
 # rebuild everything from scratch
 rebuild:
     npm install --ignore-scripts
+    npx tsc packages/pyright-worker/src/messages.ts --declaration --emitDeclarationOnly --target ES2020 --module ESNext --moduleResolution Bundler --skipLibCheck --outDir ./temp_out
+    cp ./temp_out/messages.d.ts packages/pyright-worker/src/messages.d.ts
+    rm -rf ./temp_out
     npm run generate:component-config
     just pack
     npx webpack --mode production
