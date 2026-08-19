@@ -323,14 +323,12 @@ function writePyprojectToml(options: {
     // breaks cross-file import resolution (e.g. `from helpers import answer`).
     //
     // `include: ["."]` tells Pyright what source tree to analyze under
-    // /workspace; `extraPaths: [".", "libs"]` tells import resolution where
+    // /workspace; `extraPaths: [".", "lib"]` tells import resolution where
     // bare imports may originate. Keeping "." in BOTH fields is intentional:
     // one controls analysis scope, the other controls import search roots.
     //
-    // `libs` is added to extraPaths so files in `libs/` can be imported by
-    // bare module name (e.g. `from foo import ...`). `lib/` is intentionally
-    // NOT on extraPaths: it remains a regular package, so its contents are
-    // imported as `from lib.foo import ...`.
+    // `lib` is added to extraPaths so files in `lib/` can be imported by
+    // bare module name (e.g. `from foo import ...`).
     const config = {
         typeshedPath: resolvedTypeshedPath,
         stubPath: "/typings",
@@ -438,7 +436,11 @@ async function handleInitServer(msg: MsgInitServer) {
         // Deactivate/clear any previously cached board stub packages to prevent them
         // from leaking into the 'extra stubs' state and piling up after a board switch.
         for (const pkg of cachedPackages) {
-            if (pkg !== selectedBoardPackage && isBoardStubPackage(pkg.packageName)) {
+            if (
+                msg.boardStubPackage
+                && pkg !== selectedBoardPackage
+                && isBoardStubPackage(pkg.packageName)
+            ) {
                 logVerbose(`[pyright-worker] Automatically clearing old board stub target: ${pkg.packageName}`);
                 clearStubPackages(pkg.packageName).catch(err => {
                     console.warn(`[pyright-worker] Failed to clear old board stub ${pkg.packageName}:`, err);
