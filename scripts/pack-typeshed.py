@@ -25,6 +25,27 @@ INCLUDE_DIRS = ["stdlib"]
 INCLUDE_FILES = ["LICENSE"]
 
 
+def add_file(zf: zipfile.ZipFile, full_path: Path, arcname: Path):
+    """Add a file to the zipfile with stripped metadata and no compression."""
+    # Read file contents
+    data = full_path.read_bytes()
+
+    # Create ZipInfo manually
+    info = zipfile.ZipInfo.from_file(full_path, arcname)
+
+    # Strip metadata
+    info.create_system = 0  # MS-DOS (no UNIX perms)
+    info.external_attr = 0  # remove UNIX permissions
+    info.extra = b""  # remove extra fields
+    info.comment = b""  # remove per-file comment
+
+    # Use STORE for tiny files (best for Zen-FS)
+    # info.compress_type = zipfile.ZIP_STORED
+
+    # Write file
+    zf.writestr(info, data)
+
+
 def main() -> None:
     if not TYPESHED_SRC.exists():
         print(f"Typeshed not found at: {TYPESHED_SRC}", file=sys.stderr)
@@ -36,7 +57,12 @@ def main() -> None:
     print(f"Packing typeshed from: {TYPESHED_SRC}")
     print(f"Output: {OUT_FILE}")
 
-    with zipfile.ZipFile(OUT_FILE, "w", zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(
+        OUT_FILE,
+        "w",
+        zipfile.ZIP_DEFLATED,
+        allowZip64=False,
+    ) as zf:
         for dir_name in INCLUDE_DIRS:
             src_dir = TYPESHED_SRC / dir_name
             if not src_dir.exists():
@@ -45,12 +71,12 @@ def main() -> None:
                 for f in files:
                     full = Path(root_dir) / f
                     arcname = full.relative_to(TYPESHED_SRC)
-                    zf.write(full, arcname)
+                    add_file(zf, full, arcname)
 
         for fname in INCLUDE_FILES:
             fpath = TYPESHED_SRC / fname
             if fpath.exists():
-                zf.write(fpath, fname)
+                add_file(zf, fpath, fname)
 
     size_mb = OUT_FILE.stat().st_size / 1024 / 1024
     print(f"Done: {size_mb:.2f} MB")
