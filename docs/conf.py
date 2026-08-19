@@ -15,6 +15,7 @@ exclude_patterns = [
     "_build",
     "Archive",
     "component-reusability-plan.md",
+    "improvements.md",
 ]
 
 html_theme = "furo"
