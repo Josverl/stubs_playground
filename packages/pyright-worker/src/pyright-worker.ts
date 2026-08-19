@@ -432,6 +432,17 @@ async function handleInitServer(msg: MsgInitServer) {
             );
         }
 
+        // Deactivate/clear any previously cached board stub packages to prevent them
+        // from leaking into the 'extra stubs' state and piling up after a board switch.
+        for (const pkg of cachedPackages) {
+            if (pkg !== selectedBoardPackage && isBoardStubPackage(pkg.packageName)) {
+                logVerbose(`[pyright-worker] Automatically clearing old board stub target: ${pkg.packageName}`);
+                clearStubPackages(pkg.packageName).catch(err => {
+                    console.warn(`[pyright-worker] Failed to clear old board stub ${pkg.packageName}:`, err);
+                });
+            }
+        }
+
         logVerbose("[pyright-worker] Initializing filesystem...");
         let boardStubs = msg.boardStubs;
         if (!selectedBoardPackage && msg.boardStubsUrl && boardStubs === undefined) {
