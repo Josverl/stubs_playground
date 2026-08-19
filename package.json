@@ -22,8 +22,8 @@
     "test:unit": "npm run test:app:unit && npm run test:components:unit"
   },
   "devDependencies": {
-    "@zenfs/archives": "1.0.5",
-    "@zenfs/core": "1.11.4",
+    "@zenfs/archives": "1.4.3",
+    "@zenfs/core": "2.6.3",
     "archiver": "^8.0.0",
     "arraybuffer-loader": "^1.0.8",
     "assert": "^2.1.0",
