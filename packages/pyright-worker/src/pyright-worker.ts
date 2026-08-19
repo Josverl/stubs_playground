@@ -133,10 +133,12 @@ async function initFs(
         "/typeshed-fallback": {
             backend: Zip,
             data: typeshedFallbackZip,
+            lazy: true,
         },
         "/typeshed-micropython": {
             backend: Zip,
             data: micropythonStdlibZip,
+            lazy: true,
         },
     };
 
@@ -147,6 +149,7 @@ async function initFs(
         mounts["/typings"] = {
             backend: Zip,
             data: boardStubs,
+            lazy: true,
         };
         logVerbose(`[pyright-worker] Mounting board stubs in /typings (${(boardStubs.byteLength / 1024).toFixed(0)}KB)`);
     } else {
