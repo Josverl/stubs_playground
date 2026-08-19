@@ -65,7 +65,7 @@ export class SimpleLSPClient {
             const fullConfig = {
                 python: {
                     analysis: {
-                        typeshedPaths: [this.config.typeshedPath || '/typeshed-fallback'],
+                        typeshedPaths: [this.config.typeshedPath || '/typeshed-micropython'],
                         stubPath: '/typings',
                         include: ['/workspace'],
                         extraPaths: analysisExtraPaths,
@@ -189,7 +189,7 @@ export class SimpleLSPClient {
         const configSettings = {
             python: {
                 analysis: {
-                    typeshedPaths: [this.config.typeshedPath || '/typeshed-fallback'],
+                    typeshedPaths: [this.config.typeshedPath || '/typeshed-micropython'],
                     stubPath: '/typings',
                     include: ['/workspace'],
                     extraPaths: this._getAnalysisExtraPaths(),

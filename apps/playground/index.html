@@ -5,24 +5,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MicroPython-Stubs Playground</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-1 -1 26 26'><path fill='white' stroke='black' stroke-width='0.8' d='M0 0h11.509v18.737h.982V0H24v24h-5.263V5.263h-.983V24H6.246V5.263l-.983.035V24H0zm22.246 19.509h-1.404v2.386h1.404z'/></svg>">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-1 -1 26 26'><path fill='white' stroke='black' stroke-width='0.8' d='M0 0h11.509v18.737h.982V0H24v24h-5.263V5.263h-.983V24H6.246V5.263l-.983.035V24H0zm22.246 19.509h-1.404v2.386h1.404z'/></svg>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/monaspace-argon@5.2.5/index.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
     <header>
-        <a
-            class="header-icon-wrap"
-            href="https://github.com/Josverl/stubs_playground#micropython-stubs-playground"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Open MicroPython-Stubs Playground repository on GitHub"
-        >
-            <img
-                id="headerIcon"
-                alt="Open project on GitHub"
-            >
+        <a class="header-icon-wrap" href="https://github.com/Josverl/stubs_playground#micropython-stubs-playground"
+            target="_blank" rel="noopener noreferrer"
+            aria-label="Open MicroPython-Stubs Playground repository on GitHub">
+            <img id="headerIcon" alt="Open project on GitHub">
         </a>
         <h1>MicroPython-Stubs Playground</h1>
         <div class="header-actions" aria-label="Primary actions">
@@ -35,8 +29,10 @@
                     <p class="share-title">Sharing a Code Sample</p>
                     <p class="share-desc">Copy a link or markdown to the clipboard.</p>
                     <div class="share-scope-row">
-                        <label class="share-scope-option"><input type="radio" name="shareScope" value="current" checked> Current file</label>
-                        <label class="share-scope-option"><input type="radio" name="shareScope" value="all"> All files</label>
+                        <label class="share-scope-option"><input type="radio" name="shareScope" value="current" checked>
+                            Current file</label>
+                        <label class="share-scope-option"><input type="radio" name="shareScope" value="all"> All
+                            files</label>
                     </div>
                     <p id="sharePayloadWarning" class="share-warning" hidden></p>
                     <button id="copyLink" class="share-option" aria-label="Copy shareable link">
@@ -51,7 +47,8 @@
                 </div>
             </div>
             <div class="report-issue-wrapper">
-                <button id="reportIssueBtn" class="header-action-btn" aria-label="Report a MicroPython stub issue" title="Report a MicroPython stub issue">
+                <button id="reportIssueBtn" class="header-action-btn" aria-label="Report a MicroPython stub issue"
+                    title="Report a MicroPython stub issue">
                     <span class="header-btn-icon" aria-hidden="true">⚑</span>
                     <span>Report</span>
                 </button>
@@ -61,14 +58,34 @@
     </header>
 
     <aside id="options-panel">
-        <div id="options-panel-handle" title="Toggle options panel" aria-label="Toggle options panel" role="button" tabindex="0"></div>
+        <div id="options-panel-handle" title="Toggle options panel" aria-label="Toggle options panel" role="button"
+            tabindex="0"></div>
         <div class="options-header">
             <h2>Options</h2>
         </div>
         <div class="controls">
+            <div class="stub-family-selector">
+                <label for="stubFamily">Family:</label>
+                <select id="stubFamily" aria-label="Select stub package family">
+                    <option value="micropython" selected>MicroPython</option>
+                    <option value="circuitpython">CircuitPython</option>
+                </select>
+            </div>
+            <div class="stub-version-selector">
+                <label for="stubVersion">Version:</label>
+                <select id="stubVersion" aria-label="Select MicroPython version"></select>
+            </div>
+            <div class="stub-port-selector">
+                <label for="stubPort">Port:</label>
+                <select id="stubPort" aria-label="Select MicroPython port"></select>
+            </div>
+            <div class="stub-board-selector">
+                <label for="stubBoard">Board:</label>
+                <select id="stubBoard" aria-label="Select MicroPython board"></select>
+            </div>
             <div class="board-selector">
-                <label for="boardSelect">Stubs:</label>
-                <select id="boardSelect" aria-label="Select MicroPython board">
+                <label for="boardSelect">Package:</label>
+                <select id="boardSelect" aria-label="Select stub package">
                     <option value="">Loading...</option>
                 </select>
                 <span id="boardLoading" class="loading-indicator" hidden>⏳</span>
@@ -106,7 +123,8 @@
             </div>
             <div class="generated-config-viewer">
                 <label for="openGeneratedConfigBtn">Config:</label>
-                <button id="openGeneratedConfigBtn" type="button" aria-label="View generated pyproject.toml">View pyproject.toml</button>
+                <button id="openGeneratedConfigBtn" type="button" aria-label="View generated pyproject.toml">View
+                    pyproject.toml</button>
             </div>
 
             <button id="helpBtn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">⌨</button>
@@ -119,11 +137,15 @@
             <div class="extra-stubs-section" aria-label="Install additional type stubs from PyPI">
                 <label for="extraStubSpecifier">Install extra stubs from PyPI:</label>
                 <div class="extra-stubs-controls">
-                    <input id="extraStubSpecifier" type="text" list="stubPackageCatalog" placeholder="package-name-stubs==1.20.0.* (or package only)" aria-label="PyPI package specifier">
+                    <input id="extraStubSpecifier" type="text" list="stubPackageCatalog"
+                        placeholder="package-name-stubs==1.20.0.* (or package only)"
+                        aria-label="PyPI package specifier">
                     <datalist id="stubPackageCatalog"></datalist>
                     <div class="extra-stubs-buttons">
-                        <button id="installExtraStubBtn" type="button" aria-label="Install extra type stubs">Install</button>
-                        <button id="clearExtraStubsBtn" type="button" aria-label="Clear all extra type stubs">Clear all</button>
+                        <button id="installExtraStubBtn" type="button"
+                            aria-label="Install extra type stubs">Install</button>
+                        <button id="clearExtraStubsBtn" type="button" aria-label="Clear all extra type stubs">Clear
+                            all</button>
                     </div>
                     <div id="extraStubsStatus" class="extra-stubs-status" aria-live="polite"></div>
                 </div>
@@ -146,44 +168,63 @@
                 <div id="editor-container"></div>
                 <div id="keyboard-help" hidden>
                     <table>
-                        <thead><tr><th>Key</th><th>Action</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Key</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
                         <tbody>
-                            <tr><td><kbd>F8</kbd></td><td>Next diagnostic &amp; open panel</td></tr>
-                            <tr><td><kbd>Shift</kbd>+<kbd>F8</kbd></td><td>Previous diagnostic</td></tr>
-                            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd></td><td>Toggle diagnostics panel</td></tr>
-                            <tr><td><kbd>Ctrl</kbd>+<kbd>Space</kbd></td><td>Autocomplete</td></tr>
-                            <tr><td><kbd>Ctrl</kbd>+<kbd>/</kbd></td><td>Toggle comment</td></tr>
-                            <tr><td><kbd>Ctrl</kbd>+<kbd>[</kbd> / <kbd>]</kbd></td><td>Indent / Dedent</td></tr>
-                            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>[</kbd> / <kbd>]</kbd></td><td>Fold / Unfold</td></tr>
+                            <tr>
+                                <td><kbd>F8</kbd></td>
+                                <td>Next diagnostic &amp; open panel</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Shift</kbd>+<kbd>F8</kbd></td>
+                                <td>Previous diagnostic</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd></td>
+                                <td>Toggle diagnostics panel</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Ctrl</kbd>+<kbd>Space</kbd></td>
+                                <td>Autocomplete</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Ctrl</kbd>+<kbd>/</kbd></td>
+                                <td>Toggle comment</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Ctrl</kbd>+<kbd>[</kbd> / <kbd>]</kbd></td>
+                                <td>Indent / Dedent</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>[</kbd> / <kbd>]</kbd></td>
+                                <td>Fold / Unfold</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
-                <div id="diagnostics-status"><span class="status-main">Errors: <span class="count-error">0</span> | Warnings: <span class="count-warning">0</span> | Info: <span class="count-info">0</span></span></div>
+                <div id="diagnostics-status"><span class="status-main">Errors: <span class="count-error">0</span> |
+                        Warnings: <span class="count-warning">0</span> | Info: <span class="count-info">0</span></span>
+                </div>
             </div>
         </div>
     </main>
 
     <footer>
         <p class="footer-links">
-            <a href="https://github.com/josverl/micropython-stubs" target="_blank" rel="noopener">MicroPython-Stubs</a> & 
-            <a href="https://github.com/microsoft/pyright" target="_blank" rel="noopener">Pyright (LSP) </a> & 
+            <a href="https://github.com/josverl/micropython-stubs" target="_blank" rel="noopener">MicroPython-Stubs</a>
+            &
+            <a href="https://github.com/microsoft/pyright" target="_blank" rel="noopener">Pyright (LSP) </a> &
             <a href="https://codemirror.net/6/" target="_blank" rel="noopener">CodeMirror 6</a>
         </p>
         <div class="github-stars" aria-label="GitHub star links">
-            <a
-                class="github-button"
-                href="https://github.com/Josverl/micropython-stubs"
-                data-icon="octicon-star"
-                data-show-count="true"
-                aria-label="Star Josverl/micropython-stubs on GitHub"
-            >Star</a>
-            <a
-                class="github-button"
-                href="https://github.com/Josverl/mp_codemirror"
-                data-icon="octicon-star"
-                data-show-count="true"
-                aria-label="Star Josverl/mp_codemirror on GitHub"
-            >Star</a>
+            <a class="github-button" href="https://github.com/Josverl/micropython-stubs" data-icon="octicon-star"
+                data-show-count="true" aria-label="Star Josverl/micropython-stubs on GitHub">Star</a>
+            <a class="github-button" href="https://github.com/Josverl/mp_codemirror" data-icon="octicon-star"
+                data-show-count="true" aria-label="Star Josverl/mp_codemirror on GitHub">Star</a>
         </div>
     </footer>
 
@@ -195,10 +236,12 @@
     <div id="reportIssueDropdown" class="report-issue-dropdown" hidden>
         <p class="share-title">Report a MicroPython Stub Issue</p>
         <p class="report-issue-warning">
-            Do not include passwords, API keys, or other secrets — your code sample will be visible in a public GitHub issue.
+            Do not include passwords, API keys, or other secrets — your code sample will be visible in a public GitHub
+            issue.
         </p>
         <div class="share-scope-row">
-            <label class="share-scope-option"><input type="radio" name="reportScope" value="current" checked> Current file</label>
+            <label class="share-scope-option"><input type="radio" name="reportScope" value="current" checked> Current
+                file</label>
             <label class="share-scope-option"><input type="radio" name="reportScope" value="all"> All files</label>
         </div>
         <button id="reportIssueConfirm" class="share-option" aria-label="Open GitHub issue (new tab)">

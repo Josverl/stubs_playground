@@ -1,47 +1,668 @@
 {
-  "version": "1.0",
+  "version": "2.0",
+  "source": "https://raw.githubusercontent.com/Josverl/micropython-stubs/main/data/stub-packages.json",
+  "availableRuntimeVersions": [
+    "1.28.0",
+    "1.27.0",
+    "1.26.1",
+    "1.26.0",
+    "1.25.0",
+    "1.24.1",
+    "1.23.0",
+    "1.22.1",
+    "1.22.0",
+    "1.21.0",
+    "1.20.0",
+    "1.19.1",
+    "1.18",
+    "1.17"
+  ],
+  "defaultRuntimeVersion": "1.28.0",
   "packages": [
     {
       "id": "stdlib",
       "packageName": "micropython-stdlib-stubs",
       "label": "MicroPython standard library",
-      "kind": "stdlib"
+      "kind": "stdlib",
+      "family": "micropython",
+      "runtimeVersions": [],
+      "port": "",
+      "board": ""
     },
     {
-      "id": "esp32",
+      "packageName": "micropython-esp32-esp32-generic-c3-stubs",
+      "label": "micropython-esp32-esp32_generic_c3",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.23.0"
+      ],
+      "port": "esp32",
+      "board": "ESP32_GENERIC_C3",
+      "id": "micropython-esp32-esp32-generic-c3-stubs"
+    },
+    {
+      "packageName": "micropython-esp32-esp32-generic-c5-stubs",
+      "label": "micropython-esp32-esp32_generic_c5",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0"
+      ],
+      "port": "esp32",
+      "board": "ESP32_GENERIC_C5",
+      "id": "micropython-esp32-esp32-generic-c5-stubs"
+    },
+    {
+      "packageName": "micropython-esp32-esp32-generic-c6-stubs",
+      "label": "micropython-esp32-esp32_generic_c6",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1"
+      ],
+      "port": "esp32",
+      "board": "ESP32_GENERIC_C6",
+      "id": "micropython-esp32-esp32-generic-c6-stubs"
+    },
+    {
+      "packageName": "micropython-esp32-esp32-generic-s2-stubs",
+      "label": "micropython-esp32-esp32_generic_s2",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0"
+      ],
+      "port": "esp32",
+      "board": "ESP32_GENERIC_S2",
+      "id": "micropython-esp32-esp32-generic-s2-stubs"
+    },
+    {
+      "packageName": "micropython-esp32-esp32-generic-s3-stubs",
+      "label": "micropython-esp32-esp32_generic_s3",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.24.1",
+        "1.23.0",
+        "1.22.0"
+      ],
+      "port": "esp32",
+      "board": "ESP32_GENERIC_S3",
+      "id": "micropython-esp32-esp32-generic-s3-stubs"
+    },
+    {
+      "packageName": "micropython-esp32-esp32-generic-stubs",
+      "label": "micropython-esp32-esp32_generic",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1",
+        "1.23.0",
+        "1.22.0",
+        "1.21.0"
+      ],
+      "port": "esp32",
+      "board": "ESP32_GENERIC",
+      "id": "micropython-esp32-esp32-generic-stubs"
+    },
+    {
+      "packageName": "micropython-esp32-generic-ota-stubs",
+      "label": "micropython-esp32-generic_ota",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.20.0"
+      ],
+      "port": "esp32",
+      "board": "GENERIC",
+      "id": "micropython-esp32-generic-ota-stubs"
+    },
+    {
+      "packageName": "micropython-esp32-generic-s3-stubs",
+      "label": "micropython-esp32-generic_s3",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.20.0",
+        "1.19.1"
+      ],
+      "port": "esp32",
+      "board": "GENERIC_S3",
+      "id": "micropython-esp32-generic-s3-stubs"
+    },
+    {
+      "packageName": "micropython-esp32-generic-spiram-stubs",
+      "label": "micropython-esp32-generic_spiram",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.19.1"
+      ],
+      "port": "esp32",
+      "board": "GENERIC",
+      "id": "micropython-esp32-generic-spiram-stubs"
+    },
+    {
+      "packageName": "micropython-esp32-ota-stubs",
+      "label": "micropython-esp32-ota",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.20.0"
+      ],
+      "port": "esp32",
+      "board": "GENERIC",
+      "id": "micropython-esp32-ota-stubs"
+    },
+    {
+      "packageName": "micropython-esp32-s3-stubs",
+      "label": "micropython-esp32-s3",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.20.0",
+        "1.19.1"
+      ],
+      "port": "esp32",
+      "board": "S3",
+      "id": "micropython-esp32-s3-stubs"
+    },
+    {
       "packageName": "micropython-esp32-stubs",
-      "label": "MicroPython ESP32",
-      "kind": "board"
+      "label": "micropython-esp32",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1",
+        "1.23.0",
+        "1.22.0",
+        "1.21.0",
+        "1.20.0",
+        "1.19.1",
+        "1.18",
+        "1.17"
+      ],
+      "port": "esp32",
+      "board": "GENERIC",
+      "id": "esp32"
     },
     {
-      "id": "esp8266",
+      "packageName": "micropython-esp32-um-tinypico-stubs",
+      "label": "micropython-esp32-um_tinypico",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.19.1"
+      ],
+      "port": "esp32",
+      "board": "UM_TINYPICO",
+      "id": "micropython-esp32-um-tinypico-stubs"
+    },
+    {
+      "packageName": "micropython-esp8266-esp8266-generic-stubs",
+      "label": "micropython-esp8266-esp8266_generic",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0",
+        "1.23.0"
+      ],
+      "port": "esp8266",
+      "board": "ESP8266_GENERIC",
+      "id": "micropython-esp8266-esp8266-generic-stubs"
+    },
+    {
       "packageName": "micropython-esp8266-stubs",
-      "label": "MicroPython ESP8266",
-      "kind": "board"
+      "label": "micropython-esp8266",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1",
+        "1.23.0",
+        "1.19.1",
+        "1.18",
+        "1.17"
+      ],
+      "port": "esp8266",
+      "board": "GENERIC",
+      "id": "esp8266"
     },
     {
-      "id": "rp2",
+      "packageName": "micropython-mimxrt-mimxrt1010-evk-stubs",
+      "label": "micropython-mimxrt-mimxrt1010_evk",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.26.1"
+      ],
+      "port": "mimxrt",
+      "board": "MIMXRT1010_EVK",
+      "id": "micropython-mimxrt-mimxrt1010-evk-stubs"
+    },
+    {
+      "packageName": "micropython-mimxrt-seeed-arch-mix-stubs",
+      "label": "micropython-mimxrt-seeed_arch_mix",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.26.1"
+      ],
+      "port": "mimxrt",
+      "board": "SEEED_ARCH_MIX",
+      "id": "micropython-mimxrt-seeed-arch-mix-stubs"
+    },
+    {
+      "packageName": "micropython-mimxrt-stubs",
+      "label": "micropython-mimxrt",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.26.1"
+      ],
+      "port": "mimxrt",
+      "board": "GENERIC",
+      "id": "mimxrt"
+    },
+    {
+      "packageName": "micropython-rp2-arduino-nano-rp2040-connect-stubs",
+      "label": "micropython-rp2-arduino_nano_rp2040_connect",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.24.1",
+        "1.22.1",
+        "1.22.0"
+      ],
+      "port": "rp2",
+      "board": "ARDUINO_NANO_RP2040_CONNECT",
+      "id": "micropython-rp2-arduino-nano-rp2040-connect-stubs"
+    },
+    {
+      "packageName": "micropython-rp2-pico-stubs",
+      "label": "micropython-rp2-pico",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.20.0"
+      ],
+      "port": "rp2",
+      "board": "PICO",
+      "id": "micropython-rp2-pico-stubs"
+    },
+    {
+      "packageName": "micropython-rp2-pico-w-stubs",
+      "label": "micropython-rp2-pico_w",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.20.0"
+      ],
+      "port": "rp2",
+      "board": "PICO_W",
+      "id": "micropython-rp2-pico-w-stubs"
+    },
+    {
+      "packageName": "micropython-rp2-pimoroni-picolipo-16mb-stubs",
+      "label": "micropython-rp2-pimoroni_picolipo_16mb",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.20.0"
+      ],
+      "port": "rp2",
+      "board": "PIMORONI_PICOLIPO",
+      "id": "micropython-rp2-pimoroni-picolipo-16mb-stubs--pimoroni-picolipo"
+    },
+    {
+      "packageName": "micropython-rp2-pimoroni-picolipo-16mb-stubs",
+      "label": "micropython-rp2-pimoroni_picolipo_16mb",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.22.0"
+      ],
+      "port": "rp2",
+      "board": "PIMORONI_PICOLIPO_16MB",
+      "id": "micropython-rp2-pimoroni-picolipo-16mb-stubs--pimoroni-picolipo-16mb"
+    },
+    {
+      "packageName": "micropython-rp2-pimoroni-picolipo-stubs",
+      "label": "micropython-rp2-pimoroni_picolipo",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.27.0",
+        "1.26.0"
+      ],
+      "port": "rp2",
+      "board": "PIMORONI_PICOLIPO",
+      "id": "micropython-rp2-pimoroni-picolipo-stubs"
+    },
+    {
+      "packageName": "micropython-rp2-rpi-pico-stubs",
+      "label": "micropython-rp2-rpi_pico",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1",
+        "1.23.0",
+        "1.22.1",
+        "1.22.0",
+        "1.21.0"
+      ],
+      "port": "rp2",
+      "board": "RPI_PICO",
+      "id": "micropython-rp2-rpi-pico-stubs"
+    },
+    {
+      "packageName": "micropython-rp2-rpi-pico-w-stubs",
+      "label": "micropython-rp2-rpi_pico_w",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1",
+        "1.23.0",
+        "1.22.1",
+        "1.22.0",
+        "1.21.0"
+      ],
+      "port": "rp2",
+      "board": "RPI_PICO_W",
+      "id": "micropython-rp2-rpi-pico-w-stubs"
+    },
+    {
+      "packageName": "micropython-rp2-rpi-pico2-stubs",
+      "label": "micropython-rp2-rpi_pico2",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1"
+      ],
+      "port": "rp2",
+      "board": "RPI_PICO2",
+      "id": "micropython-rp2-rpi-pico2-stubs"
+    },
+    {
+      "packageName": "micropython-rp2-rpi-pico2-w-stubs",
+      "label": "micropython-rp2-rpi_pico2_w",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0"
+      ],
+      "port": "rp2",
+      "board": "RPI_PICO2_W",
+      "id": "micropython-rp2-rpi-pico2-w-stubs"
+    },
+    {
       "packageName": "micropython-rp2-stubs",
-      "label": "MicroPython RP2",
-      "kind": "board"
+      "label": "micropython-rp2",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1",
+        "1.23.0",
+        "1.22.1",
+        "1.22.0",
+        "1.21.0",
+        "1.20.0",
+        "1.19.1",
+        "1.18",
+        "1.17"
+      ],
+      "port": "rp2",
+      "board": "GENERIC",
+      "id": "rp2"
     },
     {
-      "id": "stm32",
-      "packageName": "micropython-stm32-stubs",
-      "label": "MicroPython STM32",
-      "kind": "board"
+      "packageName": "micropython-rp2-waveshare-rp2040-zero-stubs",
+      "label": "micropython-rp2-waveshare_rp2040_zero",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0"
+      ],
+      "port": "rp2",
+      "board": "WAVESHARE_RP2040_ZERO",
+      "id": "micropython-rp2-waveshare-rp2040-zero-stubs"
     },
     {
-      "id": "samd",
+      "packageName": "micropython-samd-adafruit-feather-m4-express-stubs",
+      "label": "micropython-samd-adafruit_feather_m4_express",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.20.0"
+      ],
+      "port": "samd",
+      "board": "ADAFRUIT_FEATHER_M4_EXPRESS",
+      "id": "micropython-samd-adafruit-feather-m4-express-stubs"
+    },
+    {
+      "packageName": "micropython-samd-adafruit-itsybitsy-m4-express-stubs",
+      "label": "micropython-samd-adafruit_itsybitsy_m4_express",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.20.0"
+      ],
+      "port": "samd",
+      "board": "ADAFRUIT_ITSYBITSY_M4_EXPRESS",
+      "id": "micropython-samd-adafruit-itsybitsy-m4-express-stubs"
+    },
+    {
+      "packageName": "micropython-samd-minisam-m4-stubs",
+      "label": "micropython-samd-minisam_m4",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.20.0"
+      ],
+      "port": "samd",
+      "board": "MINISAM_M4",
+      "id": "micropython-samd-minisam-m4-stubs"
+    },
+    {
+      "packageName": "micropython-samd-seeed-wio-terminal-stubs",
+      "label": "micropython-samd-seeed_wio_terminal",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1",
+        "1.23.0",
+        "1.22.1",
+        "1.22.0",
+        "1.21.0",
+        "1.20.0"
+      ],
+      "port": "samd",
+      "board": "SEEED_WIO_TERMINAL",
+      "id": "micropython-samd-seeed-wio-terminal-stubs"
+    },
+    {
       "packageName": "micropython-samd-stubs",
-      "label": "MicroPython SAMD",
-      "kind": "board"
+      "label": "micropython-samd",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1",
+        "1.23.0",
+        "1.22.1",
+        "1.22.0",
+        "1.21.0",
+        "1.20.0"
+      ],
+      "port": "samd",
+      "board": "GENERIC",
+      "id": "samd"
     },
     {
-      "id": "webassembly",
+      "packageName": "micropython-stdlib-stubs",
+      "label": "micropython-stdlib",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.26.0"
+      ],
+      "port": "",
+      "board": "GENERIC",
+      "id": "micropython-stdlib-stubs"
+    },
+    {
+      "packageName": "micropython-stm32-pybv11-stubs",
+      "label": "micropython-stm32-pybv11",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1",
+        "1.23.0",
+        "1.22.0",
+        "1.21.0",
+        "1.20.0"
+      ],
+      "port": "stm32",
+      "board": "PYBV11",
+      "id": "micropython-stm32-pybv11-stubs"
+    },
+    {
+      "packageName": "micropython-stm32-stubs",
+      "label": "micropython-stm32",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.27.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1",
+        "1.23.0",
+        "1.22.0",
+        "1.21.0",
+        "1.20.0",
+        "1.19.1",
+        "1.18",
+        "1.17"
+      ],
+      "port": "stm32",
+      "board": "GENERIC",
+      "id": "stm32"
+    },
+    {
+      "packageName": "micropython-unix-stubs",
+      "label": "micropython-unix",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1",
+        "1.21.0",
+        "1.20.0"
+      ],
+      "port": "unix",
+      "board": "GENERIC",
+      "id": "unix"
+    },
+    {
       "packageName": "micropython-webassembly-stubs",
-      "label": "MicroPython WebAssembly",
-      "kind": "board"
+      "label": "micropython-webassembly",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1",
+        "1.21.0"
+      ],
+      "port": "webassembly",
+      "board": "GENERIC",
+      "id": "webassembly"
+    },
+    {
+      "packageName": "micropython-windows-stubs",
+      "label": "micropython-windows",
+      "kind": "firmware",
+      "family": "micropython",
+      "runtimeVersions": [
+        "1.28.0",
+        "1.26.0",
+        "1.25.0",
+        "1.24.1"
+      ],
+      "port": "windows",
+      "board": "GENERIC",
+      "id": "windows"
+    },
+    {
+      "id": "circuitpython",
+      "packageName": "circuitpython-stubs",
+      "label": "CircuitPython",
+      "kind": "firmware",
+      "family": "circuitpython",
+      "runtimeVersions": [],
+      "port": "",
+      "board": ""
     }
   ]
 }

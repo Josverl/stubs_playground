@@ -265,8 +265,13 @@ The worker keeps discoverable MicroPython package identities in
 `assets/stub-package-catalog.json`; versions are queried from PyPI at runtime:
 
 ```js
-const packages = await transport.listStubPackages();
-const esp32 = packages.find(pkg => pkg.id === 'esp32');
+const packages = await transport.listStubPackages({
+  family: 'micropython',
+  version: '1.28.0',
+  port: 'esp32',
+  board: 'GENERIC',
+});
+const esp32 = packages[0];
 await transport.installStubPackage(
   esp32.packageName,
   `==${esp32.latestVersion}`,
