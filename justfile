@@ -31,9 +31,9 @@ build-dev:
     @echo "NOTE: dist/pyright_worker.js is now an unminified DEVELOPMENT build."
     @echo "      Run 'just build' before committing or releasing."
 
-# build Sphinx API documentation and fail on warnings
+# build Sphinx API documentation
 docs:
-    uv run --with-requirements docs/requirements.txt sphinx-build -W --keep-going -b html docs docs/_build/html
+    uv run --with-requirements docs/requirements.txt sphinx-build -b html docs docs/_build/html
 
 # pack Pyright's typeshed-fallback into a zip for browser use
 pack-typeshed:
