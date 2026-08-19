@@ -158,6 +158,9 @@ jobs:
   application-browser-tests:
     # The playground verifies rendered behavior and public component interfaces.
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright/python:v1.55.0-noble
+      options: --user 1001
     needs: [worker-build]
     timeout-minutes: 20
     strategy:
@@ -174,15 +177,6 @@ jobs:
           name: pyright-worker-dist
           path: packages/pyright-worker/dist
 
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ matrix.browser }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-${{ matrix.browser }}-
-
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
         with:
@@ -192,13 +186,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra test
 
-      - name: Install Playwright browsers and system dependencies
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: uv run playwright install ${{ matrix.browser }} --with-deps
-
-      - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: uv run playwright install-deps ${{ matrix.browser }}
+      - name: Verify Playwright container version
+        run: uv run python -c "from importlib.metadata import version; actual = version('playwright'); assert actual == '1.55.0', f'Playwright {actual} does not match container v1.55.0'"
 
       - name: Run suite tests
         run: uv run pytest apps/playground/tests -v --browser "${{ matrix.browser }}"
@@ -206,6 +195,9 @@ jobs:
   component-browser-tests:
     # Package-owned harnesses test published components without the playground.
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright/python:v1.55.0-noble
+      options: --user 1001
     needs: [worker-build]
     timeout-minutes: 20
     strategy:
@@ -222,15 +214,6 @@ jobs:
           name: pyright-worker-dist
           path: packages/pyright-worker/dist
 
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ matrix.browser }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-${{ matrix.browser }}-
-
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
         with:
@@ -240,13 +223,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra test
 
-      - name: Install Playwright browsers and system dependencies
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: uv run playwright install ${{ matrix.browser }} --with-deps
-
-      - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: uv run playwright install-deps ${{ matrix.browser }}
+      - name: Verify Playwright container version
+        run: uv run python -c "from importlib.metadata import version; actual = version('playwright'); assert actual == '1.55.0', f'Playwright {actual} does not match container v1.55.0'"
 
       - name: Run component browser tests
         run: uv run pytest packages/lsp-client/tests -v --browser "${{ matrix.browser }}"
