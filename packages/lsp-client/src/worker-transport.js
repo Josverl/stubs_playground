@@ -50,7 +50,7 @@ import { logVerbose } from './logging.js';
  * @property {string} label - Human-readable package label.
  * @property {'stdlib'|'firmware'} kind - Package role.
  * @property {'micropython'|'circuitpython'} family - Firmware family.
- * @property {string[]} firmwareVersions - Compatible firmware releases.
+ * @property {string[]} runtimeVersions - Compatible firmware releases.
  * @property {string} port - MicroPython port, when applicable.
  * @property {string} board - MicroPython board, when applicable.
  * @property {string} latestVersion - Latest stable installable version.
@@ -605,7 +605,7 @@ export class WorkerTransport {
      *
     * @param {{family?: string, version?: string, port?: string, board?: string}} [filters={}] -
     *   Firmware metadata used to limit package and PyPI release discovery.
-    * @returns {Promise<StubPackageCatalogEntry[]>} Catalog entries and installable versions.
+    * @returns {Promise<{packages: StubPackageCatalogEntry[], availableRuntimeVersions: string[], defaultRuntimeVersion: string}>} Catalog entries, installable runtime versions, and the default runtime version.
      * @throws {Error} If disconnected, the worker rejects the request, or it times out.
      */
     async getStubPackageCatalog(filters = {}) {

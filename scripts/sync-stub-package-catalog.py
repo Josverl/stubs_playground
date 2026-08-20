@@ -33,14 +33,18 @@ def _stable_runtime_versions(rows: list) -> list[str]:
         match = re.fullmatch(r"(\d+)\.(\d+)(?:\.(\d+))?", row[1].strip())
         if not match:
             continue
-        key = tuple(int(part or 0) for part in match.groups())
+        major, minor, patch = match.groups()
+        key = (int(major), int(minor), int(patch or 0))
         stable_versions[key] = row[1].strip()
     return [stable_versions[key] for key in sorted(stable_versions, reverse=True)]
 
 
 def _runtime_version_sort_key(value: str) -> tuple[int, int, int]:
     match = re.match(r"(\d+)\.(\d+)(?:\.(\d+))?", value)
-    return tuple(int(part or 0) for part in match.groups()) if match else (0, 0, 0)
+    if not match:
+        return (0, 0, 0)
+    major, minor, patch = match.groups()
+    return (int(major), int(minor), int(patch or 0))
 
 
 def build_catalog(source_data: dict, source: str = DEFAULT_SOURCE) -> dict:
@@ -58,22 +62,24 @@ def build_catalog(source_data: dict, source: str = DEFAULT_SOURCE) -> dict:
             raise ValueError(f"Package row {index} contains non-string metadata")
 
         normalized_name = _normalized_name(package_name)
-        normalized_port = port.lower()
+        is_stdlib = normalized_name == "micropython-stdlib-stubs"
+        normalized_port = "" if is_stdlib else port.lower()
         is_generic_port_package = normalized_name == f"micropython-{normalized_port}-stubs"
-        normalized_board = "GENERIC" if is_generic_port_package else (board.upper() or "GENERIC")
+        normalized_board = "" if is_stdlib else ("GENERIC" if is_generic_port_package else (board.upper() or "GENERIC"))
         entry = grouped.setdefault(
             (normalized_name, normalized_port, normalized_board),
             {
                 "packageName": normalized_name,
-                "label": package_name.removesuffix("-stubs"),
-                "kind": "firmware",
+                "label": "MicroPython standard library" if is_stdlib else package_name.removesuffix("-stubs"),
+                "kind": "stdlib" if is_stdlib else "firmware",
                 "family": "micropython",
                 "runtimeVersions": set(),
                 "port": normalized_port,
                 "board": normalized_board,
             },
         )
-        entry["runtimeVersions"].add(runtime_version)  # type: ignore[union-attr]
+        if not is_stdlib:
+            entry["runtimeVersions"].add(runtime_version)  # type: ignore[union-attr]
 
     packages = []
     target_counts: dict[str, int] = {}
@@ -84,7 +90,9 @@ def build_catalog(source_data: dict, source: str = DEFAULT_SOURCE) -> dict:
         package_name = str(entry["packageName"])
         board = str(entry["board"])
         is_generic_port_package = package_name == f"micropython-{entry['port']}-stubs"
-        if is_generic_port_package:
+        if entry["kind"] == "stdlib":
+            entry["id"] = "stdlib"
+        elif is_generic_port_package:
             entry["id"] = entry["port"]
         else:
             entry["id"] = (
@@ -97,20 +105,21 @@ def build_catalog(source_data: dict, source: str = DEFAULT_SOURCE) -> dict:
         )
         packages.append(entry)
 
-    packages.sort(key=lambda entry: (entry["packageName"], entry["board"]))
-    packages.insert(
-        0,
-        {
-            "id": "stdlib",
-            "packageName": "micropython-stdlib-stubs",
-            "label": "MicroPython standard library",
-            "kind": "stdlib",
-            "family": "micropython",
-            "runtimeVersions": [],
-            "port": "",
-            "board": "",
-        },
-    )
+    packages.sort(key=lambda entry: (entry["kind"] != "stdlib", entry["packageName"], entry["board"]))
+    if not packages or packages[0]["kind"] != "stdlib":
+        packages.insert(
+            0,
+            {
+                "id": "stdlib",
+                "packageName": "micropython-stdlib-stubs",
+                "label": "MicroPython standard library",
+                "kind": "stdlib",
+                "family": "micropython",
+                "runtimeVersions": [],
+                "port": "",
+                "board": "",
+            },
+        )
     packages.append(
         {
             "id": "circuitpython",

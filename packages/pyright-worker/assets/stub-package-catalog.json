@@ -20,14 +20,14 @@
   "defaultRuntimeVersion": "1.28.0",
   "packages": [
     {
-      "id": "stdlib",
       "packageName": "micropython-stdlib-stubs",
       "label": "MicroPython standard library",
       "kind": "stdlib",
       "family": "micropython",
       "runtimeVersions": [],
       "port": "",
-      "board": ""
+      "board": "",
+      "id": "stdlib"
     },
     {
       "packageName": "micropython-esp32-esp32-generic-c3-stubs",
@@ -550,18 +550,6 @@
       "port": "samd",
       "board": "GENERIC",
       "id": "samd"
-    },
-    {
-      "packageName": "micropython-stdlib-stubs",
-      "label": "micropython-stdlib",
-      "kind": "firmware",
-      "family": "micropython",
-      "runtimeVersions": [
-        "1.26.0"
-      ],
-      "port": "",
-      "board": "GENERIC",
-      "id": "micropython-stdlib-stubs"
     },
     {
       "packageName": "micropython-stm32-pybv11-stubs",
