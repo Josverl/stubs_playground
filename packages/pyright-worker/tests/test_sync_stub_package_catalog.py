@@ -47,6 +47,7 @@ def test_build_catalog_groups_versions_and_normalizes_board_names():
 def test_build_catalog_includes_circuitpython_placeholder():
     catalog = MODULE.build_catalog({"packages": [["micropython-rp2-stubs", "1.28.0", "rp2", "GENERIC", ""]]})
 
+    assert catalog["packages"][0]["kind"] == "stdlib"
     circuitpython = catalog["packages"][-1]
     assert circuitpython == {
         "id": "circuitpython",
@@ -58,3 +59,28 @@ def test_build_catalog_includes_circuitpython_placeholder():
         "port": "",
         "board": "",
     }
+
+
+def test_build_catalog_maps_stdlib_source_row_without_duplicate():
+    catalog = MODULE.build_catalog(
+        {
+            "packages": [
+                ["micropython-rp2-stubs", "1.28.0", "rp2", "GENERIC", ""],
+                ["micropython-stdlib-stubs", "1.26.0", "", "", ""],
+            ]
+        }
+    )
+
+    stdlib_entries = [entry for entry in catalog["packages"] if entry["packageName"] == "micropython-stdlib-stubs"]
+    assert stdlib_entries == [
+        {
+            "id": "stdlib",
+            "packageName": "micropython-stdlib-stubs",
+            "label": "MicroPython standard library",
+            "kind": "stdlib",
+            "family": "micropython",
+            "runtimeVersions": [],
+            "port": "",
+            "board": "",
+        }
+    ]

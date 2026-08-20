@@ -344,9 +344,10 @@ function getSelectedStubMetadata() {
     const target = getCurrentStubTarget();
     if (target) {
         const cached = getActiveInstalledPackage(target.packageName);
+        const bundled = getBundledStubTarget(target);
         return {
-            package: cached?.packageName || target.packageName,
-            version: cached?.version || currentStubFilters.version || '',
+            package: cached?.packageName || bundled?.package || target.packageName,
+            version: cached?.version || bundled?.package_version || currentStubFilters.version || '',
         };
     }
 
@@ -391,6 +392,17 @@ function getBundledStubTarget(target = getCurrentStubTarget()) {
     )) || null;
 }
 
+function getMajorMinorPackageVersion(versionValue) {
+    return /^((?:\d+)\.(?:\d+))/.exec(String(versionValue || ''))?.[1] || '';
+}
+
+function hasMatchingRuntimeMajorMinor(packageVersion, runtimeVersion = currentStubFilters.version) {
+    const packageLine = getMajorMinorPackageVersion(packageVersion);
+    const runtimeLine = getMajorMinorPackageVersion(runtimeVersion);
+    if (!packageLine || !runtimeLine) return true;
+    return packageLine === runtimeLine;
+}
+
 function getPreferredBoardStubPackage(boardId) {
     const target = getCurrentStubTarget(boardId);
     if (!target?.packageName) return undefined;
@@ -405,7 +417,12 @@ function getPreferredBoardStubPackage(boardId) {
 
 async function ensureSelectedStubPackage(targetId = currentBoardId) {
     const target = getCurrentStubTarget(targetId);
-    if (!target || getActiveInstalledPackage(target.packageName) || getBundledStubTarget(target)?.file) {
+    if (!target) return;
+
+    const installed = getActiveInstalledPackage(target.packageName);
+    const bundled = getBundledStubTarget(target);
+    if ((installed && hasMatchingRuntimeMajorMinor(installed.version)) ||
+        (bundled?.file && bundled?.package_version && hasMatchingRuntimeMajorMinor(bundled.package_version))) {
         return;
     }
 
@@ -534,8 +551,25 @@ async function clearAllExtraStubs() {
 
     try {
         if (!lspTransport) throw new Error('Language server is not ready');
+        const activeTarget = getCurrentStubTarget(currentBoardId);
+        const activePackage = activeTarget
+            ? getActiveInstalledPackage(activeTarget.packageName)
+            : null;
+        const activePackageIsUnbundled = Boolean(
+            activePackage && !getBundledStubTarget(activeTarget)?.file,
+        );
         await lspTransport.clearStubPackages();
         installedStubPackages = [];
+
+        if (activePackageIsUnbundled) {
+            const versionSpecifier = activePackage.version
+                ? `==${activePackage.version}`
+                : '';
+            await lspTransport.installStubPackage(
+                activePackage.packageName,
+                versionSpecifier,
+            );
+        }
 
         if (lspClient && lspTransport) {
             setExtraStubsStatus('Clearing and restarting language server...');

@@ -41,7 +41,7 @@ def test_micropython_version_and_port_filters_narrow_stub_packages(
 
     expect(page.locator("#stubBoard")).to_have_value("GENERIC")
     expect(page.locator("#boardSelect")).to_have_value("rp2")
-    expect(page.locator("#boardSelect option:checked")).to_contain_text("micropython-rp2-stubs")
+    expect(page.locator("#boardSelect option:checked")).to_contain_text("rp2 / GENERIC")
     assert "RPI_PICO" in page.locator("#stubBoard option").all_text_contents()
 
     RESULTS.mkdir(exist_ok=True)

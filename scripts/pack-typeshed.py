@@ -31,9 +31,10 @@ def add_file(zf: zipfile.ZipFile, full_path: Path, arcname: Path):
     data = full_path.read_bytes()
 
     # Create ZipInfo manually
-    info = zipfile.ZipInfo.from_file(full_path, arcname)
+    info = zipfile.ZipInfo.from_file(full_path, arcname.as_posix())
 
     # Strip metadata
+    info.date_time = (2026, 1, 1, 0, 0, 0)
     info.create_system = 0  # MS-DOS (no UNIX perms)
     info.external_attr = 0  # remove UNIX permissions
     info.extra = b""  # remove extra fields
@@ -67,8 +68,9 @@ def main() -> None:
             src_dir = TYPESHED_SRC / dir_name
             if not src_dir.exists():
                 continue
-            for root_dir, _dirs, files in os.walk(src_dir):
-                for f in files:
+            for root_dir, dirs, files in os.walk(src_dir):
+                dirs.sort()
+                for f in sorted(files):
                     full = Path(root_dir) / f
                     arcname = full.relative_to(TYPESHED_SRC)
                     add_file(zf, full, arcname)
@@ -76,7 +78,7 @@ def main() -> None:
         for fname in INCLUDE_FILES:
             fpath = TYPESHED_SRC / fname
             if fpath.exists():
-                add_file(zf, fpath, fname)
+                add_file(zf, fpath, Path(fname))
 
     size_mb = OUT_FILE.stat().st_size / 1024 / 1024
     print(f"Done: {size_mb:.2f} MB")
