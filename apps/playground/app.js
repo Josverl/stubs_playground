@@ -324,40 +324,33 @@ async function restartLSPWithCurrentSettings(boardId) {
     }
 }
 
-function getSelectedStubsStatusLabel() {
-    const target = getCurrentStubTarget();
-    if (target) {
-        const cached = getActiveInstalledPackage(target.packageName);
-        if (cached) return `${cached.packageName} v${cached.version}`;
-        return target.packageName;
-    }
-
-    const select = document.getElementById('boardSelect');
-    const text = select?.options?.[select.selectedIndex]?.textContent?.trim() || '';
-    if (!text || /^loading\.{0,3}$/i.test(text)) return '';
-    const parts = text.split(' — ').map((p) => p.trim()).filter(Boolean);
-    if (parts.length >= 2) return `${parts[0]} v${parts[1]}`;
-    return text;
+// Format a package name and optional version as `name==version` (PEP 508 style).
+function formatPackageSpecifier(packageName, version) {
+    const name = normalizePackageName(packageName);
+    return version ? `${name}==${version}` : name;
 }
 
+// Resolve the {package, version} of the currently selected stub target.
 function getSelectedStubMetadata() {
     const target = getCurrentStubTarget();
-    if (target) {
-        const cached = getActiveInstalledPackage(target.packageName);
-        const bundled = getBundledStubTarget(target);
-        return {
-            package: cached?.packageName || bundled?.package || target.packageName,
-            version: cached?.version || bundled?.package_version || currentStubFilters.version || '',
-        };
-    }
-
-    const select = document.getElementById('boardSelect');
-    const text = select?.options?.[select.selectedIndex]?.textContent?.trim() || '';
-    const parts = text.split(' — ').map((p) => p.trim()).filter(Boolean);
+    const cached = target ? getActiveInstalledPackage(target.packageName) : null;
+    const bundled = target ? getBundledStubTarget(target) : null;
     return {
-        package: parts[0] || '',
-        version: parts[1] || '',
+        package: cached?.packageName || bundled?.package || target?.packageName || '',
+        version: cached?.version || bundled?.package_version || currentStubFilters.version || '',
     };
+}
+
+function getSelectedStubsStatusLabel() {
+    const { package: packageName, version } = getSelectedStubMetadata();
+    return packageName ? formatPackageSpecifier(packageName, version) : '';
+}
+
+// Refresh the readonly package field with the active `name==version` specifier.
+function updatePackageDisplay() {
+    const field = document.getElementById('boardSelect');
+    if (!field) return;
+    field.value = getSelectedStubsStatusLabel() || 'No matching package';
 }
 
 function normalizePackageName(value) {
@@ -439,23 +432,7 @@ async function refreshInstalledStubPackages() {
     if (!lspTransport) return;
     installedStubPackages = await lspTransport.listInstalledStubPackages();
     updateExtraStubsSummaryStatus();
-    updateBoardSelectorPackageVersions();
-}
-
-function updateBoardSelectorPackageVersions() {
-    const select = document.getElementById('boardSelect');
-    if (!select) return;
-    for (const option of select.options) {
-        const target = getCurrentStubTarget(option.value);
-        if (!target) continue;
-        const cached = getActiveInstalledPackage(target.packageName);
-        const targetName = target.family === 'circuitpython'
-            ? 'CircuitPython'
-            : `${target.port} / ${target.board}`;
-        option.textContent = cached
-            ? `${targetName} — ${cached.version}`
-            : `${targetName} — ${target.packageName}`;
-    }
+    updatePackageDisplay();
 }
 
 async function loadStubPackageCatalog() {
@@ -494,7 +471,7 @@ function updateExtraStubsSummaryStatus() {
     }
 
     const names = activePackages.map((entry) => (
-        entry.version ? `${entry.packageName}@${entry.version}` : entry.packageName
+        formatPackageSpecifier(entry.packageName, entry.version)
     ));
     setExtraStubsStatus(`Installed: ${names.join(', ')}`, 'success');
 }
@@ -800,24 +777,10 @@ function populateStubTargetControls(preferredTargetId = currentBoardId) {
     }
 
     const targets = filterStubPackages(stubPackageCatalog, currentStubFilters);
-    const select = document.getElementById('boardSelect');
-    select.replaceChildren();
-    for (const target of targets) {
-        const option = document.createElement('option');
-        option.value = target.id;
-        select.appendChild(option);
-    }
     currentBoardId = targets.some((target) => target.id === preferredTargetId)
         ? preferredTargetId
         : (targets[0]?.id || '');
-    select.value = currentBoardId;
-    if (!targets.length) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'No matching package';
-        select.appendChild(option);
-    }
-    updateBoardSelectorPackageVersions();
+    updatePackageDisplay();
     setStubFilterApplicability();
 }
 
@@ -877,11 +840,9 @@ async function initBoardSelector() {
 
         // Ensure status line reflects selected stubs immediately.
         updateDiagnosticsStatus([], pyrightVersion, getSelectedStubsStatusLabel());
-
-        select.addEventListener('change', handleBoardChange);
     } catch (err) {
         console.warn('Could not load board manifest:', err);
-        select.innerHTML = '<option value="">Default</option>';
+        select.value = 'Default';
     }
 }
 
@@ -898,35 +859,7 @@ function getBoardStubRuntime(boardId) {
     };
 }
 
-// Handle board selector change
-async function handleBoardChange(event) {
-    const newBoardId = event.target.value;
-    if (newBoardId === currentBoardId) return;
-
-    const loading = document.getElementById('boardLoading');
-    const select = document.getElementById('boardSelect');
-
-    try {
-        loading.hidden = false;
-        setLSPControlsDisabled(true);
-
-        await ensureSelectedStubPackage(newBoardId);
-        await restartLSPWithCurrentSettings(newBoardId);
-        currentBoardId = newBoardId;
-        persistStubTargetSelection();
-
-        console.log(`Switched to stub package target: ${newBoardId}`);
-    } catch (err) {
-        console.error(`Board switch failed:`, err);
-        // Revert UI to current board
-        select.value = currentBoardId;
-    } finally {
-        loading.hidden = true;
-        setLSPControlsDisabled(false);
-        setStubFilterApplicability();
-    }
-}
-
+// Handle stub filter (family/version/port/board) change
 async function handleStubFilterChange(event) {
     const fields = {
         stubFamily: 'family',

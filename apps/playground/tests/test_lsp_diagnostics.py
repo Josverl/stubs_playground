@@ -245,9 +245,11 @@ def test_webassembly_bundle_resolves_micropython_module(page, live_server):
     page.locator("#stubPort").select_option("webassembly")
     page.wait_for_function(
         """() => {
-            const select = document.getElementById('boardSelect');
+            const field = document.getElementById('boardSelect');
             const loading = document.getElementById('boardLoading');
-            return select.value === 'webassembly' && !select.disabled && loading.hidden;
+            return window.__activeLspBoard === 'webassembly'
+                && field.value.includes('micropython-webassembly')
+                && !field.disabled && loading.hidden;
         }""",
         timeout=LSP_TIMEOUT,
     )

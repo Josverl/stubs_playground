@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 from playwright.sync_api import Page, expect
@@ -34,14 +35,13 @@ def test_micropython_version_and_port_filters_narrow_stub_packages(
     page.locator("#stubPort").select_option("rp2")
     page.wait_for_function(
         """() => window.__lspReady === true
-            && document.querySelector('#boardSelect')?.value === 'rp2'
-            && window.__activeLspBoard === 'rp2'""",
+            && window.__activeLspBoard === 'rp2'
+            && document.querySelector('#boardSelect')?.value.includes('micropython-rp2-stubs')""",
         timeout=CDN_TIMEOUT + LSP_TIMEOUT,
     )
 
     expect(page.locator("#stubBoard")).to_have_value("GENERIC")
-    expect(page.locator("#boardSelect")).to_have_value("rp2")
-    expect(page.locator("#boardSelect option:checked")).to_contain_text("rp2 / GENERIC")
+    expect(page.locator("#boardSelect")).to_have_value(re.compile(r"^micropython-rp2-stubs=="))
     assert "RPI_PICO" in page.locator("#stubBoard option").all_text_contents()
 
     RESULTS.mkdir(exist_ok=True)

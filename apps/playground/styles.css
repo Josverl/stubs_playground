@@ -405,10 +405,31 @@ body.light-theme #options-panel .extra-stubs-status {
 #options-panel .stub-port-selector select,
 #options-panel .stub-board-selector select,
 #options-panel .board-selector select,
+#options-panel .board-selector input,
 #options-panel .typecheck-selector select,
 #options-panel .python-version-selector select {
     width: 100%;
     max-width: none;
+}
+
+#options-panel .board-selector input {
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: default;
+}
+
+body.dark-theme #options-panel .board-selector input {
+    background-color: #2a2a2a;
+    color: #d4d4d4;
+    border: 1px solid #3e3e42;
+}
+
+body.light-theme #options-panel .board-selector input {
+    background-color: #f3f3f3;
+    color: #000000;
+    border: 1px solid #d4d4d4;
 }
 
 #options-panel .generated-config-viewer button {

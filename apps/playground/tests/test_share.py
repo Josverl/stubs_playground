@@ -320,7 +320,7 @@ def test_url_restores_board(page, live_server):
     page.goto(url, wait_until="domcontentloaded")
     page.wait_for_selector(".cm-editor", timeout=CDN_TIMEOUT)
 
-    board = page.evaluate("() => document.getElementById('boardSelect').value")
+    board = page.evaluate("() => window.__activeLspBoard")
     assert board == "esp32"
 
 
@@ -338,7 +338,7 @@ def test_url_board_preloads_matching_stubs(page, live_server):
         """() =>
             window.__lspReady === true
             && window.__activeLspBoard === 'stm32'
-            && document.getElementById('boardSelect').value === 'stm32'""",
+            && document.getElementById('boardSelect').value.includes('micropython-stm32')""",
         timeout=CDN_TIMEOUT,
     )
 

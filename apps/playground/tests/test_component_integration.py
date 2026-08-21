@@ -36,7 +36,8 @@ def _wait_for_playground_lsp(page: Page) -> dict:
             window.__lspFailed === true
             || (
                 window.__lspReady === true
-                && window.__activeLspBoard === document.querySelector('#boardSelect')?.value
+                && typeof window.__activeLspBoard === 'string'
+                && window.__activeLspBoard.length > 0
             )""",
         timeout=HARNESS_TIMEOUT,
     )
@@ -113,18 +114,18 @@ def test_playground_uses_reusable_stub_catalog_and_persistent_cache(page: Page, 
     package_input.press("Enter")
     status = page.locator("#extraStubsStatus")
     expect(status).to_contain_text(
-        "Installed: micropython-esp32-stubs@",
+        "Installed: micropython-esp32-stubs==",
         timeout=HARNESS_TIMEOUT,
     )
-    installed_version = status.inner_text().split("micropython-esp32-stubs@", 1)[1]
-    expect(page.locator("#boardSelect option:checked")).to_contain_text(installed_version)
+    installed_version = status.inner_text().split("micropython-esp32-stubs==", 1)[1]
+    expect(page.locator("#boardSelect")).to_have_value(f"micropython-esp32-stubs=={installed_version}")
 
     requests_after_install: list[str] = []
     page.on("request", lambda request: requests_after_install.append(request.url))
     page.reload(wait_until="domcontentloaded")
     _wait_for_playground_lsp(page)
     expect(page.locator("#extraStubsStatus")).to_contain_text(
-        f"micropython-esp32-stubs@{installed_version}",
+        f"micropython-esp32-stubs=={installed_version}",
         timeout=HARNESS_TIMEOUT,
     )
     assert not any(url.endswith("/stubs-esp32.zip") for url in requests_after_install)
