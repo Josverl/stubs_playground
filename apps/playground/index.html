@@ -64,6 +64,18 @@
             <h2>Options</h2>
         </div>
         <div class="controls">
+
+            <div class="sample-selector">
+                <select id="sampleSelect" aria-label="Select example file">
+                    <option value="">Select Example...</option>
+                </select>
+                <button id="loadSampleBtn" aria-label="Load selected sample">Load</button>
+            </div>
+            <button id="helpBtn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">⌨</button>
+
+            <hr class="options-separator">
+            <span id="boardLoading" class="loading-indicator" hidden>⏳</span>
+
             <div class="stub-family-selector">
                 <label for="stubFamily">Family:</label>
                 <select id="stubFamily" aria-label="Select stub package family">
@@ -88,8 +100,8 @@
                 <select id="boardSelect" aria-label="Select stub package">
                     <option value="">Loading...</option>
                 </select>
-                <span id="boardLoading" class="loading-indicator" hidden>⏳</span>
             </div>
+            <hr class="options-separator">
             <div class="typecheck-selector">
                 <label for="typeCheckMode">Check:</label>
                 <select id="typeCheckMode" aria-label="Pyright type checking mode">
@@ -98,17 +110,6 @@
                     <option value="standard" selected>Standard</option>
                     <option value="strict">Strict</option>
                 </select>
-            </div>
-            <div class="typeshed-toggle">
-                <label for="typeshedPathToggle">stdlib:</label>
-                <div class="typeshed-switch-row" aria-label="Select stdlib stubs path">
-                    <span class="switch-side-label">MicroPython</span>
-                    <label class="switch" for="typeshedPathToggle">
-                        <input id="typeshedPathToggle" type="checkbox" aria-label="Use MicroPython stdlib stubs">
-                        <span class="switch-slider" aria-hidden="true"></span>
-                    </label>
-                    <span class="switch-side-label">CPython</span>
-                </div>
             </div>
             <div class="python-version-selector">
                 <label for="pythonVersion">Python:</label>
@@ -121,19 +122,27 @@
                     <span id="verboseOutputLabel"></span>
                 </div>
             </div>
+
+            <div class="typeshed-toggle">
+                <label for="typeshedPathToggle">stdlib:</label>
+                <div class="typeshed-switch-row" aria-label="Select stdlib stubs path">
+                    <span class="switch-side-label">MicroPython</span>
+                    <label class="switch" for="typeshedPathToggle">
+                        <input id="typeshedPathToggle" type="checkbox" aria-label="Use MicroPython stdlib stubs">
+                        <span class="switch-slider" aria-hidden="true"></span>
+                    </label>
+                    <span class="switch-side-label">CPython</span>
+                </div>
+            </div>
+            <hr class="options-separator">
             <div class="generated-config-viewer">
                 <label for="openGeneratedConfigBtn">Config:</label>
                 <button id="openGeneratedConfigBtn" type="button" aria-label="View generated pyproject.toml">View
                     pyproject.toml</button>
             </div>
 
-            <button id="helpBtn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">⌨</button>
-            <div class="sample-selector">
-                <select id="sampleSelect" aria-label="Select example file">
-                    <option value="">Select Example...</option>
-                </select>
-                <button id="loadSampleBtn" aria-label="Load selected sample">Load</button>
-            </div>
+            <hr class="options-separator">
+
             <div class="extra-stubs-section" aria-label="Install additional type stubs from PyPI">
                 <label for="extraStubSpecifier">Install extra stubs from PyPI:</label>
                 <div class="extra-stubs-controls">
