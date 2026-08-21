@@ -43,13 +43,13 @@ DEFAULT_BOARD_ID = "esp32"
 
 # Boards that have installable stub packages
 BOARDS: list[Board] = [
-    Board(id="stdlib",  package="micropython-stdlib-stubs"), # Used for stdlib only
+    Board(id="stdlib", package="micropython-stdlib-stubs"),  # Used for stdlib only
     Board(id="esp32", package="micropython-esp32-stubs"),
-    Board(id="rp2",   package="micropython-rp2-stubs"),
+    Board(id="rp2", package="micropython-rp2-stubs"),
     Board(id="stm32", package="micropython-stm32-stubs"),
-    Board(id="samd",  package="micropython-samd-stubs"),
+    Board(id="samd", package="micropython-samd-stubs"),
     Board(id="webassembly", package="micropython-webassembly-stubs"),
-    Board(id="circuitpython",  package="circuitpython-stubs"),
+    Board(id="circuitpython", package="circuitpython-stubs"),
 ]
 
 # Virtual boards (no stub package, included in manifest only)
@@ -155,7 +155,7 @@ def pack_board(board: Board) -> Board:
             text=True,
         )
         # Add (rp2) time.pyi, as this is not in micropython-stdlib-stubs
-        shutil.copyfile( ASSETS / "time.pyi", target / "time.pyi" )
+        shutil.copyfile(ASSETS / "time.pyi", target / "time.pyi")
 
     subprocess.run(
         ["uv", "pip", "install", board.package, "--target", str(target), "--quiet"],
@@ -190,9 +190,7 @@ def pack_board(board: Board) -> Board:
 
 def main() -> None:
     requested_ids = sys.argv[1:]
-    boards = (
-        [b for b in BOARDS if b.id in requested_ids] if requested_ids else list(BOARDS)
-    )
+    boards = [b for b in BOARDS if b.id in requested_ids] if requested_ids else list(BOARDS)
 
     if requested_ids and not boards:
         available = ", ".join(b.id for b in BOARDS)
@@ -208,10 +206,7 @@ def main() -> None:
         packed[board.id] = pack_board(board)
 
     # Targeted runs update one archive without dropping other existing boards.
-    results = [
-        packed[board.id] if board.id in packed else get_cached_board(board)
-        for board in BOARDS
-    ]
+    results = [packed[board.id] if board.id in packed else get_cached_board(board) for board in BOARDS]
     results.extend(VIRTUAL_BOARDS)
 
     # Generate manifest

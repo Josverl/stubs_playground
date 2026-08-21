@@ -756,7 +756,11 @@ export async function listAvailableStubPackages(
     return Promise.all(publicCatalog.map(async (catalogEntry) => {
         try {
             const index = await fetchPyPIIndex(catalogEntry.packageName);
-            const installable = installableReleases(index);
+            const requestedVersion = majorMinorVersion(resolvedFilters.version || "");
+            const installable = installableReleases(index).filter(
+                (release) => !requestedVersion
+                    || majorMinorVersion(release.version) === requestedVersion,
+            );
             const versions = groupedPostReleases(installable);
             const advertisedLatest = index.info?.version || "";
             const latestVersion = installable.some((release) => release.version === advertisedLatest)

@@ -26,7 +26,7 @@ INCLUDE_FILES = ["LICENSE"]
 
 
 def add_file(zf: zipfile.ZipFile, full_path: Path, arcname: Path):
-    """Add a file to the zipfile with stripped metadata and no compression."""
+    """Add a deflated file to the zipfile with deterministic metadata."""
     # Read file contents
     data = full_path.read_bytes()
 
@@ -39,9 +39,7 @@ def add_file(zf: zipfile.ZipFile, full_path: Path, arcname: Path):
     info.external_attr = 0  # remove UNIX permissions
     info.extra = b""  # remove extra fields
     info.comment = b""  # remove per-file comment
-
-    # Use STORE for tiny files (best for Zen-FS)
-    # info.compress_type = zipfile.ZIP_STORED
+    info.compress_type = zipfile.ZIP_DEFLATED
 
     # Write file
     zf.writestr(info, data)

@@ -228,6 +228,9 @@
                     packageCount: packages.length,
                     esp32LatestVersion: esp32?.latestVersion || '',
                     esp32VersionCount: esp32?.versions?.length || 0,
+                    allVersionsMatchRequestedRuntime: versions.every((version) =>
+                        version.startsWith('1.28.')
+                    ),
                     includesStdlib: packages.some((entry) =>
                         entry.packageName === 'micropython-stdlib-stubs'
                     ),

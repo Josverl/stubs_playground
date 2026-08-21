@@ -57,13 +57,9 @@ def test_webassembly_archive_and_manifest_expose_micropython_modules():
 def test_runtime_stub_catalog_is_versionless_and_covers_packaged_boards():
     assets = Path(__file__).parents[1] / "assets"
     manifest = json.loads((assets / "stubs-manifest.json").read_text(encoding="utf-8"))
-    catalog = json.loads(
-        (assets / "stub-package-catalog.json").read_text(encoding="utf-8")
-    )
+    catalog = json.loads((assets / "stub-package-catalog.json").read_text(encoding="utf-8"))
 
-    catalog_packages = {
-        entry["packageName"]: entry for entry in catalog["packages"]
-    }
+    catalog_packages = {entry["packageName"]: entry for entry in catalog["packages"]}
     packaged = {
         entry["package"]
         for entry in manifest["boards"]

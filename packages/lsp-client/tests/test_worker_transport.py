@@ -177,7 +177,8 @@ def test_worker_transport_lists_current_pypi_stub_releases(page, test_page_url):
     assert result["success"] is True
     assert result["packageCount"] >= 6
     assert result["esp32LatestVersion"]
-    assert result["esp32VersionCount"] > 1
+    assert result["esp32VersionCount"] >= 1
+    assert result["allVersionsMatchRequestedRuntime"] is True
     assert result["includesStdlib"] is False
     assert result["postReleaseVersions"] == []
     assert result["wildcardVersionCount"] > 0
