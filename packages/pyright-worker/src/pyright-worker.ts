@@ -442,7 +442,7 @@ async function handleInitServer(msg: MsgInitServer) {
                 && isBoardStubPackage(pkg.packageName)
             ) {
                 logVerbose(`[pyright-worker] Automatically clearing old board stub target: ${pkg.packageName}`);
-                clearStubPackages(pkg.packageName).catch(err => {
+                await clearStubPackages(pkg.packageName).catch(err => {
                     console.warn(`[pyright-worker] Failed to clear old board stub ${pkg.packageName}:`, err);
                 });
             }
