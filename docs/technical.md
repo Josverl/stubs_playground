@@ -1011,7 +1011,7 @@ The worker is defined in `packages/pyright-worker/src/pyright-worker.ts` and bun
 webpack to `packages/pyright-worker/dist/pyright_worker.js`.
 
 The build command (`just build` or `npm run build:worker`) runs:
-1. `scripts/pack-typeshed.py` — packs Pyright's typeshed-fallback into a zip
+1. `scripts/pack-typeshed.py` — packs Pyright's typeshed-fallback into a deflated zip (~0.6 MB)
 2. `scripts/pack-stubs.py` — packs MicroPython board stubs into per-board zips
 3. `webpack` — bundles everything into
    `packages/pyright-worker/dist/pyright_worker.js`

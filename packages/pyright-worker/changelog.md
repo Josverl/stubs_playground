@@ -11,6 +11,12 @@
 - Catalog results expose `family`, `runtimeVersions`, `port`, and `board` metadata.
 - Catalog responses expose `availableRuntimeVersions` and `defaultRuntimeVersion`.
 
+### Fixed
+
+- `listStubPackages` now filters each package's `versions` and `latestVersion` to the requested firmware line, so a version-scoped request no longer advertises releases from a newer runtime.
+- Obsolete board stub packages are now removed before initialization reports success, preventing a stale IndexedDB record from being observed on an immediate refresh or board switch.
+- The bundled `typeshed-fallback.zip` is now compressed (deflated) instead of stored, reducing the asset and inlined worker bundle from ~3.1 MB to ~0.6 MB.
+
 ### Added
 
 - Added a reproducible catalog sync script backed by the published `stub-packages.json` source.

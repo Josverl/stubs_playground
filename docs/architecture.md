@@ -214,7 +214,7 @@ flowchart LR
 ```
 
 **Key details:**
-- **typeshed-fallback.zip** and **stubs-esp32.zip** are inlined into the worker bundle via `arraybuffer-loader`, so the default board works with zero additional fetches.
+- **typeshed-fallback.zip** and **stubs-esp32.zip** are inlined into the worker bundle via `arraybuffer-loader`, so the default board works with zero additional fetches. `typeshed-fallback.zip` is deflated (~0.6 MB) to keep the bundle small.
 - Non-default board stubs (RP2, STM32) are fetched on demand and cached in memory (`stubsCache` Map).
 - The webpack config targets `webworker`, polyfills Node APIs (fs → ZenFS, path, crypto, etc.), and uses `ts-loader` in transpile-only mode.
 - `fs` is aliased to `@zenfs/core` so Pyright's filesystem calls work against the in-browser virtual filesystem.
