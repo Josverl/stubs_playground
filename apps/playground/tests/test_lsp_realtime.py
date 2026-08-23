@@ -22,13 +22,7 @@ from tests.timing import CDN_TIMEOUT, LSP_TIMEOUT, DEBOUNCE_MS, DEBOUNCE_SETTLE,
 # Module-level skip marker
 # ---------------------------------------------------------------------------
 
-_worker_available = (
-    Path(__file__).parents[3]
-    / "packages"
-    / "pyright-worker"
-    / "dist"
-    / "pyright_worker.js"
-).exists()
+_worker_available = (Path(__file__).parents[3] / "packages" / "pyright-worker" / "dist" / "pyright_worker.js").exists()
 
 requires_lsp = pytest.mark.skipif(
     not _worker_available,
@@ -36,6 +30,7 @@ requires_lsp = pytest.mark.skipif(
 )
 
 pytestmark = pytest.mark.worker
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -329,19 +324,18 @@ def test_close_tab_cancels_pending_did_change(page, live_server):
     assert _open_tree_file(page, "debounce_close.py"), "debounce_close.py should be in the file tree"
     time.sleep(POLL_INTERVAL)
 
+    # Resolve the close button before typing: the debounce timer starts at the last
+    # keystroke, so any locator round trips after typing eat into the 300 ms window.
+    close_button = (
+        page.locator(".tab-bar__tab", has_text="debounce_close.py").locator(".tab-bar__close").element_handle()
+    )
+    assert close_button, "Expected debounce_close.py tab to be closable"
+
     console.clear()
     _type_in_editor(page, "\n# pending", delay=10)
 
-    # Close the edited tab before debounce timer fires.
-    tabs = page.locator(".tab-bar__tab")
-    closed = False
-    for i in range(tabs.count()):
-        tab = tabs.nth(i)
-        if "debounce_close.py" in tab.inner_text():
-            tab.locator(".tab-bar__close").click()
-            closed = True
-            break
-    assert closed, "Expected debounce_close.py tab to be closable"
+    # dispatch_event skips actionability polling so the close lands inside the window.
+    close_button.dispatch_event("click")
     page.wait_for_function(
         """() => {
             const tabs = [...document.querySelectorAll('.tab-bar__tab')];
