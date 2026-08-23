@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ESNext",
+    // "preserve" keeps bundler resolution while still allowing the `import x = require()`
+    // form used by Pyright's vendored sources; ES module emit breaks them at runtime.
+    "module": "preserve",
     "moduleResolution": "bundler",
     "paths": {
       "pyright/packages/pyright-internal/src/server": ["./packages/pyright-worker/src/pyright-server.d.ts"]

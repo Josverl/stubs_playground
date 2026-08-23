@@ -70,6 +70,29 @@ import { logVerbose } from './logging.js';
  * @property {boolean} active - Whether this is the active cached version.
  */
 
+/**
+ * @typedef {Object} WorkerResponseMessage
+ * @property {string} [type] - Control message type.
+ * @property {string} [requestId] - Correlates a response with its request.
+ * @property {boolean} [ok] - Whether the request succeeded.
+ * @property {string} [error] - Failure reason when `ok` is false.
+ * @property {string} [root] - Listed filesystem root.
+ * @property {WorkerFsEntry[]} [entries] - Listed filesystem entries.
+ * @property {string} [content] - Generated configuration content.
+ * @property {string} [pyrightVersion] - Worker-reported Pyright version.
+ * @property {StubPackageCatalogEntry[]|InstalledStubPackage[]} [packages] - Catalog or installed stub packages.
+ * @property {string[]} [availableRuntimeVersions] - Firmware versions offered by the catalog.
+ * @property {string} [defaultRuntimeVersion] - Default firmware version.
+ * @property {InstalledStubPackage} [package] - Newly installed stub package.
+ * @property {number} [removed] - Number of cleared cache entries.
+ * @property {boolean} [restartRequired] - Whether the worker must restart.
+ * @property {string} [jsonrpc] - Present on forwarded LSP messages.
+ */
+
+/**
+ * @param {string} path - Workspace-relative file path.
+ * @returns {string} The validated path.
+ */
 function validateWorkspacePath(path) {
     if (typeof path !== 'string' || path.length === 0) {
         throw new TypeError('Workspace file path must be a non-empty string');
@@ -106,6 +129,7 @@ export class WorkerTransport {
         /** @type {Array<(error: Error|ErrorEvent) => void>} */
         this.errorHandlers = [];
         this.connected = false;
+        /** @type {string[]} */
         this._messageQueue = [];
         this._connectReject = null;
         this._boardStubs = options.boardStubs; // ArrayBuffer | false | undefined
@@ -118,12 +142,19 @@ export class WorkerTransport {
         this._extraStubPackages = options.extraStubPackages || [];
         this._extraPaths = options.extraPaths || [];
         this._workspaceFiles = options.workspaceFiles || {};
-        this._debugRequests = new Map(); // requestId -> {resolve,reject,timeout}
-        this._generatedConfigRequests = new Map(); // requestId -> {resolve,reject,timeout}
-        this._stubPackageRequests = new Map(); // requestId -> {resolve,reject,timeout}
+        /** @type {Map<string, {resolve: (value: any) => void, reject: (reason?: unknown) => void, timeout?: ReturnType<typeof setTimeout>}>} */
+        this._debugRequests = new Map();
+        /** @type {Map<string, {resolve: (value: any) => void, reject: (reason?: unknown) => void, timeout?: ReturnType<typeof setTimeout>}>} */
+        this._generatedConfigRequests = new Map();
+        /** @type {Map<string, {resolve: (value: any) => void, reject: (reason?: unknown) => void, timeout?: ReturnType<typeof setTimeout>}>} */
+        this._stubPackageRequests = new Map();
         this.pyrightVersion = ""; // set when serverInitialized is received
     }
 
+    /**
+     * @param {WorkerResponseMessage} msg - Worker control message.
+     * @returns {boolean} Whether the message was consumed.
+     */
     _handleDebugResponse(msg) {
         if (!msg || msg.type !== 'debugListFsResult' || !msg.requestId) {
             return false;
@@ -151,6 +182,10 @@ export class WorkerTransport {
         return true;
     }
 
+    /**
+     * @param {WorkerResponseMessage} msg - Worker control message.
+     * @returns {boolean} Whether the message was consumed.
+     */
     _handleGeneratedConfigResponse(msg) {
         if (!msg || msg.type !== 'readGeneratedConfigResult' || !msg.requestId) {
             return false;
@@ -175,6 +210,10 @@ export class WorkerTransport {
         return true;
     }
 
+    /**
+     * @param {WorkerResponseMessage} msg - Worker control message.
+     * @returns {boolean} Whether the message was consumed.
+     */
     _handleStubPackageResponse(msg) {
         const resultTypes = new Set([
             'listStubPackagesResult',
@@ -312,6 +351,9 @@ export class WorkerTransport {
 
     /**
      * Steady-state message handler — separates control from LSP messages.
+     *
+     * @param {MessageEvent<WorkerResponseMessage>} e - Worker message event.
+     * @returns {void}
      */
     _onSteadyStateMessage(e) {
         const msg = e.data;
@@ -345,6 +387,9 @@ export class WorkerTransport {
 
     /**
      * Forward an LSP message object to subscribers as a JSON string.
+     *
+     * @param {unknown} msg - JSON-RPC message object.
+     * @returns {void}
      */
     _dispatchLSP(msg) {
         const str = JSON.stringify(msg);
@@ -574,6 +619,12 @@ export class WorkerTransport {
         });
     }
 
+    /**
+     * @param {string} type - Stub-package request message type.
+     * @param {Object} [payload={}] - Request payload.
+     * @param {number} [timeoutMs=30000] - Request timeout in milliseconds.
+     * @returns {Promise<WorkerResponseMessage>} Resolves with the worker response.
+     */
     _requestStubPackage(type, payload = {}, timeoutMs = 30000) {
         if (!this.connected || !this.worker) {
             return Promise.reject(new Error('WorkerTransport: not connected'));
@@ -614,7 +665,9 @@ export class WorkerTransport {
         }
         const response = await this._requestStubPackage('listStubPackages', { filters });
         return {
-            packages: Array.isArray(response.packages) ? response.packages : [],
+            packages: Array.isArray(response.packages)
+                ? /** @type {StubPackageCatalogEntry[]} */ (response.packages)
+                : [],
             availableRuntimeVersions: Array.isArray(response.availableRuntimeVersions)
                 ? response.availableRuntimeVersions
                 : [],
@@ -672,7 +725,9 @@ export class WorkerTransport {
      */
     async listInstalledStubPackages() {
         const response = await this._requestStubPackage('listInstalledStubPackages');
-        return Array.isArray(response.packages) ? response.packages : [];
+        return Array.isArray(response.packages)
+            ? /** @type {InstalledStubPackage[]} */ (response.packages)
+            : [];
     }
 
     /**

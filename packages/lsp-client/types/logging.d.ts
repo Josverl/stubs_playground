@@ -5,8 +5,4 @@
  * @param {...unknown} args - Values forwarded to `console.log`.
  * @returns {void}
  */
-export function logVerbose(enabled, ...args) {
-    if (enabled === true) {
-        console.log(...args);
-    }
-}
+export function logVerbose(enabled?: boolean, ...args: unknown[]): void;

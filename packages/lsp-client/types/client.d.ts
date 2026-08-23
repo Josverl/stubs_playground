@@ -1,23 +1,4 @@
 /**
- * LSP Client Setup for CodeMirror
- *
- * Creates and initializes an LSP client with either Worker or WebSocket transport.
- * Supports board switching by tearing down and rebuilding the worker.
- */
-
-import { EditorState } from '@codemirror/state';
-import { createCompletionSource } from './completion.js';
-import {
-    createLSPDiagnostics,
-    createWorkspaceDiagnosticsSubscription,
-    notifyDocumentOpen,
-} from './diagnostics.js';
-import { createHoverTooltip } from './hover.js';
-import { logVerbose } from './logging.js';
-import { SimpleLSPClient } from './simple-client.js';
-import { createTransport } from './transport-factory.js';
-
-/**
  * @typedef {Object} LSPClientConfig
  * @property {string} workerUrl - Worker script URL.
  * @property {number} [timeout=5000] - Request timeout in milliseconds.
@@ -42,7 +23,6 @@ import { createTransport } from './transport-factory.js';
  *   [onWorkspaceDiagnosticsChange] - Receives diagnostics for all files reported
  *   by Pyright, including unopened files in workspace mode.
  */
-
 /**
  * @typedef {Object} LSPClientResult
  * @property {SimpleLSPClient} client - Initialized LSP client.
@@ -53,7 +33,6 @@ import { createTransport } from './transport-factory.js';
  * @property {{destroy: () => void}|null} workspaceDiagnosticsSubscription -
  *   Client-level diagnostics subscription, when requested.
  */
-
 /**
  * @typedef {Object} LSPPluginOptions
  * @property {string} [fileUri='file:///workspace/document.py'] - Document URI.
@@ -68,7 +47,6 @@ import { createTransport } from './transport-factory.js';
  * @property {number} [completionDelayMs=320] - Delay auto-triggered dotted
  *   completions when the consumer debounces document synchronization.
  */
-
 /**
  * Create and initialize an LSP client.
  *
@@ -78,60 +56,7 @@ import { createTransport } from './transport-factory.js';
  * @throws {Error} If worker creation, worker initialization, or the LSP
  *   initialization handshake fails.
  */
-export async function createLSPClient(config) {
-    if (!config?.workerUrl) {
-        throw new TypeError('createLSPClient requires config.workerUrl');
-    }
-    const transport = createTransport({
-        workerUrl: config.workerUrl,
-        boardStubs: config.boardStubs,
-        boardStubsUrl: config.boardStubsUrl,
-        boardStubPackage: config.boardStubPackage,
-        workspaceFiles: config.workspaceFiles,
-        typeCheckingMode: config.typeCheckingMode,
-        typeshedPath: config.typeshedPath,
-        pythonVersion: config.pythonVersion,
-        verboseOutput: config.verboseOutput,
-        extraStubPackages: config.extraStubPackages,
-        extraPaths: config.extraPaths,
-    });
-
-    logVerbose(config.verboseOutput, 'Creating LSP client...');
-
-    const client = new SimpleLSPClient({
-        rootUri: 'file:///workspace',
-        timeout: config.timeout || 5000,
-        typeCheckingMode: config.typeCheckingMode,
-        diagnosticMode: config.diagnosticMode,
-        typeshedPath: config.typeshedPath,
-        pythonVersion: config.pythonVersion,
-        verboseOutput: config.verboseOutput,
-        extraPaths: config.extraPaths,
-    });
-    const workspaceDiagnosticsSubscription =
-        typeof config.onWorkspaceDiagnosticsChange === 'function'
-            ? createWorkspaceDiagnosticsSubscription(client, config.onWorkspaceDiagnosticsChange)
-            : null;
-
-    try {
-        await transport.connect();
-        logVerbose(config.verboseOutput, 'Transport connected');
-
-        await client.connect(transport);
-        logVerbose(config.verboseOutput, 'LSP Client initialized:', client.serverCapabilities);
-    } catch (error) {
-        workspaceDiagnosticsSubscription?.destroy();
-        throw error;
-    }
-
-    return {
-        client,
-        transport,
-        pyrightVersion: transport.pyrightVersion || "",
-        workspaceDiagnosticsSubscription,
-    };
-}
-
+export function createLSPClient(config: LSPClientConfig): Promise<LSPClientResult>;
 /**
  * Create CodeMirror extensions that connect an editor document to an LSP client.
  *
@@ -145,51 +70,7 @@ export async function createLSPClient(config) {
  * @returns {import('@codemirror/state').Extension[]} CodeMirror extensions for
  *   diagnostics, completion, and hover.
  */
-export function createLSPPlugin(client, view, options = {}) {
-    const {
-        fileUri = 'file:///workspace/document.py',
-        languageId = 'python',
-        initialContent = '',
-        onDiagnosticsChange = null,
-        diagnosticDelayMs = 0,
-        completionDelayMs,
-    } = options;
-
-    // Notify server that document is open
-    notifyDocumentOpen(client, fileUri, languageId, initialContent, 1);
-
-    // Create diagnostics extension with the view
-    const diagnosticsExtensions = createLSPDiagnostics(
-        client,
-        fileUri,
-        view,
-        onDiagnosticsChange,
-        diagnosticDelayMs,
-    );
-
-    // Create completion source
-    const completionSource = createCompletionSource(client, fileUri, {
-        autoTriggerDelayMs: completionDelayMs,
-    });
-
-    // Provide LSP completions through the language data facet so they
-    // integrate with the existing autocompletion() from basicSetup instead
-    // of creating a competing second autocomplete instance.
-    const completionExtension = EditorState.languageData.of(() => [{
-        autocomplete: completionSource
-    }]);
-
-    // Create hover tooltip extension
-    const hoverExtension = createHoverTooltip(client, fileUri);
-
-    // Return extensions array
-    return [
-        ...diagnosticsExtensions,
-        completionExtension,
-        hoverExtension
-    ];
-}
-
+export function createLSPPlugin(client: SimpleLSPClient, view: import("@codemirror/view").EditorView, options?: LSPPluginOptions): import("@codemirror/state").Extension[];
 /**
  * Switch board stubs by tearing down the current worker and creating a new one.
  *
@@ -204,32 +85,147 @@ export function createLSPPlugin(client, view, options = {}) {
  * @throws {TypeError} If `config.workerUrl` is missing.
  * @throws {Error} If the replacement worker or LSP handshake fails.
  */
-export async function switchBoard(current, config) {
-    // Tear down old client and transport
-    current.workspaceDiagnosticsSubscription?.destroy();
-    try {
-        current.client.disconnect();
-    } catch (e) { /* ignore shutdown errors */ }
-    try {
-        current.transport.close();
-    } catch (e) { /* ignore close errors */ }
-
-    // Create new client with new board stubs
-    const result = await createLSPClient(config);
-
-    // Do NOT re-open documents here — the caller is responsible for
-    // reconfiguring the CodeMirror LSP compartment (which calls
-    // createLSPPlugin → notifyDocumentOpen with the actual content).
-
-    return result;
-}
-
+export function switchBoard(current: LSPClientResult, config: LSPClientConfig): Promise<LSPClientResult>;
 /**
  * Check whether an LSP client is connected and initialized.
  *
  * @param {SimpleLSPClient|null|undefined} client - Client to inspect.
  * @returns {boolean} Whether server capabilities are available on a connected client.
  */
-export function isLSPReady(client) {
-    return Boolean(client && client.connected && client.serverCapabilities !== null);
-}
+export function isLSPReady(client: SimpleLSPClient | null | undefined): boolean;
+export type LSPClientConfig = {
+    /**
+     * - Worker script URL.
+     */
+    workerUrl: string;
+    /**
+     * - Request timeout in milliseconds.
+     */
+    timeout?: number;
+    /**
+     * - Board stubs zip; `false` disables
+     * board stubs and `undefined` uses the worker's bundled default.
+     */
+    boardStubs?: ArrayBuffer | false;
+    /**
+     * - Absolute fallback archive URL fetched
+     * only when the preferred cached package is unavailable.
+     */
+    boardStubsUrl?: string;
+    /**
+     * -
+     * Cached PyPI package to materialize as the active board stubs.
+     */
+    boardStubPackage?: {
+        packageName: string;
+        version?: string;
+        fallbackToBundled?: boolean;
+    };
+    /**
+     * - Project files to preload
+     * into `/workspace`, keyed by workspace-relative path.
+     */
+    workspaceFiles?: {
+        [x: string]: string;
+    };
+    /**
+     * - Pyright type-checking mode.
+     */
+    typeCheckingMode?: string;
+    /**
+     * -
+     * Analyze opened files or every Python file in the workspace.
+     */
+    diagnosticMode?: "openFilesOnly" | "workspace";
+    /**
+     * - Absolute worker-VFS typeshed path.
+     */
+    typeshedPath?: string;
+    /**
+     * - Python version in `X.Y` format.
+     */
+    pythonVersion?: string;
+    /**
+     * - Enable verbose Pyright output.
+     */
+    verboseOutput?: boolean;
+    /**
+     * - Additional type-only stub packages.
+     */
+    extraStubPackages?: Array<{
+        packageName: string;
+        files: {
+            [x: string]: string;
+        };
+    }>;
+    /**
+     * - Absolute extra import search paths.
+     */
+    extraPaths?: string[];
+    /**
+     * - Receives diagnostics for all files reported
+     * by Pyright, including unopened files in workspace mode.
+     */
+    onWorkspaceDiagnosticsChange?: (diagnostics: import("./diagnostics.js").WorkspaceDiagnostic[]) => void;
+};
+export type LSPClientResult = {
+    /**
+     * - Initialized LSP client.
+     */
+    client: SimpleLSPClient;
+    /**
+     * -
+     * Connected worker transport.
+     */
+    transport: import("./worker-transport.js").WorkerTransport;
+    /**
+     * - Detected Pyright version, or an empty
+     * string when the worker does not report one.
+     */
+    pyrightVersion: string;
+    /**
+     * -
+     * Client-level diagnostics subscription, when requested.
+     */
+    workspaceDiagnosticsSubscription: {
+        destroy: () => void;
+    } | null;
+};
+export type LSPPluginOptions = {
+    /**
+     * - Document URI.
+     */
+    fileUri?: string;
+    /**
+     * - LSP language identifier.
+     */
+    languageId?: string;
+    /**
+     * - Initial document text.
+     */
+    initialContent?: string;
+    /**
+     * - Receives a snapshot of workspace diagnostics.
+     */
+    onDiagnosticsChange?: (diagnostics: Array<{
+        uri: string;
+        fileName: string;
+        line: number;
+        character: number;
+        endLine: number;
+        endCharacter: number;
+        message: string;
+        severity: string;
+    }>) => void;
+    /**
+     * - Idle time before displaying the
+     * latest Pyright diagnostics. Document changes remain immediate.
+     */
+    diagnosticDelayMs?: number;
+    /**
+     * - Delay auto-triggered dotted
+     * completions when the consumer debounces document synchronization.
+     */
+    completionDelayMs?: number;
+};
+import { SimpleLSPClient } from './simple-client.js';

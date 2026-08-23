@@ -45,3 +45,19 @@ export { createHoverTooltip } from './hover.js';
 
 // Markdown/RST renderer (pure rendering utilities)
 export { renderMarkdown, processInline, renderBlocks, PYRIGHT_SIG_RE } from './markdown-renderer.js';
+
+// Public types re-exported for TypeScript consumers.
+/**
+ * @typedef {import('./client.js').LSPClientConfig} LSPClientConfig
+ * @typedef {import('./client.js').LSPClientResult} LSPClientResult
+ * @typedef {import('./client.js').LSPPluginOptions} LSPPluginOptions
+ * @typedef {import('./diagnostics.js').WorkspaceDiagnostic} WorkspaceDiagnostic
+ * @typedef {import('./simple-client.js').LSPTransport} LSPTransport
+ * @typedef {import('./worker-transport.js').WorkerTransportOptions} WorkerTransportOptions
+ * @typedef {import('./worker-transport.js').StubPackageCatalogEntry} StubPackageCatalogEntry
+ * @typedef {import('./worker-transport.js').StubPackageRelease} StubPackageRelease
+ * @typedef {import('./worker-transport.js').InstalledStubPackage} InstalledStubPackage
+ * @typedef {import('./worker-transport.js').WorkerFsEntry} WorkerFsEntry
+ * @typedef {import('./completion-core.mjs').LSPCompletionItem} LSPCompletionItem
+ * @typedef {import('./completion-core.mjs').CodeMirrorCompletionOption} CodeMirrorCompletionOption
+ */

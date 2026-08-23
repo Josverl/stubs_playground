@@ -13,9 +13,21 @@ import { renderMarkdown } from './markdown-renderer.js';
 export { renderMarkdown } from './markdown-renderer.js';
 
 /**
+ * @typedef {Object} LSPPosition
+ * @property {number} line - Zero-based line.
+ * @property {number} character - Zero-based character offset.
+ */
+
+/**
+ * @typedef {Object} LSPHoverResult
+ * @property {string|{value?: string}|Array<string|{value?: string}>} [contents] - Hover markup.
+ * @property {{start: LSPPosition, end: LSPPosition}} [range] - Hovered source range.
+ */
+
+/**
  * Convert LSP Hover result to CodeMirror tooltip content.
  *
- * @param {Object} hover - LSP Hover result
+ * @param {LSPHoverResult|null} hover - LSP Hover result
  * @returns {HTMLElement|null} Tooltip DOM element
  */
 function createHoverContent(hover) {
@@ -26,7 +38,7 @@ function createHoverContent(hover) {
     const container = document.createElement('div');
     container.className = 'cm-lsp-hover';
 
-    const content = hover.contents;
+    const content = /** @type {any} */ (hover.contents);
 
     if (typeof content === 'string') {
         container.appendChild(renderMarkdown(content));
@@ -80,10 +92,12 @@ export function createHoverTooltip(lspClient, documentUri) {
             logVerbose(lspClient.verboseOutput, `LSP hover at line ${lineNumber + 1}, char ${character}`);
 
             // Send LSP hover request
-            const result = await lspClient.request('textDocument/hover', {
-                textDocument: { uri: documentUri },
-                position: { line: lineNumber, character }
-            });
+            const result = /** @type {LSPHoverResult|null} */ (
+                await lspClient.request('textDocument/hover', {
+                    textDocument: { uri: documentUri },
+                    position: { line: lineNumber, character }
+                })
+            );
 
             logVerbose(lspClient.verboseOutput, 'LSP hover result:', result);
 
