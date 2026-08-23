@@ -257,12 +257,12 @@ CodeMirror tooltip lifecycle (LSP request, range mapping, tooltip creation).
 
 ### 2.3 `@mp-codemirror/pyright-worker` (built artifact)
 
-This is the compiled `packages/pyright-worker/dist/pyright_worker.js` published through
-an immutable component tag, so consumers reference the built file directly:
+This is the compiled `packages/pyright-worker/dist/pyright_worker.js` published to npm, so
+consumers reference the built file directly:
 
 ```js
 const workerUrl =
-  'https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@pyright-worker-v0.2.0/packages/pyright-worker/dist/pyright_worker.js';
+  'https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.0/dist/pyright_worker.js';
 ```
 
 The worker's internal control-plane protocol (`serverLoaded` / `initServer` / `serverInitialized`)
@@ -281,36 +281,38 @@ through Rollup's normal node resolver and copies the installed
 `@mp-codemirror/pyright-worker` `dist/` and `assets/` directories into its static build.
 This keeps the package manifest and lockfile as the only version authority.
 
-### Option B: immutable CDN tags (legacy)
+### Option B: immutable CDN versions
 
-Point consumers at `esm.sh` or `jsDelivr` directly from the GitHub repo (using a tag):
+Point unbundled consumers at the npm CDN, pinning an exact version:
 
 ```html
 <script type="importmap">
 {
   "imports": {
-    "@mp-codemirror/lsp-client": "https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.3/packages/lsp-client/src/index.js"
+    "@mp-codemirror/lsp-client": "https://cdn.jsdelivr.net/npm/@mp-codemirror/lsp-client@0.3.1/src/index.js"
   }
 }
 </script>
 ```
 
+> Serving these files from the GitHub repository (`cdn.jsdelivr.net/gh/...`) is no longer
+> supported. Use the npm CDN paths above.
+
 For an unbundled browser app, import the URL through an import map as shown above. For a bundled
-host such as ViperIDE, a small Rollup HTTPS-module loader fetches the same tagged source graph at
-build time. Relative imports stay on the immutable tag; bare imports such as
+host such as ViperIDE, a small Rollup HTTPS-module loader fetches the same pinned source graph at
+build time. Relative imports stay on the immutable version; bare imports such as
 `@codemirror/state`, `@codemirror/view`, and `@codemirror/lint` fall through to
 `@rollup/plugin-node-resolve` and are resolved from the host's `node_modules`.
 
 **Pros:**
 - One release and distribution architecture for both bundled and unbundled consumers.
-- No npm publication or package-registry maintenance.
 - ViperIDE gets one CodeMirror module graph from its own lockfile.
-- Exact immutable tags keep client and worker inputs reproducible.
+- Exact immutable versions keep client and worker inputs reproducible.
 
 **Cons:**
 - ViperIDE's build needs network access to jsDelivr unless CI provides a validated cache.
 - Rollup needs a small, tested HTTPS-module loader because it does not fetch remote modules itself.
-- There is no semver resolver; upgrades are explicit tag changes.
+- There is no semver resolver; upgrades are explicit version changes.
 
 ### Option C: Copy-paste / vendoring (not selected)
 
@@ -321,9 +323,8 @@ path and no formal contract. ViperIDE will not use this option.
 
 Use **Option A** for bundled applications. Normal package resolution preserves one
 `@codemirror/state` / `@codemirror/view` module graph, and copying the worker package through the
-host's static-asset pipeline makes the worker same-origin without a Blob shim. The legacy CDN
-integration contract remains in [`cdn-consumption.md`](./cdn-consumption.md) for unbundled
-consumers and older releases.
+host's static-asset pipeline makes the worker same-origin without a Blob shim. Unbundled consumers
+use the npm CDN paths from Option B.
 
 ---
 

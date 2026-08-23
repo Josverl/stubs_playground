@@ -7,8 +7,7 @@ as a reference for browser IDE authors.
 
 This page focuses on what to try in the live application. For implementation
 details, use the [architecture guide](architecture.md). To integrate the
-components elsewhere, use the [API documentation](index.md) and
-[CDN consumption guide](cdn-consumption.md).
+components elsewhere, use the [API documentation](index.md).
 
 ## What the playground demonstrates
 

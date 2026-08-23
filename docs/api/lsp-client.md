@@ -5,8 +5,8 @@ point is `packages/lsp-client/src/index.js`.
 
 ## Import
 
-Pin an immutable client tag and provide the host's CodeMirror packages through
-an import map or bundler:
+Pin an immutable client version and provide the host's CodeMirror packages
+through an import map or bundler:
 
 ```js
 import {
@@ -18,8 +18,13 @@ import {
 } from "@mp-codemirror/lsp-client";
 ```
 
-For CDN URL and peer-dependency details, see the
-[CDN consumption guide](../cdn-consumption.md).
+The packages are published on npm. Unbundled consumers can load the same files
+from the npm CDN:
+
+```text
+https://cdn.jsdelivr.net/npm/@mp-codemirror/lsp-client@0.3.1/src/index.js
+https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.0/dist/pyright_worker.js
+```
 
 ## TypeScript
 
@@ -50,11 +55,10 @@ const runtime: LSPClientResult = await createLSPClient(config);
 ```
 
 `moduleResolution` must be `bundler`, `node16`, or `nodenext` so the `types`
-export condition is resolved. The CDN build serves the same declarations next to
-the source at `packages/lsp-client/types/` on each `lsp-client-v*` tag. Vendor
-that directory and map it explicitly:
+export condition is resolved. The npm CDN serves the same declarations beside
+the source, so unbundled consumers can vendor them and map the path explicitly:
 
-```jsonc
+```json
 {
   "compilerOptions": {
     "moduleResolution": "bundler",
