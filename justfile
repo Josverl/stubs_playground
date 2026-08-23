@@ -45,8 +45,8 @@ pack-stubs:
 
 # pack MicroPython board stubs and typeshed-fallback
 pack:
-    just pack-typeshed
-    just pack-stubs
+    @just pack-typeshed
+    @just pack-stubs
 
 # rebuild everything from scratch
 rebuild:
