@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,20 +11,34 @@
       It deliberately does not import app.js, ui/, storage/, or share.js.
 
       Sources are switchable via query params so the same page validates both
-      local files (default, used by CI before a tag exists) and the published
-      CDN tags:
+      local files (default, used by CI before a release exists) and the
+      published npm packages. CDN mode requires an explicit version:
 
-        ?client=cdn&clientTag=lsp-client-v0.2.1
-        ?worker=cdn&workerTag=pyright-worker-v0.2.1
-        ?repo=Josverl/stubs_playground   (override owner/repo, e.g. after rename)
+        ?client=cdn&clientVersion=0.3.1
+        ?worker=cdn&workerVersion=0.4.0
 
-      See docs/cdn-consumption.md for the full integration contract.
+      See docs/api/lsp-client.md for the full integration contract.
     -->
     <style>
-        body { font-family: system-ui, sans-serif; margin: 0; }
-        #status { padding: 6px 10px; font: 13px/1.4 monospace; background: #f3f3f3; border-bottom: 1px solid #ddd; }
-        #editor { height: 60vh; }
-        .cm-editor { height: 100%; }
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 0;
+        }
+
+        #status {
+            padding: 6px 10px;
+            font: 13px/1.4 monospace;
+            background: #f3f3f3;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #editor {
+            height: 60vh;
+        }
+
+        .cm-editor {
+            height: 100%;
+        }
     </style>
 
     <!-- The consumer supplies the LSP client's CodeMirror peer dependencies. -->
@@ -41,6 +56,7 @@
     }
     </script>
 </head>
+
 <body>
     <div id="status">initializing…</div>
     <div id="editor"></div>
@@ -64,36 +80,40 @@
     </script>
 
     <script type="module">
-        import { EditorView, basicSetup } from 'codemirror';
-        import { Compartment } from '@codemirror/state';
-        import { python } from '@codemirror/lang-python';
-        import { diagnosticCount } from '@codemirror/lint';
+        import {EditorView, basicSetup} from 'codemirror';
+        import {Compartment} from '@codemirror/state';
+        import {python} from '@codemirror/lang-python';
+        import {diagnosticCount} from '@codemirror/lint';
 
         const params = new URLSearchParams(location.search);
-        const repo = params.get('repo') || 'Josverl/stubs_playground';
-        const cdn = (tag, path) => `https://cdn.jsdelivr.net/gh/${repo}@${tag}/${path}`;
+        const CLIENT_PACKAGE = '@mp-codemirror/lsp-client';
+        const WORKER_PACKAGE = '@mp-codemirror/pyright-worker';
+        const cdn = (pkg, version, path) =>
+            `https://cdn.jsdelivr.net/npm/${pkg}@${version}/${path}`;
+        // Required rather than defaulted so a stale pinned version cannot go unnoticed.
+        const requireVersion = (name) => {
+            const value = params.get(name);
+            if (!value) throw new Error(`Missing "${name}" query parameter for CDN mode`);
+            return value;
+        };
         const statusEl = document.getElementById('status');
-        const setStatus = (msg) => { statusEl.textContent = msg; };
+        const setStatus = (msg) => {statusEl.textContent = msg;};
 
         // Resolve the LSP client module URL (local by default, CDN on request).
         const clientUrl = params.get('client') === 'cdn'
-            ? cdn(
-                params.get('clientTag') || 'lsp-client-v0.2.1',
-                'packages/lsp-client/src/index.js',
-            )
+            ? cdn(CLIENT_PACKAGE, requireVersion('clientVersion'), 'src/index.js')
             : '../src/index.js';
 
         // Resolve the worker URL. A cross-origin (CDN) worker must be wrapped in
         // a same-origin Blob that importScripts() the remote bundle.
         function makeSameOriginWorkerUrl(remoteUrl) {
             const shim = `importScripts(${JSON.stringify(remoteUrl)});`;
-            return URL.createObjectURL(new Blob([shim], { type: 'application/javascript' }));
+            return URL.createObjectURL(new Blob([shim], {type: 'application/javascript'}));
         }
         const workerUrl = params.get('worker') === 'cdn'
-            ? makeSameOriginWorkerUrl(cdn(
-                params.get('workerTag') || 'pyright-worker-v0.2.1',
-                'packages/pyright-worker/dist/pyright_worker.js',
-            ))
+            ? makeSameOriginWorkerUrl(
+                cdn(WORKER_PACKAGE, requireVersion('workerVersion'), 'dist/pyright_worker.js'),
+            )
             : '../../pyright-worker/dist/pyright_worker.js';
 
         const sourceMode = {
@@ -110,10 +130,7 @@
             }
 
             const base = sourceMode.worker === 'cdn'
-                ? cdn(
-                    params.get('workerTag') || 'pyright-worker-v0.2.1',
-                    'packages/pyright-worker/assets',
-                )
+                ? cdn(WORKER_PACKAGE, requireVersion('workerVersion'), 'assets')
                 : '../../pyright-worker/assets';
             const response = await fetch(`${base}/stubs-${board}.zip`);
             if (!response.ok) {
@@ -154,7 +171,7 @@
                     window.__workspaceDiagnostics = diagnostics || [];
                 };
             }
-            const { client, pyrightVersion } = await lsp.createLSPClient(clientConfig);
+            const {client, pyrightVersion} = await lsp.createLSPClient(clientConfig);
 
             const lspCompartment = new Compartment();
             const view = new EditorView({
@@ -179,16 +196,16 @@
                             window.__probesStarted = true;
 
                             const completion = await client.request('textDocument/completion', {
-                                textDocument: { uri: FILE_URI },
-                                position: { line: 1, character: 14 },
-                                context: { triggerKind: 2, triggerCharacter: '.' },
+                                textDocument: {uri: FILE_URI},
+                                position: {line: 1, character: 14},
+                                context: {triggerKind: 2, triggerCharacter: '.'},
                             });
                             const completionItems = completion?.items || completion || [];
                             window.__completionLabels = completionItems.map((item) => item.label);
 
                             window.__hover = await client.request('textDocument/hover', {
-                                textDocument: { uri: FILE_URI },
-                                position: { line: 1, character: 15 },
+                                textDocument: {uri: FILE_URI},
+                                position: {line: 1, character: 15},
                             });
                             window.__probesComplete = true;
                         },
@@ -206,4 +223,5 @@
         }
     </script>
 </body>
+
 </html>

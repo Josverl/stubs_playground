@@ -171,7 +171,6 @@ jobs:
         run: npm run test:lsp-client:unit
 
       - name: Install uv
-        if: steps.meta.outputs.component == 'pyright-worker'
         uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
@@ -243,6 +242,22 @@ jobs:
           done
           echo "::error::npm did not serve $PACKAGE_NAME@$VERSION after publication."
           exit 1
+
+      - name: Validate the published package over the CDN
+        if: steps.publish.outcome == 'success'
+        env:
+          COMPONENT: ${{ steps.meta.outputs.component }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ "$COMPONENT" = 'lsp-client' ]; then
+            export MP_CODEMIRROR_CDN_CLIENT_VERSION="$VERSION"
+          else
+            export MP_CODEMIRROR_CDN_WORKER_VERSION="$VERSION"
+          fi
+          uv sync --extra test
+          uv run playwright install --with-deps chromium
+          uv run pytest packages/lsp-client/tests -v -m published --browser chromium
 
       - name: Create and push the immutable version tag
         if: steps.publish.outcome == 'success'
