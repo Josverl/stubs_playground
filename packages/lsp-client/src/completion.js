@@ -14,6 +14,10 @@ import { logVerbose } from './logging.js';
 
 const AUTO_TRIGGER_WAIT_MS = 320;
 
+/**
+ * @param {number} ms - Delay in milliseconds.
+ * @returns {Promise<void>} Resolves once the delay elapses.
+ */
 function delay(ms) {
     return new Promise(resolve => {
         setTimeout(resolve, ms);
@@ -99,7 +103,9 @@ export function createCompletionSource(lspClient, documentUri, options = {}) {
             }
 
             // Handle both CompletionList and CompletionItem[] responses
-            const items = result?.items || result || [];
+            const payload = /** @type {{items?: import('./completion-core.mjs').LSPCompletionItem[]}
+             *   |import('./completion-core.mjs').LSPCompletionItem[]|null|undefined} */ (result);
+            const items = (Array.isArray(payload) ? payload : payload?.items) || [];
 
             if (!items || items.length === 0) {
                 return null;

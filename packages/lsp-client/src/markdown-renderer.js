@@ -134,6 +134,10 @@ function parseRstGridTable(lines) {
 const RST_ADMONITION_RE = /^Admonition:\s*(.+?)(?:\s+:class:\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)*))?\s*$/;
 const RST_ADMONITION_CLASS_LINE_RE = /^:class:\s+([A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)*)\s*$/;
 
+/**
+ * @param {string} line - Candidate admonition header line.
+ * @returns {{title: string, classes: string[]}|null} Parsed header, or null.
+ */
 function parseAdmonitionHeader(line) {
     const match = line.match(RST_ADMONITION_RE);
     if (!match) return null;
@@ -144,12 +148,20 @@ function parseAdmonitionHeader(line) {
     };
 }
 
+/**
+ * @param {string} line - Candidate `:class:` line.
+ * @returns {string[]|null} Parsed class names, or null.
+ */
 function parseAdmonitionClassLine(line) {
     const match = line.trim().match(RST_ADMONITION_CLASS_LINE_RE);
     if (!match) return null;
     return match[1].split(/\s+/).filter(Boolean);
 }
 
+/**
+ * @param {string} line - Candidate line.
+ * @returns {boolean} Whether the line starts a new block.
+ */
 function isBlockBoundaryStart(line) {
     const trimmed = line.trimEnd();
     if (!trimmed.trim()) return false;

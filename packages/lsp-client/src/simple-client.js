@@ -48,18 +48,22 @@ export class SimpleLSPClient {
         /** @type {LSPTransport|null} */
         this.transport = null;
         this.messageId = 0;
+        /** @type {Map<number, {resolve: (value: unknown) => void, reject: (reason?: unknown) => void, timeout?: ReturnType<typeof setTimeout>}>} */
         this.pendingRequests = new Map();
         this.serverCapabilities = null;
         this.connected = false;
         this.verboseOutput = config.verboseOutput === true;
         this.initializing = null;
+        /** @type {Array<(method: string, params: unknown) => void>} */
         this.messageHandlers = [];
+        /** @type {Map<string, (params: unknown) => unknown>} */
         this.requestHandlers = new Map();
 
         // Default handler for workspace/configuration requests from Pyright
         // Pyright requests sections like 'python', 'python.analysis', 'pyright'
         // and expects the value for that specific section.
-        this.onRequest('workspace/configuration', (params) => {
+        this.onRequest('workspace/configuration', (rawParams) => {
+            const params = /** @type {{items?: Array<{section?: string}>}} */ (rawParams ?? {});
             const mode = this.config.typeCheckingMode || 'standard';
             const analysisExtraPaths = this._getAnalysisExtraPaths();
             const fullConfig = {
@@ -86,7 +90,7 @@ export class SimpleLSPClient {
                 const section = item.section || '';
                 // Navigate the config tree by section path (e.g., 'python.analysis')
                 const parts = section.split('.');
-                let value = fullConfig;
+                let value = /** @type {any} */ (fullConfig);
                 for (const part of parts) {
                     if (part && value && typeof value === 'object') {
                         value = value[part];
@@ -179,7 +183,8 @@ export class SimpleLSPClient {
             }
         });
 
-        this.serverCapabilities = response.capabilities;
+        this.serverCapabilities =
+            /** @type {{capabilities?: object}} */ (response ?? {}).capabilities ?? null;
 
         // Send initialized notification
         this.notify('initialized', {});
@@ -384,22 +389,24 @@ export class SimpleLSPClient {
         });
 
         // Built-in handlers
+        const { type, message: text } =
+            /** @type {{type?: number, message?: string}} */ (params ?? {});
         if (method === 'window/logMessage') {
             const types = ['', 'ERROR', 'WARNING', 'INFO', 'LOG'];
-            if (params.type === 1) {
-                console.error('[LSP ERROR]:', params.message);
-            } else if (params.type === 2) {
-                console.warn('[LSP WARNING]:', params.message);
+            if (type === 1) {
+                console.error('[LSP ERROR]:', text);
+            } else if (type === 2) {
+                console.warn('[LSP WARNING]:', text);
             } else {
-                logVerbose(this.verboseOutput, `[LSP ${types[params.type]}]:`, params.message);
+                logVerbose(this.verboseOutput, `[LSP ${types[type]}]:`, text);
             }
         } else if (method === 'window/showMessage') {
-            if (params.type === 1) {
-                console.error('[LSP ERROR]:', params.message);
-            } else if (params.type === 2) {
-                console.warn('[LSP WARNING]:', params.message);
+            if (type === 1) {
+                console.error('[LSP ERROR]:', text);
+            } else if (type === 2) {
+                console.warn('[LSP WARNING]:', text);
             } else {
-                logVerbose(this.verboseOutput, '[LSP Message]:', params.message);
+                logVerbose(this.verboseOutput, '[LSP Message]:', text);
             }
         }
     }

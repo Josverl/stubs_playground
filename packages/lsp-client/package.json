@@ -10,18 +10,22 @@
   },
   "type": "module",
   "main": "./src/index.js",
+  "types": "./types/index.d.ts",
   "files": [
     "src/",
+    "types/",
     "changelog.md"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "test": "node --test tests/*.unit.mjs"
+    "build:types": "tsc -p tsconfig.json",
+    "test": "node ../../scripts/check-lsp-client-types.mjs && node --test tests/*.unit.mjs"
   },
   "exports": {
     ".": {
+      "types": "./types/index.d.ts",
       "import": "./src/index.js"
     }
   },

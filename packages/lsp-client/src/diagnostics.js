@@ -26,6 +26,13 @@ import {
 import { logVerbose } from './logging.js';
 
 /**
+ * @typedef {Object} PublishDiagnosticsParams
+ * @property {string} [uri] - Document URI the diagnostics belong to.
+ * @property {import('vscode-languageserver-types').Diagnostic[]} [diagnostics] -
+ *   Diagnostics published for the document.
+ */
+
+/**
  * Workspace-level diagnostics cache: maps fileUri → CodeMirror diagnostics[].
  * Updated by createLSPDiagnostics whenever publishDiagnostics arrives.
  * Used to compute aggregate workspace counts for the status bar.
@@ -33,6 +40,11 @@ import { logVerbose } from './logging.js';
 const _workspaceDiagnostics = new Map();
 const refreshLSPDiagnostics = StateEffect.define();
 
+/**
+ * @param {string} uri - Source document URI.
+ * @param {import('vscode-languageserver-types').Diagnostic} diagnostic - Published diagnostic.
+ * @returns {WorkspaceDiagnostic} Report-ready diagnostic with one-based positions.
+ */
 function workspaceDiagnostic(uri, diagnostic) {
     const sourceName = diagnostic.source || 'Pyright';
     return {
@@ -48,6 +60,10 @@ function workspaceDiagnostic(uri, diagnostic) {
     };
 }
 
+/**
+ * @param {Map<string, WorkspaceDiagnostic[]>} diagnosticsByUri - Cached diagnostics per URI.
+ * @returns {WorkspaceDiagnostic[]} Flattened snapshot.
+ */
 function flattenWorkspaceDiagnostics(diagnosticsByUri) {
     return [...diagnosticsByUri.values()].flat();
 }
@@ -129,18 +145,20 @@ export function createWorkspaceDiagnosticsSubscription(client, onDiagnosticsChan
         throw new TypeError('Workspace diagnostics subscription requires a callback');
     }
     const diagnosticsByUri = new Map();
-    const unsubscribe = client.onNotification((method, params) => {
+    const unsubscribe = client.onNotification((method, rawParams) => {
+        const params = /** @type {PublishDiagnosticsParams} */ (rawParams ?? {});
         if (method !== 'textDocument/publishDiagnostics' || typeof params?.uri !== 'string') {
             return;
         }
+        const uri = params.uri;
         const diagnostics = params.diagnostics || [];
         if (diagnostics.length) {
             diagnosticsByUri.set(
-                params.uri,
-                diagnostics.map(diagnostic => workspaceDiagnostic(params.uri, diagnostic)),
+                uri,
+                diagnostics.map(diagnostic => workspaceDiagnostic(uri, diagnostic)),
             );
         } else {
-            diagnosticsByUri.delete(params.uri);
+            diagnosticsByUri.delete(uri);
         }
         onDiagnosticsChange(flattenWorkspaceDiagnostics(diagnosticsByUri));
     });
@@ -174,7 +192,8 @@ export function createDiagnosticsSubscription(
     publishDiagnostics = null,
     publishLSPDiagnostics = null,
 ) {
-    const unsubscribe = client.onNotification((method, params) => {
+    const unsubscribe = client.onNotification((method, rawParams) => {
+        const params = /** @type {PublishDiagnosticsParams} */ (rawParams ?? {});
         if (method === 'textDocument/publishDiagnostics') {
             if (params.uri === fileUri) {
                 const lspDiagnostics = params.diagnostics || [];
@@ -222,6 +241,14 @@ export function createDiagnosticsSubscription(
 /**
  * Delay raw LSP diagnostics and map their positions against the document shown
  * when they are actually published.
+ *
+ * @param {import('@codemirror/view').EditorView} view - Target editor view.
+ * @param {(diagnostics: import('@codemirror/lint').Diagnostic[]) => void} publishDiagnostics -
+ *   Receives converted diagnostics.
+ * @param {number} diagnosticDelayMs - Idle time before publishing.
+ * @param {(callback: () => void, delay: number) => unknown} [schedule=setTimeout]
+ * @param {(timer: unknown) => void} [cancelSchedule=clearTimeout]
+ * @returns {{publish: (diagnostics: unknown) => void, cancel: () => void}} Debounced publisher.
  */
 export function createDeferredDiagnosticsPublisher(
     view,
@@ -231,8 +258,10 @@ export function createDeferredDiagnosticsPublisher(
     cancelSchedule = clearTimeout,
 ) {
     return createDebouncedPublisher((lspDiagnostics) => {
-        publishDiagnostics(lspDiagnostics.map(diag =>
-            convertLSPDiagnostic(diag, view.state.doc)));
+        publishDiagnostics(
+            /** @type {import('vscode-languageserver-types').Diagnostic[]} */ (lspDiagnostics)
+                .map(diag => convertLSPDiagnostic(diag, view.state.doc)),
+        );
     }, diagnosticDelayMs, schedule, cancelSchedule);
 }
 
@@ -259,6 +288,7 @@ export function createLSPDiagnostics(
     onDiagnosticsChange = null,
     diagnosticDelayMs = 0,
 ) {
+    /** @type {import('@codemirror/lint').Diagnostic[]} */
     let currentDiagnostics = [];
     const diagnosticSource = linter(() => currentDiagnostics, {
         needsRefresh: update => update.transactions.some(transaction =>
@@ -314,12 +344,14 @@ export function createLSPDiagnostics(
 export async function requestDiagnostics(client, fileUri, documentText) {
     try {
         // Some servers support pull diagnostics via textDocument/diagnostic
-        if (client.serverCapabilities?.diagnosticProvider) {
-            const result = await client.request('textDocument/diagnostic', {
-                textDocument: {
-                    uri: fileUri
-                }
-            });
+        if (/** @type {{diagnosticProvider?: unknown}} */ (client.serverCapabilities ?? {}).diagnosticProvider) {
+            const result = /** @type {{items?: Object[]}|null} */ (
+                await client.request('textDocument/diagnostic', {
+                    textDocument: {
+                        uri: fileUri
+                    }
+                })
+            );
 
             if (result && result.items) {
                 return result.items;

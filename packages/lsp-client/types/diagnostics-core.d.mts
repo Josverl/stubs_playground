@@ -3,7 +3,6 @@
  *
  * Keep this file free of CodeMirror imports so it can be unit tested in Node.
  */
-
 /**
  * Convert LSP severity number to CodeMirror severity string.
  * LSP: 1=Error, 2=Warning, 3=Information, 4=Hint.
@@ -11,16 +10,7 @@
  * @param {number} [severity] - LSP `DiagnosticSeverity` value.
  * @returns {'error'|'warning'|'info'|'hint'} CodeMirror severity name.
  */
-export function lspSeverityToString(severity) {
-    switch (severity) {
-        case 1: return 'error';
-        case 2: return 'warning';
-        case 3: return 'info';
-        case 4: return 'info';
-        default: return 'error';
-    }
-}
-
+export function lspSeverityToString(severity?: number): "error" | "warning" | "info" | "hint";
 /**
  * Convert LSP position (0-based line/character) to absolute doc offset.
  * Expects a doc-like object with { lines, length, line(n) -> { from, to } }.
@@ -30,18 +20,17 @@ export function lspSeverityToString(severity) {
  * @param {{line: number, character: number}} position - Zero-based LSP position.
  * @returns {number} Absolute document offset.
  */
-export function positionToOffset(doc, position) {
-    try {
-        if (position.line >= doc.lines) {
-            return doc.length;
-        }
-        const line = doc.line(position.line + 1);
-        return Math.min(line.from + position.character, line.to);
-    } catch {
-        return 0;
-    }
-}
-
+export function positionToOffset(doc: {
+    lines: number;
+    length: number;
+    line: (n: number) => {
+        from: number;
+        to: number;
+    };
+}, position: {
+    line: number;
+    character: number;
+}): number;
 /**
  * Convert LSP diagnostic to CodeMirror diagnostic.
  *
@@ -51,25 +40,20 @@ export function positionToOffset(doc, position) {
  * @returns {{from: number, to: number, severity: 'error'|'warning'|'info'|'hint',
  *   message: string, source: string}} CodeMirror diagnostic.
  */
-export function convertLSPDiagnostic(lspDiag, doc) {
-    const from = positionToOffset(doc, lspDiag.range.start);
-    const to = positionToOffset(doc, lspDiag.range.end);
-    const severity = lspSeverityToString(lspDiag.severity);
-
-    const sourceName = lspDiag.source || 'Pyright';
-    const source = lspDiag.code
-        ? `${sourceName}: ${lspDiag.code}`
-        : sourceName;
-
-    return {
-        from,
-        to,
-        severity,
-        message: lspDiag.message,
-        source
+export function convertLSPDiagnostic(lspDiag: import("vscode-languageserver-types").Diagnostic, doc: {
+    lines: number;
+    length: number;
+    line: (n: number) => {
+        from: number;
+        to: number;
     };
-}
-
+}): {
+    from: number;
+    to: number;
+    severity: "error" | "warning" | "info" | "hint";
+    message: string;
+    source: string;
+};
 /**
  * Coalesce diagnostic publications while preserving immediate document synchronization.
  *
@@ -79,53 +63,10 @@ export function convertLSPDiagnostic(lspDiag, doc) {
  * @param {(timer: unknown) => void} [cancelSchedule=clearTimeout]
  * @returns {{publish: (diagnostics: unknown) => void, cancel: () => void}}
  */
-export function createDebouncedPublisher(
-    publish,
-    delayMs,
-    schedule = setTimeout,
-    cancelSchedule = clearTimeout,
-) {
-    if (typeof publish !== 'function') {
-        throw new TypeError('Diagnostic publisher requires a callback');
-    }
-    if (!Number.isFinite(delayMs) || delayMs < 0) {
-        throw new TypeError('Diagnostic delay must be a non-negative finite number');
-    }
-
-    /** @type {unknown} */
-    let timer = null;
-    /** @type {unknown} */
-    let pending = null;
-
-    const cancel = () => {
-        if (timer !== null) {
-            cancelSchedule(timer);
-            timer = null;
-        }
-        pending = null;
-    };
-
-    return {
-        publish(diagnostics) {
-            if (delayMs === 0) {
-                publish(diagnostics);
-                return;
-            }
-            if (timer !== null) {
-                cancelSchedule(timer);
-            }
-            pending = diagnostics;
-            timer = schedule(() => {
-                timer = null;
-                const latest = pending;
-                pending = null;
-                publish(latest);
-            }, delayMs);
-        },
-        cancel,
-    };
-}
-
+export function createDebouncedPublisher(publish: (diagnostics: unknown) => void, delayMs: number, schedule?: (callback: () => void, delay: number) => unknown, cancelSchedule?: (timer: unknown) => void): {
+    publish: (diagnostics: unknown) => void;
+    cancel: () => void;
+};
 /**
  * Shared behavior for F8: open panel, navigate, restore focus.
  *
@@ -134,13 +75,7 @@ export function createDebouncedPublisher(
  * @param {(view: import('@codemirror/view').EditorView) => boolean} nextDiagnostic - Navigation command.
  * @returns {boolean} Result of the navigation command.
  */
-export function runNextDiagnostic(view, openLintPanel, nextDiagnostic) {
-    openLintPanel(view);
-    const result = nextDiagnostic(view);
-    view.focus();
-    return result;
-}
-
+export function runNextDiagnostic(view: import("@codemirror/view").EditorView, openLintPanel: (view: import("@codemirror/view").EditorView) => unknown, nextDiagnostic: (view: import("@codemirror/view").EditorView) => boolean): boolean;
 /**
  * Shared behavior for Shift-F8: open panel, navigate, restore focus.
  *
@@ -149,9 +84,4 @@ export function runNextDiagnostic(view, openLintPanel, nextDiagnostic) {
  * @param {(view: import('@codemirror/view').EditorView) => boolean} previousDiagnostic - Navigation command.
  * @returns {boolean} Result of the navigation command.
  */
-export function runPreviousDiagnostic(view, openLintPanel, previousDiagnostic) {
-    openLintPanel(view);
-    const result = previousDiagnostic(view);
-    view.focus();
-    return result;
-}
+export function runPreviousDiagnostic(view: import("@codemirror/view").EditorView, openLintPanel: (view: import("@codemirror/view").EditorView) => unknown, previousDiagnostic: (view: import("@codemirror/view").EditorView) => boolean): boolean;

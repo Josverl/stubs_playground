@@ -105,6 +105,10 @@ export function isDunderLabel(label) {
     return typeof label === 'string' && /^__.+__$/.test(label);
 }
 
+/**
+ * @param {string|{value?: string}} [documentation] - Plain or markup documentation.
+ * @returns {string} Plain documentation text.
+ */
 function docToInfo(documentation) {
     if (!documentation) return '';
     if (typeof documentation === 'string') return documentation;
@@ -144,15 +148,28 @@ export function computeCompletionFrom(word) {
     return dotIndex >= 0 ? word.from + dotIndex + 1 : word.from;
 }
 
+/**
+ * @param {CodeMirrorCompletionOption} option - Candidate option.
+ * @returns {string} Stable dedupe key.
+ */
 function completionKey(option) {
     return `${option.label || ''}\u0000${option.apply || option.label || ''}`;
 }
 
+/**
+ * @param {CodeMirrorCompletionOption} option - Candidate option.
+ * @returns {number} Documentation length used as a tie-breaker.
+ */
 function infoLength(option) {
     if (!option.info) return 0;
     return String(option.info).length;
 }
 
+/**
+ * @param {CodeMirrorCompletionOption} a - First option.
+ * @param {CodeMirrorCompletionOption} b - Second option.
+ * @returns {number} Sort comparison result.
+ */
 function compareOptions(a, b) {
     const boostA = a.boost || 0;
     const boostB = b.boost || 0;
