@@ -41,6 +41,7 @@ markers = [
     "editor: Editor UI tests, needs HTTP + CDN (Tier 1)",
     "worker: Worker tests, needs packages/pyright-worker/dist/pyright_worker.js (Tier 2)",
     "lsp: Full LSP integration, needs LSP bridge (Tier 3)",
+    "published: Validates artifacts already on npm; run after publishing, not on pull requests",
     "slow: Tests that take >10s to complete",
 ]
 testpaths = [

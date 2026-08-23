@@ -227,4 +227,4 @@ jobs:
         run: uv run python -c "from importlib.metadata import version; actual = version('playwright'); assert actual == '1.55.0', f'Playwright {actual} does not match container v1.55.0'"
 
       - name: Run component browser tests
-        run: uv run pytest packages/lsp-client/tests -v --browser "${{ matrix.browser }}"
+        run: uv run pytest packages/lsp-client/tests -v -m "not published" --browser "${{ matrix.browser }}"
