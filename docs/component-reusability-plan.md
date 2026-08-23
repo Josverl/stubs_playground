@@ -262,7 +262,7 @@ consumers reference the built file directly:
 
 ```js
 const workerUrl =
-  'https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.0/dist/pyright_worker.js';
+  'https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.1/dist/pyright_worker.js';
 ```
 
 The worker's internal control-plane protocol (`serverLoaded` / `initServer` / `serverInitialized`)
@@ -289,7 +289,7 @@ Point unbundled consumers at the npm CDN, pinning an exact version:
 <script type="importmap">
 {
   "imports": {
-    "@mp-codemirror/lsp-client": "https://cdn.jsdelivr.net/npm/@mp-codemirror/lsp-client@0.3.1/src/index.js"
+    "@mp-codemirror/lsp-client": "https://cdn.jsdelivr.net/npm/@mp-codemirror/lsp-client@0.3.2/src/index.js"
   }
 }
 </script>

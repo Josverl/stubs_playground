@@ -12,7 +12,7 @@ Blob shim:
 
 ```js
 const remoteWorker =
-  "https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.0" +
+  "https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.1" +
   "/dist/pyright_worker.js";
 
 const shim = `importScripts(${JSON.stringify(remoteWorker)});`;

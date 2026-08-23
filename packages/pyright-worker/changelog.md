@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.4.1 - 2026-08-23
+
 ### Changed
 
 - The stub package catalog now uses the published MicroPython package index and includes a CircuitPython placeholder entry.

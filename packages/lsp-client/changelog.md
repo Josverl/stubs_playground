@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.2 - 2026-08-23
+
 ### Added
 
 - TypeScript declarations generated from the JSDoc are now published in `types/`
