@@ -20,7 +20,8 @@
     "access": "public"
   },
   "scripts": {
-    "test": "node ../../scripts/check-worker-protocol-types.mjs && node --test tests/*.unit.mjs"
+    "test": "npm run typecheck && node ../../scripts/check-worker-protocol-types.mjs && node --test tests/*.unit.mjs",
+    "typecheck": "tsc --noEmit -p ../../tsconfig.json"
   },
   "types": "./src/messages.d.ts",
   "exports": {
