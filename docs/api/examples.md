@@ -1,5 +1,49 @@
 # Integration examples
 
+## TypeScript editor setup
+
+The package ships generated declarations, so the same API is fully typed. Only
+the imports differ from the JavaScript examples below.
+
+```ts
+import { EditorView } from "@codemirror/view";
+import {
+  createLSPClient,
+  createLSPPlugin,
+  notifyDocumentChange,
+  type LSPClientConfig,
+  type LSPClientResult,
+  type WorkspaceDiagnostic,
+} from "@mp-codemirror/lsp-client";
+
+const config: LSPClientConfig = {
+  workerUrl,
+  typeCheckingMode: "standard",
+  diagnosticMode: "workspace",
+  onWorkspaceDiagnosticsChange(diagnostics: WorkspaceDiagnostic[]) {
+    for (const diagnostic of diagnostics) {
+      console.log(`${diagnostic.fileName}:${diagnostic.line} ${diagnostic.message}`);
+    }
+  },
+};
+
+const runtime: LSPClientResult = await createLSPClient(config);
+
+const fileUri = "file:///workspace/main.py";
+let version = 1;
+
+function attach(view: EditorView) {
+  return createLSPPlugin(runtime.client, view, {
+    fileUri,
+    initialContent: view.state.doc.toString(),
+  });
+}
+
+function onChange(view: EditorView): void {
+  notifyDocumentChange(runtime.client, fileUri, view.state.doc.toString(), ++version);
+}
+```
+
 ## Complete CodeMirror lifecycle
 
 ```js
