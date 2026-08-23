@@ -31,6 +31,24 @@ Install `extensions` in a CodeMirror compartment or editor configuration. The
 worker URL is supplied by the host application; use
 `@mp-codemirror/pyright-worker` for the packaged Pyright worker.
 
+## TypeScript
+
+The package is JavaScript with JSDoc types and ships generated declarations, so
+TypeScript consumers need no extra setup:
+
+```ts
+import {
+  createLSPClient,
+  type LSPClientConfig,
+  type LSPClientResult,
+} from "@mp-codemirror/lsp-client";
+
+const config: LSPClientConfig = { workerUrl, diagnosticMode: "workspace" };
+const runtime: LSPClientResult = await createLSPClient(config);
+```
+
+Use `moduleResolution` `bundler`, `node16`, or `nodenext`.
+
 See the [API documentation](https://github.com/Josverl/stubs_playground/tree/main/docs/api)
 for lifecycle, diagnostics, workspace synchronization, and stub configuration.
 

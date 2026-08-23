@@ -26,18 +26,20 @@ runTsc([
     '--outDir', generatedDir,
 ], repoRoot);
 
+const isDeclaration = (file) => file.endsWith('.d.ts') || file.endsWith('.d.mts');
+
 const [generatedFiles, committedFiles] = await Promise.all([
     readdir(generatedDir),
     readdir(committedTypesDir),
 ]);
 
 assert.deepEqual(
-    committedFiles.sort(),
-    generatedFiles.sort(),
+    committedFiles.filter(isDeclaration).sort(),
+    generatedFiles.filter(isDeclaration).sort(),
     'packages/lsp-client/types is out of sync; run "npm run build:types --workspace @mp-codemirror/lsp-client"',
 );
 
-for (const file of generatedFiles) {
+for (const file of generatedFiles.filter(isDeclaration)) {
     const [generated, committed] = await Promise.all([
         readFile(join(generatedDir, file), 'utf8'),
         readFile(new URL(file, committedTypesDir), 'utf8'),
@@ -69,13 +71,37 @@ await Promise.all([
 await writeFile(
     join(consumerDir, 'consumer.ts'),
     [
-        "import { createLSPClient, createLSPPlugin } from '@mp-codemirror/lsp-client';",
+        "import type { EditorView } from '@codemirror/view';",
+        'import {',
+        '    createLSPClient,',
+        '    createLSPPlugin,',
+        '    notifyDocumentChange,',
+        '    type LSPClientConfig,',
+        '    type LSPClientResult,',
+        '    type LSPPluginOptions,',
+        '    type WorkspaceDiagnostic,',
+        '    type InstalledStubPackage,',
+        '    type StubPackageCatalogEntry,',
+        "} from '@mp-codemirror/lsp-client';",
         '',
-        'export async function start(workerUrl: string): Promise<void> {',
-        '    const runtime = await createLSPClient({ workerUrl, diagnosticMode: "workspace" });',
+        'export async function start(workerUrl: string, view: EditorView): Promise<void> {',
+        '    const config: LSPClientConfig = {',
+        '        workerUrl,',
+        '        typeCheckingMode: "standard",',
+        '        diagnosticMode: "workspace",',
+        '        onWorkspaceDiagnosticsChange(diagnostics: WorkspaceDiagnostic[]) {',
+        '            void diagnostics.map((diagnostic) => diagnostic.fileName);',
+        '        },',
+        '    };',
+        '    const runtime: LSPClientResult = await createLSPClient(config);',
         '    const pyrightVersion: string = runtime.pyrightVersion;',
-        '    void pyrightVersion;',
-        '    void createLSPPlugin;',
+        '    const options: LSPPluginOptions = { fileUri: "file:///workspace/main.py" };',
+        '    const extensions = createLSPPlugin(runtime.client, view, options);',
+        '    notifyDocumentChange(runtime.client, "file:///workspace/main.py", "x = 1", 2);',
+        '    const packages: StubPackageCatalogEntry[] = await runtime.transport.listStubPackages();',
+        '    const installed: InstalledStubPackage[] =',
+        '        await runtime.transport.listInstalledStubPackages();',
+        '    void [pyrightVersion, extensions, packages, installed];',
         '}',
         '',
     ].join('\n'),

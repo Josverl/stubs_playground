@@ -82,6 +82,7 @@ stage-pages output="deploy":
         ("apps/playground", "apps/playground"),
         ("packages/lsp-client/package.json", "packages/lsp-client/package.json"),
         ("packages/lsp-client/src", "packages/lsp-client/src"),
+        ("packages/lsp-client/types", "packages/lsp-client/types"),
         ("packages/pyright-worker/package.json", "packages/pyright-worker/package.json"),
         ("packages/pyright-worker/src", "packages/pyright-worker/src"),
         ("packages/pyright-worker/dist", "packages/pyright-worker/dist"),

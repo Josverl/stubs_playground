@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Added
+
+- TypeScript declarations generated from the JSDoc are now published in `types/`
+  and exposed through the package `types` export condition. JavaScript
+  consumption is unchanged.
+- Public types (`LSPClientConfig`, `LSPClientResult`, `LSPPluginOptions`,
+  `WorkspaceDiagnostic`, `WorkerTransportOptions`, `StubPackageCatalogEntry`,
+  `StubPackageRelease`, `InstalledStubPackage`, `WorkerFsEntry`, `LSPTransport`,
+  `LSPCompletionItem`, `CodeMirrorCompletionOption`) are re-exported from the
+  package entry point.
+
+### Fixed
+
+- `createLSPClient` no longer forwards `diagnosticMode` to the worker transport,
+  which never accepted it. Pyright still receives the setting through the client
+  configuration, so behavior is unchanged.
+
 ### Changed
 
 - Default `typeshedPath` resolution now uses `/typeshed-micropython`.

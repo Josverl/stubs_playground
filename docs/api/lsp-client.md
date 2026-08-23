@@ -21,6 +21,54 @@ import {
 For CDN URL and peer-dependency details, see the
 [CDN consumption guide](../cdn-consumption.md).
 
+## TypeScript
+
+The package is written in JavaScript with JSDoc types and ships generated
+declarations in `packages/lsp-client/types/`. JavaScript consumers are
+unaffected; TypeScript consumers get full typing without extra configuration
+because `package.json` exposes a `types` condition:
+
+```ts
+import {
+  createLSPClient,
+  createLSPPlugin,
+  type LSPClientConfig,
+  type LSPClientResult,
+  type WorkspaceDiagnostic,
+} from "@mp-codemirror/lsp-client";
+
+const config: LSPClientConfig = {
+  workerUrl,
+  typeCheckingMode: "standard",
+  diagnosticMode: "workspace",
+  onWorkspaceDiagnosticsChange(diagnostics: WorkspaceDiagnostic[]) {
+    console.log(diagnostics.length);
+  },
+};
+
+const runtime: LSPClientResult = await createLSPClient(config);
+```
+
+`moduleResolution` must be `bundler`, `node16`, or `nodenext` so the `types`
+export condition is resolved. The CDN build serves the same declarations next to
+the source at `packages/lsp-client/types/` on each `lsp-client-v*` tag. Vendor
+that directory and map it explicitly:
+
+```jsonc
+{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "paths": {
+      "@mp-codemirror/lsp-client": ["./vendor/lsp-client/types/index.d.ts"]
+    }
+  }
+}
+```
+
+The declarations are generated from the JSDoc and verified in CI, so they
+cannot drift from the implementation. See
+[Contributing](../contributing.md) for the check that enforces this.
+
 ## `createLSPClient(config)`
 
 Starts the worker transport, performs the LSP `initialize` handshake, and

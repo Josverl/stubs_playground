@@ -207,7 +207,7 @@ jobs:
           }
           const files = new Set(archive.files.map(({ path }) => path));
           const required = process.env.COMPONENT === 'lsp-client'
-            ? ['src/index.js']
+            ? ['src/index.js', 'types/index.d.ts']
             : ['dist/pyright_worker.js', 'src/messages.d.ts', 'assets/stubs-manifest.json'];
           for (const path of required) {
             if (!files.has(path)) throw new Error(`Required package file is missing: ${path}`);
