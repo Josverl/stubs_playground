@@ -46,7 +46,6 @@ api/viperide
 :caption: Other topics
 
 quickstart
-cdn-consumption
 technical
 contributing
 ```

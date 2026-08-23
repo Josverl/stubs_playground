@@ -79,9 +79,9 @@ Custom worker implementations can use the stable control-plane types published a
 
 They are published as public packages on npm under the `@mp-codemirror` scope.
 Releases use npm trusted publishing through the
-[`Release npm package`](.github/workflows/release-npm.yml) workflow. The existing
-**[CDN consumption guide](docs/cdn-consumption.md)** documents the legacy jsDelivr
-integration while consumers migrate to npm.
+[`Release npm package`](.github/workflows/release-npm.yml) workflow. Unbundled
+consumers can load the same files from the npm CDN; see the
+**[LSP client API](docs/api/lsp-client.md)** for the integration contract.
 
 The complete public API reference, including the worker protocol, runtime PyPI
 stub management, and the ViperIDE lifecycle integration, starts at

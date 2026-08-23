@@ -12,8 +12,8 @@ Blob shim:
 
 ```js
 const remoteWorker =
-  "https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@" +
-  "pyright-worker-v0.2.4/packages/pyright-worker/dist/pyright_worker.js";
+  "https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.0" +
+  "/dist/pyright_worker.js";
 
 const shim = `importScripts(${JSON.stringify(remoteWorker)});`;
 const workerUrl = URL.createObjectURL(

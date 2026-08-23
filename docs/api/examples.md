@@ -57,8 +57,8 @@ import {
 } from "@mp-codemirror/lsp-client";
 
 const remoteWorker =
-  "https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@" +
-  "pyright-worker-v0.2.4/packages/pyright-worker/dist/pyright_worker.js";
+  "https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.0" +
+  "/dist/pyright_worker.js";
 const workerUrl = URL.createObjectURL(new Blob(
   [`importScripts(${JSON.stringify(remoteWorker)});`],
   { type: "application/javascript" },
