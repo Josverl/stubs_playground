@@ -1,6 +1,6 @@
 {
   "name": "@mp-codemirror/lsp-client",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Reusable LSP bridge for CodeMirror 6",
   "license": "MIT",
   "repository": {
