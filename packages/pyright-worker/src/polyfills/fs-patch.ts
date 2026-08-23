@@ -8,4 +8,4 @@ if (typeof __os_constants !== "undefined") {
 os.platform = () => "linux";
 os.homedir = () => "/";
 os.tmpdir = () => "/tmp";
-os.EOL = "\n";
+(os as { EOL: string }).EOL = "\n";
