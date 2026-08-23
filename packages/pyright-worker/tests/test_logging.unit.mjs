@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { logVerbose, setVerboseOutput } from '../src/logging.js';
+import { logVerbose, setVerboseOutput } from '../src/logging.ts';
 
 test('worker informational logging is quiet by default and opt-in', () => {
     const originalLog = console.log;
