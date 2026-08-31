@@ -142,16 +142,23 @@ not automatically retried, avoiding duplicate side effects.
 
 ## `TypecheckingAssets`
 
-`TypecheckingAssets` loads the immutable worker manifest and returns config for
-`createLSPClient()`:
+`TypecheckingAssets` loads board metadata and returns config for
+`createLSPClient()`. The production singleton selects the deployed
+`runtime-manifest.json`, permits its exact origin, and keeps the copied npm
+worker as the deterministic bundled fallback:
 
 ```js
 const assets = new TypecheckingAssets();
 const runtimeConfig = await assets.prepare({ boardId: "esp32" });
 ```
 
-The manifest request is memoized after success. Failed requests may be retried.
-One worker Blob URL is reused until the service revokes and releases it.
+Custom hosts may override or explicitly disable `runtimeManifestUrl`,
+`runtimeAllowedOrigins`, `runtimeCacheName`, and `runtimeStorageKey`. The
+reusable client verifies and caches the selected runtime; ViperIDE exposes
+`runtimeSource`, `runtimeId`, `runtimeManifest`, and `runtimeFallbacks` through
+the service snapshot and status presentation. Runtime incompatibility and
+fallback details are therefore actionable without making the worker
+self-update.
 
 `prepare()` prefers an active cached board package and configures the published
 board archive as its fallback.

@@ -7,6 +7,8 @@ flowchart LR
     Host[Host application] --> Service[Optional lifecycle service]
     Service --> Client[LSP client]
     Host --> Client
+    Client --> Manifest[Verified runtime manifest]
+    Client <-->|Cache Storage| RuntimeCache[Last-known-good runtime]
     Client --> Transport[WorkerTransport]
     Transport <-->|postMessage| Worker[Pyright worker]
     Worker --> VFS[ZenFS workspace, typeshed, and stubs]
@@ -22,6 +24,7 @@ application service around it, as ViperIDE does.
 | Contract | Source of truth | Stability boundary |
 |---|---|---|
 | JavaScript package exports | [`packages/lsp-client/src/index.js`](../../packages/lsp-client/src/index.js) | Import only from this entry point. |
+| Runtime selection | [`startWorkerRuntime`](../../packages/lsp-client/src/runtime-loader.js) | Host-selected manifest, digest cache, last-known-good, then bundled fallback. |
 | Worker control messages | [`packages/pyright-worker/src/messages.d.ts`](../../packages/pyright-worker/src/messages.d.ts) | Correlated main-thread/worker protocol. |
 | ViperIDE lifecycle adapter | [`TypecheckingService`](https://github.com/Josverl/ViperIDE/blob/typechecking_1/src/typechecking_service.js) | Reference integration; copied or imported by a host application. |
 | Board asset metadata | `packages/pyright-worker/assets/stubs-manifest.json` | Runtime manifest, separate from package-release discovery. |
@@ -40,6 +43,8 @@ application service around it, as ViperIDE does.
    operations.
 5. Close editor subscriptions, the LSP client, the worker transport, and any
    worker Blob URL when the owning application is disposed.
+6. A remote runtime becomes last-known-good only after worker and LSP startup
+   succeeds; the worker never selects or updates its own runtime.
 
 ## Error model
 
@@ -56,6 +61,7 @@ application service around it, as ViperIDE does.
 ## Browser requirements
 
 - Web Workers and Blob URLs
+- Cache Storage and localStorage for persistent last-known-good runtimes
 - IndexedDB for persistent downloaded stubs
 - `fetch`, streams, and `AbortSignal`
 - ES modules and CodeMirror 6
