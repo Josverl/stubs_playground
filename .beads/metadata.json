@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "stubs_playground",
+  "project_id": "289dfcc3-0f51-4818-8952-63caf763848c"
+}
