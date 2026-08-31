@@ -23,12 +23,14 @@ build:
     npm run generate:component-config
     just pack
     npx webpack --mode production
+    npm run generate:runtime-manifest
 
 # build the Pyright web worker (development, unminified); overwrites the tracked dist/ artifact
 build-dev:
     npm run generate:component-config
     @just sync-stub-package-catalog
     npx webpack --mode development
+    npm run generate:runtime-manifest
     @echo "NOTE: dist/pyright_worker.js is now an unminified DEVELOPMENT build."
     @echo "      Run 'just build' before committing or releasing."
 
@@ -63,6 +65,7 @@ rebuild:
     npm run generate:component-config
     just pack
     npx webpack --mode production
+    npm run generate:runtime-manifest
 
 # stage the static GitHub Pages tree
 [script("uv", "run", "python")]

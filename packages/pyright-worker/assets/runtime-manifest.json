@@ -1,0 +1,100 @@
+{
+  "$schema": "runtime-manifest.schema.json",
+  "runtimeId": "@mp-codemirror/pyright-worker@0.4.3+sha256.a8d80fb78a6222963c17727e46536ef8acf1a5349636fd19a2d90e39be50bb8a",
+  "schemaVersion": 1,
+  "package": {
+    "name": "@mp-codemirror/pyright-worker",
+    "version": "0.4.3"
+  },
+  "worker": {
+    "url": "../dist/pyright_worker.js",
+    "size": 5374738,
+    "sha256": "e62c9c78b3dbd601e88e19402a4f06b018fc05b0f4a65b6be5cbb5cc6d431fb3"
+  },
+  "pyrightVersion": "1.1.386",
+  "typeshed": {
+    "identity": "pyright@1.1.386/typeshed-fallback",
+    "url": "typeshed-fallback.zip",
+    "size": 593836,
+    "sha256": "bc9f9529931540a04e0a849d44d4ef4cca43f0db1a3a266a65641b70ecc1a91e"
+  },
+  "controlProtocol": {
+    "minimumVersion": 1,
+    "maximumVersion": 2,
+    "capabilities": [
+      "runtimeStubPackages"
+    ]
+  },
+  "catalog": {
+    "url": "micropython-stub-package-catalog.json",
+    "size": 17999,
+    "sha256": "d52ffccdc8d92ce08d115b504c36b43991ec5ecc95ab933bd500a01807e6b874",
+    "schemaVersion": "2.0"
+  },
+  "fallbackArchives": [
+    {
+      "id": "stdlib",
+      "packageName": "micropython-stdlib-stubs",
+      "packageVersion": "1.29.0.post2",
+      "url": "stubs-stdlib.zip",
+      "size": 139145,
+      "sha256": "e3f138da608f62063ddc44b77b976e4460991d2e2d0591fcdcdc7f8bcbdbe64f"
+    },
+    {
+      "id": "esp32",
+      "packageName": "micropython-esp32-stubs",
+      "packageVersion": "1.29.0.post1",
+      "url": "stubs-esp32.zip",
+      "size": 267029,
+      "sha256": "8d272f41ce0ebbbb357981dbcf7dfcd73ba904ec37964c34dc7dab97da59b50e"
+    },
+    {
+      "id": "rp2",
+      "packageName": "micropython-rp2-stubs",
+      "packageVersion": "1.29.0.post1",
+      "url": "stubs-rp2.zip",
+      "size": 263996,
+      "sha256": "f11342e7e46d7c5315404087c740bf863abf1ce309be736e9dde32147decaffb"
+    },
+    {
+      "id": "samd",
+      "packageName": "micropython-samd-stubs",
+      "packageVersion": "1.29.0.post1",
+      "url": "stubs-samd.zip",
+      "size": 211449,
+      "sha256": "c65c089c3731eababf9b0dd694029714d4686cd81b56941d818f38b7b909da21"
+    },
+    {
+      "id": "stm32",
+      "packageName": "micropython-stm32-stubs",
+      "packageVersion": "1.29.0.post1",
+      "url": "stubs-stm32.zip",
+      "size": 269874,
+      "sha256": "28ca1dce997e496988abd45de03c856179a1e32acd514056dc36cc02b7795af3"
+    },
+    {
+      "id": "nrf",
+      "packageName": "micropython-nrf-stubs",
+      "packageVersion": "1.29.0.post1",
+      "url": "stubs-nrf.zip",
+      "size": 205451,
+      "sha256": "5d22f140591d583d916a71156325ee6d49f5bf52924cbfbfdd73795fc07cbab2"
+    },
+    {
+      "id": "webassembly",
+      "packageName": "micropython-webassembly-stubs",
+      "packageVersion": "1.29.0.post1",
+      "url": "stubs-webassembly.zip",
+      "size": 212172,
+      "sha256": "502864787e0b0700977e2006ffc3b5c0d60d6dbe8feb4aac331138e1a57e9e86"
+    },
+    {
+      "id": "esp8266",
+      "packageName": "micropython-esp8266-stubs",
+      "packageVersion": "1.29.0.post1",
+      "url": "stubs-esp8266.zip",
+      "size": 234432,
+      "sha256": "4f37b0130a0a7d64a5bd3e8e35237b8c8f7270f429cd2917dae5a78f52462eda"
+    }
+  ]
+}

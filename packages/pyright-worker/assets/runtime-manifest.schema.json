@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mp-codemirror.github.io/schemas/runtime-manifest.schema.json",
+  "title": "Pyright worker runtime manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "runtimeId",
+    "package",
+    "worker",
+    "pyrightVersion",
+    "typeshed",
+    "controlProtocol",
+    "catalog",
+    "fallbackArchives"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "runtime-manifest.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "runtimeId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "worker": {
+      "$ref": "#/$defs/asset"
+    },
+    "pyrightVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "typeshed": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/asset"
+        },
+        {
+          "type": "object",
+          "required": ["identity"],
+          "properties": {
+            "identity": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "controlProtocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimumVersion", "maximumVersion", "capabilities"],
+      "properties": {
+        "minimumVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maximumVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "catalog": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/asset"
+        },
+        {
+          "type": "object",
+          "required": ["schemaVersion"],
+          "properties": {
+            "schemaVersion": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "fallbackArchives": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/asset"
+          },
+          {
+            "type": "object",
+            "required": ["id", "packageName", "packageVersion"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "packageName": {
+                "type": "string",
+                "minLength": 1
+              },
+              "packageVersion": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "asset": {
+      "type": "object",
+      "required": ["url", "size", "sha256"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}

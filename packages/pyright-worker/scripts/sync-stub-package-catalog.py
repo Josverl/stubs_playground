@@ -12,6 +12,9 @@ from urllib.request import urlopen
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_SOURCE = "https://raw.githubusercontent.com/Josverl/micropython-stubs/main/data/stub-packages.json"
 DEFAULT_OUTPUT = Path(__file__).resolve().parent.parent / "assets" / "stub-package-catalog.json"
+DEFAULT_RUNTIME_OUTPUT = (
+    Path(__file__).resolve().parent.parent / "assets" / "micropython-stub-package-catalog.json"
+)
 
 
 def _read_source(source: str) -> dict:
@@ -150,16 +153,36 @@ def build_catalog(source_data: dict, source: str = DEFAULT_SOURCE) -> dict:
     }
 
 
+def build_runtime_catalog(catalog: dict) -> dict:
+    return {
+        **catalog,
+        "packages": [
+            package
+            for package in catalog["packages"]
+            if package["family"] == "micropython"
+        ],
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", default=DEFAULT_SOURCE)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--runtime-output", type=Path)
     args = parser.parse_args()
 
     catalog = build_catalog(_read_source(args.source))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
     print(f"Wrote {len(catalog['packages'])} packages to {args.output}")
+    runtime_output = args.runtime_output
+    if runtime_output is None and args.output == DEFAULT_OUTPUT:
+        runtime_output = DEFAULT_RUNTIME_OUTPUT
+    if runtime_output is not None:
+        runtime_catalog = build_runtime_catalog(catalog)
+        runtime_output.parent.mkdir(parents=True, exist_ok=True)
+        runtime_output.write_text(json.dumps(runtime_catalog, indent=2) + "\n", encoding="utf-8")
+        print(f"Wrote {len(runtime_catalog['packages'])} packages to {runtime_output}")
 
 
 if __name__ == "__main__":

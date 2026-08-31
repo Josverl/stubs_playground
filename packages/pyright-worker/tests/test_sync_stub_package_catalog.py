@@ -11,6 +11,9 @@ SPEC.loader.exec_module(MODULE)
 
 def test_default_output_resolves_from_worker_package():
     assert MODULE.DEFAULT_OUTPUT == Path(__file__).parents[1] / "assets" / "stub-package-catalog.json"
+    assert MODULE.DEFAULT_RUNTIME_OUTPUT == (
+        Path(__file__).parents[1] / "assets" / "micropython-stub-package-catalog.json"
+    )
 
 
 def test_build_catalog_groups_versions_and_normalizes_board_names():
@@ -63,6 +66,9 @@ def test_build_catalog_includes_circuitpython_placeholder():
         "port": "",
         "board": "",
     }
+
+    runtime_catalog = MODULE.build_runtime_catalog(catalog)
+    assert {package["family"] for package in runtime_catalog["packages"]} == {"micropython"}
 
 
 def test_build_catalog_maps_webassembly_package_to_pyscript_board():

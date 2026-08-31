@@ -32,6 +32,7 @@
   "workerBundle": "./dist/pyright_worker.js",
   "browserDistribution": {
     "worker": "dist/pyright_worker.js",
-    "assets": "assets"
+    "assets": "assets",
+    "runtimeManifest": "assets/runtime-manifest.json"
   }
 }

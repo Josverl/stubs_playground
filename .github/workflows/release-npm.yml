@@ -189,7 +189,9 @@ jobs:
 
       - name: Build worker
         if: steps.meta.outputs.component == 'pyright-worker'
-        run: npx webpack --mode production
+        run: |
+          npx webpack --mode production
+          npm run generate:runtime-manifest
 
       - name: Verify package archive
         env:
@@ -208,7 +210,14 @@ jobs:
           const files = new Set(archive.files.map(({ path }) => path));
           const required = process.env.COMPONENT === 'lsp-client'
             ? ['src/index.js', 'types/index.d.ts']
-            : ['dist/pyright_worker.js', 'src/messages.d.ts', 'assets/stubs-manifest.json'];
+            : [
+                'dist/pyright_worker.js',
+                'src/messages.d.ts',
+                'assets/stubs-manifest.json',
+                'assets/micropython-stub-package-catalog.json',
+                'assets/runtime-manifest.json',
+                'assets/runtime-manifest.schema.json',
+              ];
           for (const path of required) {
             if (!files.has(path)) throw new Error(`Required package file is missing: ${path}`);
           }

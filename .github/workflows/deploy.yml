@@ -52,7 +52,9 @@ jobs:
         run: uv run packages/pyright-worker/scripts/pack-stubs.py
 
       - name: Build worker
-        run: npx webpack --mode production
+        run: |
+          npx webpack --mode production
+          npm run generate:runtime-manifest
 
       - name: Verify build artifacts
         run: |
@@ -77,6 +79,7 @@ jobs:
             deploy/apps/playground/component-source.js \
             deploy/packages/lsp-client/src/index.js \
             deploy/packages/pyright-worker/dist/pyright_worker.js \
+            deploy/packages/pyright-worker/assets/runtime-manifest.json \
             deploy/packages/pyright-worker/assets/stubs-manifest.json \
             deploy/packages/pyright-worker/assets/stubs-esp32.zip
           do

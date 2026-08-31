@@ -4,6 +4,12 @@
 Pyright, ZenFS, typeshed, and bundled MicroPython stubs. The stable control
 contract is declared in
 [`messages.d.ts`](../../packages/pyright-worker/src/messages.d.ts).
+Each build also publishes `assets/runtime-manifest.json`, which binds the
+worker, its exact Pyright/typeshed pair, protocol range, catalog, and fallback
+archives by URL, byte size, and SHA-256 digest. Its JSON Schema is published as
+`assets/runtime-manifest.schema.json`. CircuitPython artifacts remain outside
+this MicroPython runtime contract, whose catalog is published separately as
+`assets/micropython-stub-package-catalog.json`.
 
 ## Starting a CDN worker
 

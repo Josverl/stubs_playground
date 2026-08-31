@@ -133,7 +133,9 @@ jobs:
         run: npm run sync:stub-package-catalog
 
       - name: Build worker
-        run: npx webpack --mode production
+        run: |
+          npx webpack --mode production
+          npm run generate:runtime-manifest
 
       - name: Verify GitHub Pages staging
         run: |
@@ -145,6 +147,7 @@ jobs:
             ci-deploy/apps/playground/component-source.js \
             ci-deploy/packages/lsp-client/src/index.js \
             ci-deploy/packages/pyright-worker/dist/pyright_worker.js \
+            ci-deploy/packages/pyright-worker/assets/runtime-manifest.json \
             ci-deploy/packages/pyright-worker/assets/stubs-manifest.json \
             ci-deploy/packages/pyright-worker/assets/stubs-esp32.zip
           do
