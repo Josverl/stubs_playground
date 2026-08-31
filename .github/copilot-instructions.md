@@ -49,8 +49,11 @@ just pack-stubs
 npm run generate:component-config
 ```
 
-The generated worker bundle is tracked. `just build-dev` overwrites it with a
-development build, so restore the production artifact with `just build`.
+Always build the worker before browser tests that exercise Pyright. Do not
+assume the generated worker bundle is tracked in every checkout: confirm with
+`git ls-files packages/pyright-worker/dist/pyright_worker.js` before staging it.
+`just build-dev` overwrites the production artifact, so run `just build` before
+release validation.
 
 ## Tests, types, and formatting
 
@@ -133,7 +136,10 @@ is application-owned.
 
 When changing a public JSDoc signature, regenerate and commit
 `packages/lsp-client/types/`. Its package test checks declaration drift and a
-real TypeScript consumer import.
+real TypeScript consumer import. For a new public module or substantial public
+API change, run `npm run build:types --workspace @mp-codemirror/lsp-client`
+after the first implementation slice, before wiring application or browser
+integration; do not defer JSDoc type errors until the end.
 
 ### Worker boundary
 
@@ -179,7 +185,17 @@ Blob shim containing `importScripts`.
 - Validate remote package/archive origins, paths, counts, and byte limits before
   persistence or mounting. Surface failures; do not silently turn them into
   successful empty results.
+- Browser workers cannot inspect every intermediate redirect origin. Verified
+  runtime, catalog, and archive fetches must reject redirects with
+  `redirect: "error"`; do not implement manual or automatic redirect following.
 - Keep package versions in package manifests and lockfiles, not duplicated in
   application source. Package release tags and published versions are immutable.
 - Update API and architecture documentation when public contracts, worker
   messages, mount behavior, or distribution boundaries change.
+- `just stage-pages` creates `deploy/`. When it is run only as a validation
+  step, remove an untracked `deploy/` afterward; retain it only when deployment
+  output was explicitly requested.
+- Before broad or cross-repository work, inspect active sessions and worktrees
+  to avoid overlapping edits. Keep dependency-chain tasks sequential, but move
+  newly ready, genuinely independent cross-repository tasks into isolated
+  worktrees or sessions rather than sharing a dirty repository root.
