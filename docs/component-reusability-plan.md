@@ -841,9 +841,49 @@ Allow downloading/using , additional, type stubs from PyPI [Only Advanced mode ?
   records the resolved artifacts. Source and Rollup configuration contain no duplicated version
   constants. Rollup resolves the client package and copies the installed worker package by name.
 Remaining:
+- Done: hide pypi stub installation unless in advanced mode
 
-Advanced mode options
-- hide pypi stub installation unless in advanced mode 
+- Done. better filtering and searching on the available package list
+7. Done automatically match stub version to the connected device version. Currently the user has to manually select the correct stub version. This should be automatic based on the connected device version.
+
+
+Testing
+
+- Add link to report stub issues
+- Or should this be a separate report package
+    - Include the diagnostics - file / selected code snippet Similar to current
+
+
+Architecture decision (`stubs_playground-bvk`, accepted 2026-08-31):
+
+- Keep the existing two npm packages. Do not split Pyright, compatible typeshed,
+  ZenFS integration, and worker glue into independently selectable packages.
+- Add a generated `runtime-manifest.json` so a host can select an immutable,
+  compatible runtime without rebuilding the application.
+- Publish the stub-package catalog and hashed fallback archives as independently
+  refreshable static artifacts, while retaining bundled offline fallbacks.
+- Keep runtime selection and rollback policy in the host. The worker does not
+  self-update.
+- Add control-protocol version and capability negotiation. Missing protocol
+  metadata means legacy v1; incompatible versions fail before `initServer`.
+- Retain classic workers and the existing same-origin/Blob loading paths. A module
+  worker or service-worker updater would add complexity without improving the
+  required boundaries.
+- Correct LSP shutdown to use a `shutdown` request followed by `exit`.
+- Keep client-defined overlays, such as ViperIDE `viper-tools-stubs`, outside the
+  shared runtime manifest. Hosts may supply validated archives or type-only PyPI
+  packages without rebuilding the worker.
+- Migrate Playground first and ViperIDE only after the manifest path, cache,
+  offline fallback, and rollback behavior are proven.
+
+The complete component responsibilities, compatibility policy, security and
+cache rules, fallback behavior, migration sequence, and test matrix are recorded
+in `docs/architecture.md` under **Accepted Runtime and Asset Evolution**.
+
+
+
+
+Later Advanced mode options
 6. disable Other lint sources [advanced mode]: 
     - enable/disable Ruff diagnostics , default on
     - enable/disable mpy-cross diagnostics, default on
@@ -854,10 +894,5 @@ Advanced mode options
 
 4. Should there be an option to automagically add the stubs for natmod modules such as emlean-micropython  ?  
 
-7. automatically match stub version to the connected device version. Currently the user has to manually select the correct stub version. This should be automatic based on the connected device version.
 
 Backend
-
-1. Allow the pyright worker code to be updated without having to update the ViperIDE code and pinned versions.
-2. better filtering and searching on the available package list
-
