@@ -34,7 +34,7 @@ const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
  * @property {string} workerUrl - Verified Blob URL or bundled worker URL.
  * @property {RuntimeSource} source - Candidate origin in the fallback chain.
  * @property {string} runtimeId - Immutable runtime identity, or `bundled`.
- * @property {Object|null} manifest - Validated runtime manifest.
+ * @property {RuntimeManifest|null} manifest - Validated runtime manifest.
  * @property {{url: string, size: number, sha256: string,
  *   allowedOrigins: string[]}|undefined} stubPackageCatalog
  */
@@ -79,6 +79,7 @@ const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
  * @property {T} value - Value returned by the successful start callback.
  * @property {RuntimeSource} source - Successful runtime source.
  * @property {string} runtimeId - Successful immutable runtime identity.
+ * @property {RuntimeManifest|null} manifest - Selected validated manifest.
  * @property {RuntimeFallback[]} fallbacks - Earlier rejected candidates.
  */
 
@@ -549,7 +550,13 @@ export async function startWorkerRuntime(options, start) {
             manifest: null,
             stubPackageCatalog: undefined,
         });
-        return { value, source: 'bundled', runtimeId: 'bundled', fallbacks: [] };
+        return {
+            value,
+            source: 'bundled',
+            runtimeId: 'bundled',
+            manifest: null,
+            fallbacks: [],
+        };
     }
 
     const allowedOrigins = options.allowedOrigins || [];
@@ -591,7 +598,13 @@ export async function startWorkerRuntime(options, start) {
                     error: `Last-known-good metadata was not persisted: ${errorMessage(error)}`,
                 });
             }
-            return { value, source: 'remote', runtimeId: candidate.runtimeId, fallbacks };
+            return {
+                value,
+                source: 'remote',
+                runtimeId: candidate.runtimeId,
+                manifest: candidate.manifest,
+                fallbacks,
+            };
         } catch (error) {
             fallbacks.push({ source: 'remote', error: errorMessage(error) });
         } finally {
@@ -617,6 +630,7 @@ export async function startWorkerRuntime(options, start) {
                     value,
                     source: 'last-known-good',
                     runtimeId: candidate.runtimeId,
+                    manifest: candidate.manifest,
                     fallbacks,
                 };
             } catch (error) {
@@ -637,7 +651,13 @@ export async function startWorkerRuntime(options, start) {
             manifest: null,
             stubPackageCatalog: undefined,
         });
-        return { value, source: 'bundled', runtimeId: 'bundled', fallbacks };
+        return {
+            value,
+            source: 'bundled',
+            runtimeId: 'bundled',
+            manifest: null,
+            fallbacks,
+        };
     } catch (error) {
         fallbacks.push({ source: 'bundled', error: errorMessage(error) });
         throw new Error(

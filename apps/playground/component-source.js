@@ -36,6 +36,12 @@ const sourceConfig = requestedSource === 'npm'
         workerVersion: 'workspace',
     };
 
+const runtimeManifestUrl = `${sourceConfig.assetsBase}/runtime-manifest.json`;
+const runtimeOptions = Object.freeze({
+    runtimeManifestUrl,
+    runtimeAllowedOrigins: [new URL(runtimeManifestUrl).origin],
+});
+
 let workerObjectUrl;
 function resolveWorkerUrl() {
     if (requestedSource === 'local') {
@@ -71,5 +77,6 @@ export const componentSource = Object.freeze({
 
 export const componentAssetsBase = sourceConfig.assetsBase;
 export const getWorkerUrl = resolveWorkerUrl;
+export const getRuntimeOptions = () => runtimeOptions;
 
 window.__componentSource = componentSource;

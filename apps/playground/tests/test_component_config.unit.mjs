@@ -33,4 +33,6 @@ test('runtime source selector contains no component release versions', async () 
     );
     assert.doesNotMatch(source, /(?:lsp-client|pyright-worker)-v\d/);
     assert.match(source, /component-config\.generated\.js/);
+    assert.match(source, /runtime-manifest\.json/);
+    assert.match(source, /runtimeAllowedOrigins/);
 });

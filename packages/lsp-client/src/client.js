@@ -73,6 +73,8 @@ import { createTransport } from './transport-factory.js';
  * @property {'remote'|'last-known-good'|'bundled'} runtimeSource - Selected
  *   worker runtime source.
  * @property {string} runtimeId - Immutable manifest runtime ID or `bundled`.
+ * @property {import('./runtime-loader.js').RuntimeManifest|null} runtimeManifest -
+ *   Selected validated runtime manifest.
  * @property {import('./runtime-loader.js').RuntimeFallback[]} runtimeFallbacks -
  *   Runtime candidates rejected before the successful selection.
  */
@@ -195,6 +197,7 @@ export async function createLSPClient(config) {
         ...selected.value,
         runtimeSource: selected.source,
         runtimeId: selected.runtimeId,
+        runtimeManifest: selected.manifest,
         runtimeFallbacks: selected.fallbacks,
     };
 }

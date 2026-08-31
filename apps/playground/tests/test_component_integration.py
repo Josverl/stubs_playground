@@ -13,6 +13,7 @@ from tests.timing import CDN_TIMEOUT, LSP_TIMEOUT
 pytestmark = pytest.mark.worker
 HARNESS_TIMEOUT = CDN_TIMEOUT + LSP_TIMEOUT
 PROJECT_ROOT = Path(__file__).parents[3]
+RESULTS = PROJECT_ROOT / "results"
 
 
 def _package_version(package_path: str) -> str:
@@ -47,6 +48,9 @@ def _wait_for_playground_lsp(page: Page) -> dict:
             ready: window.__lspReady,
             failed: window.__lspFailed,
             activeBoard: window.__activeLspBoard,
+            runtimeSource: window.__runtimeSource,
+            runtimeId: window.__runtimeId,
+            runtimeFallbacks: window.__runtimeFallbacks,
             status: document.querySelector('#diagnostics-status')?.innerText,
         })"""
     )
@@ -67,11 +71,34 @@ def test_local_mode_uses_workspace_component_interfaces(page: Page, project_serv
     assert state["failed"] is False
     assert state["activeBoard"] == "esp32"
     assert state["source"]["mode"] == "local"
+    assert state["runtimeSource"] == "remote"
+    assert state["runtimeId"].startswith("@mp-codemirror/pyright-worker@")
+    assert state["runtimeFallbacks"] == []
     assert "Pyright" in state["status"]
     assert any("/apps/playground/app.js" in url for url in requests)
     assert any("/packages/lsp-client/src/index.js" in url for url in requests)
     assert any("/packages/pyright-worker/dist/pyright_worker.js" in url for url in requests)
+    assert any("/packages/pyright-worker/assets/runtime-manifest.json" in url for url in requests)
     assert not any("cdn.jsdelivr.net/npm/@mp-codemirror/" in url for url in requests)
+    RESULTS.mkdir(exist_ok=True)
+    page.screenshot(path=RESULTS / "playground-runtime-manifest.png", full_page=True)
+
+
+@requires_worker
+def test_playground_runtime_manifest_failure_uses_bundled_worker(page: Page, project_server: str):
+    page.route("**/runtime-manifest.json", lambda route: route.abort())
+    page.goto(
+        f"{project_server}/apps/playground/?components=local",
+        wait_until="domcontentloaded",
+    )
+    state = _wait_for_playground_lsp(page)
+
+    assert state["ready"] is True
+    assert state["failed"] is False
+    assert state["runtimeSource"] == "bundled"
+    assert state["runtimeId"] == "bundled"
+    assert state["runtimeFallbacks"][0]["source"] == "remote"
+    assert "download failed" in state["runtimeFallbacks"][0]["error"]
 
 
 def test_root_redirect_preserves_component_source_and_fragment(page: Page, project_server: str):

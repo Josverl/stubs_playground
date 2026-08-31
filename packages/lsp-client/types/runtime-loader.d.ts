@@ -55,7 +55,7 @@ export type WorkerRuntimeCandidate = {
     /**
      * - Validated runtime manifest.
      */
-    manifest: Object | null;
+    manifest: RuntimeManifest | null;
     stubPackageCatalog: {
         url: string;
         size: number;
@@ -121,6 +121,10 @@ export type WorkerRuntimeResult<T> = {
      * - Successful immutable runtime identity.
      */
     runtimeId: string;
+    /**
+     * - Selected validated manifest.
+     */
+    manifest: RuntimeManifest | null;
     /**
      * - Earlier rejected candidates.
      */

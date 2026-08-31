@@ -213,6 +213,11 @@ export type LSPClientResult = {
     runtimeId: string;
     /**
      * -
+     * Selected validated runtime manifest.
+     */
+    runtimeManifest: import("./runtime-loader.js").RuntimeManifest | null;
+    /**
+     * -
      * Runtime candidates rejected before the successful selection.
      */
     runtimeFallbacks: import("./runtime-loader.js").RuntimeFallback[];

@@ -43,6 +43,7 @@ import {
     componentAssetsBase,
     createLSPClient,
     createLSPPlugin,
+    getRuntimeOptions,
     getWorkerUrl,
     notifyDocumentChange,
     notifyDocumentOpen,
@@ -103,6 +104,7 @@ let exampleFiles = [];
 // LSP client and related state
 let lspClient = null;
 let lspTransport = null;
+let activeRuntimeManifest = null;
 let documentUri = 'file:///workspace/main.py'; // updated dynamically
 const GENERATED_PYPROJECT_TAB_PATH = '@generated/pyproject.toml';
 
@@ -279,6 +281,14 @@ function setLSPControlsDisabled(disabled) {
     }
 }
 
+function recordRuntimeSelection(result) {
+    activeRuntimeManifest = result.runtimeManifest || null;
+    pyrightVersion = result.pyrightVersion || "";
+    window.__runtimeSource = result.runtimeSource || 'bundled';
+    window.__runtimeId = result.runtimeId || 'bundled';
+    window.__runtimeFallbacks = result.runtimeFallbacks || [];
+}
+
 async function restartLSPWithCurrentSettings(boardId) {
     if (!lspClient || !lspTransport) return;
 
@@ -294,6 +304,7 @@ async function restartLSPWithCurrentSettings(boardId) {
             { client: lspClient, transport: lspTransport },
             {
                 workerUrl: getWorkerUrl(),
+                ...getRuntimeOptions(),
                 timeout: 15000,
                 ...boardStubRuntime,
                 boardStubPackage,
@@ -307,6 +318,7 @@ async function restartLSPWithCurrentSettings(boardId) {
 
         lspClient = result.client;
         lspTransport = result.transport;
+        recordRuntimeSelection(result);
 
         if (docManager) {
             updateDiagnosticsStatus([], pyrightVersion, getSelectedStubsStatusLabel());
@@ -852,6 +864,21 @@ function getBoardStubRuntime(boardId) {
     const bundled = getBundledStubTarget(target);
     if (!bundled?.file) {
         return { boardStubs: false };
+    }
+    const verifiedArchive = activeRuntimeManifest?.fallbackArchives?.find(
+        (archive) => normalizePackageName(archive.packageName)
+            === normalizePackageName(bundled.package),
+    );
+    if (verifiedArchive) {
+        return {
+            boardStubs: undefined,
+            boardStubsArchive: {
+                url: verifiedArchive.url,
+                size: verifiedArchive.size,
+                sha256: verifiedArchive.sha256,
+                allowedOrigins: getRuntimeOptions().runtimeAllowedOrigins,
+            },
+        };
     }
     return {
         boardStubs: undefined,
@@ -1757,6 +1784,7 @@ function startEarlyLSPInit() {
 
             const lspResult = await createLSPClient({
                 workerUrl: getWorkerUrl(),
+                ...getRuntimeOptions(),
                 timeout: 15000,
                 boardStubs: false, // Board selection becomes authoritative after UI setup
                 // Start with an empty workspace so worker creation is not
@@ -1770,7 +1798,7 @@ function startEarlyLSPInit() {
 
             lspClient = lspResult.client;
             lspTransport = lspResult.transport;
-            pyrightVersion = lspResult.pyrightVersion || "";
+            recordRuntimeSelection(lspResult);
             console.log('LSP client ready (early init).');
             window.__lspReady = true;
 
