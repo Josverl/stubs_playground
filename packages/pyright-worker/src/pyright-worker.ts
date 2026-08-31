@@ -830,4 +830,8 @@ ctx.onmessage = (event: MessageEvent) => {
 };
 
 // Signal that the worker script has loaded
-ctx.postMessage({ type: "serverLoaded" } as WorkerMessage);
+ctx.postMessage({
+    type: "serverLoaded",
+    protocolVersion: 2,
+    capabilities: ["runtimeStubPackages"],
+} as WorkerMessage);

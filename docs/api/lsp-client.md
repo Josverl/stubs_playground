@@ -104,6 +104,12 @@ Important configuration:
 | `pythonVersion` | `string` | `3.11` | Python `X.Y` version exposed to Pyright. |
 | `extraStubPackages` | `Array` | `[]` | In-memory type-only packages under `/extra`. |
 | `extraPaths` | `string[]` | `[]` | Additional absolute worker-VFS import paths. |
+
+`WorkerTransport` exposes the negotiated `protocolVersion`, a capability set,
+and `supportsCapability(name)`. The public
+`CURRENT_WORKER_PROTOCOL_VERSION`, `MIN_SUPPORTED_WORKER_PROTOCOL_VERSION`, and
+`WORKER_CAPABILITIES` constants let hosts validate or conditionally expose
+worker-specific features without coupling them to LSP JSON-RPC.
 | `onWorkspaceDiagnosticsChange` | `function` | none | Complete diagnostics snapshot, including unopened files. |
 
 ```js

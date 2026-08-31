@@ -1,3 +1,8 @@
+export const CURRENT_WORKER_PROTOCOL_VERSION: 2;
+export const MIN_SUPPORTED_WORKER_PROTOCOL_VERSION: 1;
+export const WORKER_CAPABILITIES: Readonly<{
+    RUNTIME_STUB_PACKAGES: "runtimeStubPackages";
+}>;
 /**
  * Transport that adapts a classic Web Worker to the string-based interface
  * expected by {@link SimpleLSPClient}.
@@ -60,6 +65,27 @@ export class WorkerTransport {
         timeout?: ReturnType<typeof setTimeout>;
     }>;
     pyrightVersion: string;
+    protocolVersion: number;
+    /** @type {Set<string>} */
+    capabilities: Set<string>;
+    /**
+     * Validate and store the worker-specific control protocol handshake.
+     *
+     * @param {WorkerResponseMessage} msg - `serverLoaded` message.
+     * @returns {void}
+     */
+    _negotiateProtocol(msg: WorkerResponseMessage): void;
+    /**
+     * @param {string} capability - Worker capability identifier.
+     * @returns {boolean} Whether the negotiated worker supports it.
+     */
+    supportsCapability(capability: string): boolean;
+    /**
+     * @param {string} capability - Required worker capability identifier.
+     * @returns {void}
+     * @throws {Error} If the worker did not advertise the capability.
+     */
+    _requireCapability(capability: string): void;
     /**
      * @param {WorkerResponseMessage} msg - Worker control message.
      * @returns {boolean} Whether the message was consumed.
@@ -476,6 +502,14 @@ export type WorkerResponseMessage = {
      * - Worker-reported Pyright version.
      */
     pyrightVersion?: string;
+    /**
+     * - Worker control-protocol version.
+     */
+    protocolVersion?: number;
+    /**
+     * - Optional worker control capabilities.
+     */
+    capabilities?: string[];
     /**
      * - Catalog or installed stub packages.
      */

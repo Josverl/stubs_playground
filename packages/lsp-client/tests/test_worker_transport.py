@@ -45,6 +45,8 @@ def test_worker_transport_connects(page, test_page_url):
 
     assert result["success"] is True
     assert result["connected"] is True
+    assert result["protocolVersion"] == 2
+    assert "runtimeStubPackages" in result["capabilities"]
 
 
 def test_current_client_starts_without_implicit_board_stubs(page, test_page_url):

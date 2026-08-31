@@ -1,5 +1,4 @@
 export { SimpleLSPClient } from "./simple-client.js";
-export { WorkerTransport } from "./worker-transport.js";
 export { createTransport as createWorkerTransport } from "./transport-factory.js";
 export { createCompletionSource } from "./completion.js";
 export { createHoverTooltip } from "./hover.js";
@@ -15,6 +14,7 @@ export type InstalledStubPackage = import("./worker-transport.js").InstalledStub
 export type WorkerFsEntry = import("./worker-transport.js").WorkerFsEntry;
 export type LSPCompletionItem = import("./completion-core.mjs").LSPCompletionItem;
 export type CodeMirrorCompletionOption = import("./completion-core.mjs").CodeMirrorCompletionOption;
+export { CURRENT_WORKER_PROTOCOL_VERSION, MIN_SUPPORTED_WORKER_PROTOCOL_VERSION, WORKER_CAPABILITIES, WorkerTransport } from "./worker-transport.js";
 export { createLSPClient, createLSPPlugin, switchBoard, isLSPReady } from "./client.js";
 export { createLSPDiagnostics, createWorkspaceDiagnosticsSubscription, notifyDocumentOpen, notifyDocumentChange, notifyDocumentClose, removeWorkspaceDiagnosticsFor, getWorkspaceDiagnostics, requestDiagnostics, lintKeymapExtension } from "./diagnostics.js";
 export { kindToType, isDunderLabel, convertCompletionItem, dedupeAndSortCompletionOptions, computeCompletionFrom, CompletionItemKind } from "./completion-core.mjs";

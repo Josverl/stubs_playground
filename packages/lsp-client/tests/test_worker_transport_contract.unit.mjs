@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { SimpleLSPClient } from '../src/simple-client.js';
-import { WorkerTransport } from '../src/worker-transport.js';
+import {
+    CURRENT_WORKER_PROTOCOL_VERSION,
+    WORKER_CAPABILITIES,
+    WorkerTransport,
+} from '../src/worker-transport.js';
 import { createTransport } from '../src/transport-factory.js';
 
 test('WorkerTransport requires an explicit worker URL', () => {
@@ -26,6 +30,96 @@ test('WorkerTransport makes no-board selection explicit by default', () => {
 
     assert.equal(noBoard._boardStubs, false);
     assert.equal(remoteBoard._boardStubs, undefined);
+});
+
+class HandshakeWorker {
+    static loadedMessage = { type: 'serverLoaded' };
+    static instances = [];
+
+    constructor() {
+        this.messages = [];
+        this.terminated = false;
+        HandshakeWorker.instances.push(this);
+        queueMicrotask(() => this.onmessage?.({ data: HandshakeWorker.loadedMessage }));
+    }
+
+    postMessage(message) {
+        this.messages.push(message);
+        if (message.type === 'initServer') {
+            queueMicrotask(() => this.onmessage?.({
+                data: { type: 'serverInitialized', pyrightVersion: 'test' },
+            }));
+        }
+    }
+
+    terminate() {
+        this.terminated = true;
+    }
+}
+
+async function connectWithHandshake(loadedMessage) {
+    const originalWorker = globalThis.Worker;
+    HandshakeWorker.loadedMessage = loadedMessage;
+    HandshakeWorker.instances = [];
+    globalThis.Worker = HandshakeWorker;
+    const transport = new WorkerTransport('worker.js');
+    try {
+        await transport.connect();
+        return { transport, worker: HandshakeWorker.instances[0] };
+    } finally {
+        globalThis.Worker = originalWorker;
+    }
+}
+
+test('WorkerTransport treats missing protocol metadata as legacy v1', async () => {
+    const { transport, worker } = await connectWithHandshake({ type: 'serverLoaded' });
+
+    assert.equal(transport.protocolVersion, 1);
+    assert.equal(
+        transport.supportsCapability(WORKER_CAPABILITIES.RUNTIME_STUB_PACKAGES),
+        true,
+    );
+    assert.equal(worker.messages[0].type, 'initServer');
+    transport.close();
+});
+
+test('WorkerTransport accepts current protocol capabilities', async () => {
+    const { transport } = await connectWithHandshake({
+        type: 'serverLoaded',
+        protocolVersion: CURRENT_WORKER_PROTOCOL_VERSION,
+        capabilities: [WORKER_CAPABILITIES.RUNTIME_STUB_PACKAGES],
+    });
+
+    assert.equal(transport.protocolVersion, CURRENT_WORKER_PROTOCOL_VERSION);
+    assert.deepEqual(
+        [...transport.capabilities],
+        [WORKER_CAPABILITIES.RUNTIME_STUB_PACKAGES],
+    );
+    transport.close();
+});
+
+test('WorkerTransport rejects unsupported protocol before initServer', async () => {
+    const originalWorker = globalThis.Worker;
+    HandshakeWorker.loadedMessage = {
+        type: 'serverLoaded',
+        protocolVersion: CURRENT_WORKER_PROTOCOL_VERSION + 1,
+        capabilities: [],
+    };
+    HandshakeWorker.instances = [];
+    globalThis.Worker = HandshakeWorker;
+    const transport = new WorkerTransport('worker.js');
+
+    try {
+        await assert.rejects(
+            transport.connect(),
+            /unsupported worker control protocol 3; supported range is 1-2/,
+        );
+    } finally {
+        globalThis.Worker = originalWorker;
+    }
+
+    assert.deepEqual(HandshakeWorker.instances[0].messages, []);
+    assert.equal(HandshakeWorker.instances[0].terminated, true);
 });
 
 test('disconnect awaits shutdown response before sending exit', async () => {
@@ -217,6 +311,7 @@ function connectedTransport() {
     const messages = [];
     const transport = new WorkerTransport('worker.js');
     transport.connected = true;
+    transport.capabilities.add(WORKER_CAPABILITIES.RUNTIME_STUB_PACKAGES);
     transport.worker = {
         postMessage(message) {
             messages.push(message);
@@ -224,6 +319,17 @@ function connectedTransport() {
     };
     return { transport, messages };
 }
+
+test('stub package operations require the negotiated capability', async () => {
+    const transport = new WorkerTransport('worker.js');
+    transport.connected = true;
+    transport.worker = { postMessage() {} };
+
+    await assert.rejects(
+        transport.listStubPackages(),
+        /does not support capability "runtimeStubPackages"/,
+    );
+});
 
 test('stub package methods use correlated worker requests', async () => {
     const { transport, messages } = connectedTransport();

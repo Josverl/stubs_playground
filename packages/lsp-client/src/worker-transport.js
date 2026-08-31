@@ -8,6 +8,16 @@
 
 import { logVerbose } from './logging.js';
 
+export const CURRENT_WORKER_PROTOCOL_VERSION = 2;
+export const MIN_SUPPORTED_WORKER_PROTOCOL_VERSION = 1;
+export const WORKER_CAPABILITIES = Object.freeze({
+    RUNTIME_STUB_PACKAGES: 'runtimeStubPackages',
+});
+
+const LEGACY_WORKER_CAPABILITIES = [
+    WORKER_CAPABILITIES.RUNTIME_STUB_PACKAGES,
+];
+
 /**
  * @typedef {Object} WorkerTransportOptions
  * @property {ArrayBuffer|false} [boardStubs] - Board stubs zip. `false` or
@@ -81,6 +91,8 @@ import { logVerbose } from './logging.js';
  * @property {WorkerFsEntry[]} [entries] - Listed filesystem entries.
  * @property {string} [content] - Generated configuration content.
  * @property {string} [pyrightVersion] - Worker-reported Pyright version.
+ * @property {number} [protocolVersion] - Worker control-protocol version.
+ * @property {string[]} [capabilities] - Optional worker control capabilities.
  * @property {StubPackageCatalogEntry[]|InstalledStubPackage[]} [packages] - Catalog or installed stub packages.
  * @property {string[]} [availableRuntimeVersions] - Firmware versions offered by the catalog.
  * @property {string} [defaultRuntimeVersion] - Default firmware version.
@@ -154,6 +166,70 @@ export class WorkerTransport {
         /** @type {Map<string, {resolve: (value: any) => void, reject: (reason?: unknown) => void, timeout?: ReturnType<typeof setTimeout>}>} */
         this._stubPackageRequests = new Map();
         this.pyrightVersion = ""; // set when serverInitialized is received
+        this.protocolVersion = MIN_SUPPORTED_WORKER_PROTOCOL_VERSION;
+        /** @type {Set<string>} */
+        this.capabilities = new Set();
+    }
+
+    /**
+     * Validate and store the worker-specific control protocol handshake.
+     *
+     * @param {WorkerResponseMessage} msg - `serverLoaded` message.
+     * @returns {void}
+     */
+    _negotiateProtocol(msg) {
+        const protocolVersion = msg.protocolVersion
+            ?? MIN_SUPPORTED_WORKER_PROTOCOL_VERSION;
+        if (
+            !Number.isInteger(protocolVersion)
+            || protocolVersion < MIN_SUPPORTED_WORKER_PROTOCOL_VERSION
+            || protocolVersion > CURRENT_WORKER_PROTOCOL_VERSION
+        ) {
+            throw new Error(
+                `WorkerTransport: unsupported worker control protocol `
+                + `${String(protocolVersion)}; supported range is `
+                + `${MIN_SUPPORTED_WORKER_PROTOCOL_VERSION}-${CURRENT_WORKER_PROTOCOL_VERSION}`,
+            );
+        }
+
+        if (
+            msg.capabilities !== undefined
+            && (
+                !Array.isArray(msg.capabilities)
+                || msg.capabilities.some((capability) => typeof capability !== 'string')
+            )
+        ) {
+            throw new Error('WorkerTransport: worker capabilities must be an array of strings');
+        }
+
+        this.protocolVersion = protocolVersion;
+        this.capabilities = new Set(
+            protocolVersion === MIN_SUPPORTED_WORKER_PROTOCOL_VERSION
+                ? LEGACY_WORKER_CAPABILITIES
+                : (msg.capabilities || []),
+        );
+    }
+
+    /**
+     * @param {string} capability - Worker capability identifier.
+     * @returns {boolean} Whether the negotiated worker supports it.
+     */
+    supportsCapability(capability) {
+        return this.capabilities.has(capability);
+    }
+
+    /**
+     * @param {string} capability - Required worker capability identifier.
+     * @returns {void}
+     * @throws {Error} If the worker did not advertise the capability.
+     */
+    _requireCapability(capability) {
+        if (!this.supportsCapability(capability)) {
+            throw new Error(
+                `WorkerTransport: worker protocol ${this.protocolVersion} `
+                + `does not support capability "${capability}"`,
+            );
+        }
     }
 
     /**
@@ -293,6 +369,14 @@ export class WorkerTransport {
 
                 // --- Control-plane messages (handshake) ---
                 if (msg.type === 'serverLoaded') {
+                    try {
+                        this._negotiateProtocol(msg);
+                    } catch (error) {
+                        clearTimeout(timeout);
+                        this._cleanup();
+                        reject(error);
+                        return;
+                    }
                     phase = 'initializing';
                     this.worker.postMessage({
                         type: 'initServer',
@@ -633,6 +717,11 @@ export class WorkerTransport {
     _requestStubPackage(type, payload = {}, timeoutMs = 30000) {
         if (!this.connected || !this.worker) {
             return Promise.reject(new Error('WorkerTransport: not connected'));
+        }
+        try {
+            this._requireCapability(WORKER_CAPABILITIES.RUNTIME_STUB_PACKAGES);
+        } catch (error) {
+            return Promise.reject(error);
         }
 
         const requestId = `stubs_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;

@@ -48,7 +48,12 @@
             async connect() {
                 const t = new WorkerTransport('../../pyright-worker/dist/pyright_worker.js');
                 await t.connect();
-                const result = {success: true, connected: t.isConnected()};
+                const result = {
+                    success: true,
+                    connected: t.isConnected(),
+                    protocolVersion: t.protocolVersion,
+                    capabilities: [...t.capabilities],
+                };
                 t.close();
                 return result;
             },

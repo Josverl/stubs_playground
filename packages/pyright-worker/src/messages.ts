@@ -6,7 +6,12 @@ export interface UserFolder {
 
 export interface MsgServerLoaded {
     type: "serverLoaded";
+    /** Missing metadata identifies a legacy protocol-v1 worker. */
+    protocolVersion?: 2;
+    capabilities?: WorkerCapability[];
 }
+
+export type WorkerCapability = "runtimeStubPackages";
 
 export interface MsgInitServer {
     type: "initServer";

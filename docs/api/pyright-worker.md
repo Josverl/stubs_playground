@@ -30,7 +30,7 @@ sequenceDiagram
     participant Host
     participant Worker
     Host->>Worker: new Worker(workerUrl)
-    Worker-->>Host: {type: "serverLoaded"}
+    Worker-->>Host: {type: "serverLoaded", protocolVersion, capabilities}
     Host->>Worker: {type: "initServer", ...}
     Worker-->>Host: {type: "serverInitialized", pyrightVersion}
     Host->>Worker: LSP initialize request
@@ -39,7 +39,11 @@ sequenceDiagram
 
 The host must wait for `serverLoaded` before sending `initServer`, and wait for
 `serverInitialized` before normal LSP traffic. `WorkerTransport.connect()`
-implements this sequence.
+implements this sequence. The current control protocol is version 2. A missing
+version is treated as legacy version 1; versions outside the client's supported
+range fail before `initServer`. Optional operations are invoked only when their
+capability is present. Legacy version 1 maps to its documented
+`runtimeStubPackages` baseline for compatibility with published workers.
 
 Important `initServer` properties:
 

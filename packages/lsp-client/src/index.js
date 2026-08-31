@@ -10,7 +10,12 @@
 
 // Transport layer
 export { SimpleLSPClient } from './simple-client.js';
-export { WorkerTransport } from './worker-transport.js';
+export {
+    CURRENT_WORKER_PROTOCOL_VERSION,
+    MIN_SUPPORTED_WORKER_PROTOCOL_VERSION,
+    WORKER_CAPABILITIES,
+    WorkerTransport,
+} from './worker-transport.js';
 export { createTransport as createWorkerTransport } from './transport-factory.js';
 
 // Client factories
