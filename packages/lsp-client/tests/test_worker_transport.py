@@ -47,6 +47,24 @@ def test_worker_transport_connects(page, test_page_url):
     assert result["connected"] is True
 
 
+def test_current_client_starts_without_implicit_board_stubs(page, test_page_url):
+    """Omitting board selection in the current client leaves /typings empty."""
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate("""() => window.runTest('no-board-default')""")
+
+    assert result == {"success": True, "fileCount": 0}
+
+
+def test_legacy_client_retains_bundled_rp2_default(page, test_page_url):
+    """Published clients that sent undefined still receive the RP2 fallback."""
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate("""() => window.runTest('legacy-board-default')""")
+
+    assert result == {"success": True, "hasMachineStubs": True}
+
+
 def test_worker_transport_is_quiet_by_default(page, test_page_url):
     """Default component settings suppress informational console output."""
     messages = []

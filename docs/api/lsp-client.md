@@ -93,8 +93,9 @@ Important configuration:
 |---|---|---|---|
 | `workerUrl` | `string` | required | Worker script URL or same-origin Blob URL. |
 | `timeout` | `number` | `5000` | LSP request timeout in milliseconds. |
+| `shutdownTimeout` | `number` | `1000` | Maximum wait for the shutdown response before `exit`. |
 | `workspaceFiles` | `Record<string,string>` | `{}` | Files created under `/workspace` before Pyright starts. |
-| `boardStubs` | `ArrayBuffer \| false` | bundled default | Board archive override; `false` disables board stubs. |
+| `boardStubs` | `ArrayBuffer \| false` | `false` | Explicit board archive; omission means no board unless another source is selected. |
 | `boardStubsUrl` | `string` | none | Worker-fetched fallback archive. |
 | `boardStubPackage` | `object` | none | Cached package preferred as `/typings`. |
 | `typeCheckingMode` | `string` | `standard` | `off`, `basic`, `standard`, or `strict`. |
@@ -235,7 +236,9 @@ const unsubscribe = runtime.client.onNotification((method, params) => {
 unsubscribe();
 ```
 
-Call `client.disconnect()` before `transport.close()`. Disconnect rejects
+Await `client.disconnect()` before `transport.close()`. Disconnect sends the
+standard `shutdown` request, waits up to the configured `shutdownTimeout`
+(1 second by default), sends `exit`, and rejects
 pending LSP requests but does not own or close the transport.
 
 ## Diagnostics helpers

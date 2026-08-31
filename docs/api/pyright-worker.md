@@ -46,7 +46,7 @@ Important `initServer` properties:
 | Property | Behavior |
 |---|---|
 | `workspaceFiles` | Creates text files below `/workspace` before Pyright starts. |
-| `boardStubs` | Archive buffer, `false` for none, or `undefined` for bundled default. |
+| `boardStubs` | Archive buffer or `false` for none. Published legacy clients that send `undefined` retain the bundled RP2 compatibility default; current clients always select a board source or send `false`. |
 | `boardStubsUrl` | HTTPS fallback fetched only when a preferred cached board package is unavailable. |
 | `boardStubPackage` | Cached package mounted as `/typings`; may permit bundled fallback. |
 | `typeCheckingMode` | Pyright checking mode. |

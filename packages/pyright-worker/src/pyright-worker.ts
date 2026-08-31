@@ -28,7 +28,7 @@ const { configure, InMemory } = fs as any;
 import typeshedFallbackZip from "../assets/typeshed-fallback.zip";
 import micropythonStdlibZip from "../assets/stubs-stdlib.zip";
 
-// Bundled default board stubs (rp2)
+// Bundled RP2 stubs retained only for legacy clients that omitted board selection.
 import defaultBoardStubsZip from "../assets/stubs-rp2.zip";
 
 import {
@@ -121,7 +121,8 @@ async function fetchBoardStubsArchive(value: string): Promise<ArrayBuffer> {
 async function initFs(
     boardStubsData?: ArrayBuffer | false
 ) {
-    // Use bundled default board stubs unless explicitly overridden
+    // Published legacy clients sent undefined to request the historical RP2 default.
+    // Current clients always send false when no board has been selected.
     const boardStubs = boardStubsData === false
         ? undefined
         : (boardStubsData || defaultBoardStubsZip);

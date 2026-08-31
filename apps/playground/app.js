@@ -1492,7 +1492,7 @@ async function initializeEditor() {
         console.log('Editor will continue without LSP features');
     } else {
         try {
-            // Early init prioritizes fast worker startup with bundled defaults.
+            // Early init prioritizes fast worker startup without board stubs.
             // Re-apply selected board/workspace settings once UI/OPFS is ready.
             if (currentBoardId) {
                 await refreshInstalledStubPackages();
@@ -1758,7 +1758,7 @@ function startEarlyLSPInit() {
             const lspResult = await createLSPClient({
                 workerUrl: getWorkerUrl(),
                 timeout: 15000,
-                boardStubs: undefined, // Use bundled stubs initially
+                boardStubs: false, // Board selection becomes authoritative after UI setup
                 // Start with an empty workspace so worker creation is not
                 // blocked by OPFS/project hydration.
                 workspaceFiles: {},

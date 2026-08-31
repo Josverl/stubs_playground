@@ -96,10 +96,10 @@ function publishChange() {
   );
 }
 
-function dispose() {
+async function dispose() {
   notifyDocumentClose(runtime.client, uri);
   runtime.workspaceDiagnosticsSubscription?.destroy();
-  runtime.client.disconnect();
+  await runtime.client.disconnect();
   runtime.transport.close();
   view.destroy();
   URL.revokeObjectURL(workerUrl);
@@ -125,7 +125,7 @@ console.log(`Cached ${metadata.packageName} ${metadata.version}`);
 
 // Required: create a replacement worker so /extra contains the new package.
 runtime.workspaceDiagnosticsSubscription?.destroy();
-runtime.client.disconnect();
+await runtime.client.disconnect();
 runtime.transport.close();
 
 const replacement = await createLSPClient({

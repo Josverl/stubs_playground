@@ -271,8 +271,9 @@ export class WorkerTransport {
 }
 export type WorkerTransportOptions = {
     /**
-     * - Board stubs zip, `false` to
-     * disable board stubs, or `undefined` to use the bundled default.
+     * - Board stubs zip. `false` or
+     * omission disables board stubs unless `boardStubsUrl` or
+     * `boardStubPackage` selects them explicitly.
      */
     boardStubs?: ArrayBuffer | false;
     /**

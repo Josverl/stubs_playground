@@ -18,6 +18,67 @@ test('createTransport preserves the supplied worker URL', () => {
     assert.equal(transport.workerUrl, 'https://example.test/worker.js');
 });
 
+test('WorkerTransport makes no-board selection explicit by default', () => {
+    const noBoard = new WorkerTransport('worker.js');
+    const remoteBoard = new WorkerTransport('worker.js', {
+        boardStubsUrl: 'https://example.test/stubs.zip',
+    });
+
+    assert.equal(noBoard._boardStubs, false);
+    assert.equal(remoteBoard._boardStubs, undefined);
+});
+
+test('disconnect awaits shutdown response before sending exit', async () => {
+    const sent = [];
+    const client = new SimpleLSPClient({ shutdownTimeout: 50 });
+    client.connected = true;
+    client.transport = {
+        send(message) {
+            const parsed = JSON.parse(message);
+            sent.push(parsed);
+            if (parsed.method === 'shutdown') {
+                queueMicrotask(() => client.handleMessage(JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: parsed.id,
+                    result: null,
+                })));
+            }
+        },
+    };
+
+    await client.disconnect();
+
+    assert.deepEqual(sent.map(({ method, params }) => ({ method, params })), [
+        { method: 'shutdown', params: null },
+        { method: 'exit', params: null },
+    ]);
+    assert.equal(client.connected, false);
+});
+
+test('disconnect sends exit after a bounded shutdown timeout', async () => {
+    const sent = [];
+    const errors = [];
+    const originalError = console.error;
+    const client = new SimpleLSPClient({ shutdownTimeout: 1 });
+    client.connected = true;
+    client.transport = {
+        send(message) {
+            sent.push(JSON.parse(message));
+        },
+    };
+    console.error = (...args) => errors.push(args);
+
+    try {
+        await client.disconnect();
+    } finally {
+        console.error = originalError;
+    }
+
+    assert.deepEqual(sent.map(({ method }) => method), ['shutdown', 'exit']);
+    assert.match(String(errors[0]?.[1]), /Request shutdown timed out/);
+    assert.equal(client.connected, false);
+});
+
 test('informational logging is quiet by default and opt-in', () => {
     const originalLog = console.log;
     const originalWarn = console.warn;

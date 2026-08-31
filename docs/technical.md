@@ -276,7 +276,7 @@ class SimpleLSPClient {
   notify(method, params)         // Send notification (fire-and-forget)
   handleMessage(messageStr)      // Parse and route incoming messages
   onNotification(handler)        // Register notification handlers
-  disconnect()                   // Clean shutdown
+  await disconnect()             // Bounded shutdown request, then exit
 }
 ```
 

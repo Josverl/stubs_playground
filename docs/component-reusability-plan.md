@@ -140,7 +140,7 @@ Minor additions needed:
 class SimpleLSPClient {
   constructor(config?: LSPClientConfig);
   connect(transport: LSPTransport): Promise<SimpleLSPClient>;
-  disconnect(): void;
+  disconnect(): Promise<void>;
   request(method: string, params: unknown): Promise<unknown>;
   notify(method: string, params: unknown): void;
   onNotification(handler: (method: string, params: unknown) => void): () => void;

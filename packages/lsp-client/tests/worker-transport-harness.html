@@ -53,6 +53,55 @@
                 return result;
             },
 
+            async 'no-board-default'() {
+                const t = new WorkerTransport('../../pyright-worker/dist/pyright_worker.js');
+                await t.connect();
+                const filesystem = await t.debugListFs('/typings', 1);
+                t.close();
+                return {
+                    success: true,
+                    fileCount: filesystem.entries.filter((entry) => entry.kind === 'file').length,
+                };
+            },
+
+            async 'legacy-board-default'() {
+                const worker = new Worker('../../pyright-worker/dist/pyright_worker.js');
+                const entries = await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(new Error('Legacy worker init timeout')), 15000);
+                    worker.onmessage = (event) => {
+                        const message = event.data;
+                        if (message.type === 'serverLoaded') {
+                            worker.postMessage({
+                                type: 'initServer',
+                                userFiles: {},
+                                boardStubs: undefined,
+                            });
+                        } else if (message.type === 'serverInitialized') {
+                            worker.postMessage({
+                                type: 'debugListFs',
+                                requestId: 'legacy-board-default',
+                                root: '/typings',
+                                depth: 1,
+                            });
+                        } else if (
+                            message.type === 'debugListFsResult'
+                            && message.requestId === 'legacy-board-default'
+                        ) {
+                            clearTimeout(timeout);
+                            resolve(message.entries);
+                        } else if (message.type === 'serverError') {
+                            clearTimeout(timeout);
+                            reject(new Error(message.error));
+                        }
+                    };
+                });
+                worker.terminate();
+                return {
+                    success: true,
+                    hasMachineStubs: entries.some((entry) => entry.path.endsWith('/machine.pyi')),
+                };
+            },
+
             async 'verbose-logging'() {
                 const t = new WorkerTransport('../../pyright-worker/dist/pyright_worker.js', {
                     verboseOutput: true,
@@ -170,7 +219,7 @@
                 });
 
                 const diagnosticCount = await diagPromise;
-                client.disconnect();
+                await client.disconnect();
                 t.close();
                 return {success: true, hasCapabilities, diagnosticCount};
             },

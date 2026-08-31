@@ -12,8 +12,8 @@ import { WorkerTransport } from './worker-transport.js';
  *
  * @param {Object} options - Worker initialization options.
  * @param {string} options.workerUrl - Worker script or Blob URL.
- * @param {ArrayBuffer|false} [options.boardStubs] - Board-specific stubs zip,
- *   `false` to disable board stubs, or `undefined` for the bundled default.
+ * @param {ArrayBuffer|false} [options.boardStubs] - Board-specific stubs zip.
+ *   `false` or omission disables board stubs unless another source is selected.
  * @param {string} [options.boardStubsUrl] - Absolute fallback archive URL.
  * @param {{packageName: string, version?: string, fallbackToBundled?: boolean}} [options.boardStubPackage] -
  *   Cached PyPI package to use as `/typings`.

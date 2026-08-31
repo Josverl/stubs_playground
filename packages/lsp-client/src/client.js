@@ -21,8 +21,10 @@ import { createTransport } from './transport-factory.js';
  * @typedef {Object} LSPClientConfig
  * @property {string} workerUrl - Worker script URL.
  * @property {number} [timeout=5000] - Request timeout in milliseconds.
- * @property {ArrayBuffer|false} [boardStubs] - Board stubs zip; `false` disables
- *   board stubs and `undefined` uses the worker's bundled default.
+ * @property {number} [shutdownTimeout=1000] - Maximum time to await the LSP
+ *   shutdown response before sending `exit`.
+ * @property {ArrayBuffer|false} [boardStubs] - Board stubs zip. `false` or
+ *   omission disables board stubs unless another board source is selected.
  * @property {string} [boardStubsUrl] - Absolute fallback archive URL fetched
  *   only when the preferred cached package is unavailable.
  * @property {{packageName: string, version?: string, fallbackToBundled?: boolean}} [boardStubPackage] -
@@ -101,6 +103,7 @@ export async function createLSPClient(config) {
     const client = new SimpleLSPClient({
         rootUri: 'file:///workspace',
         timeout: config.timeout || 5000,
+        shutdownTimeout: config.shutdownTimeout,
         typeCheckingMode: config.typeCheckingMode,
         diagnosticMode: config.diagnosticMode,
         typeshedPath: config.typeshedPath,
@@ -208,11 +211,10 @@ export async function switchBoard(current, config) {
     // Tear down old client and transport
     current.workspaceDiagnosticsSubscription?.destroy();
     try {
-        current.client.disconnect();
-    } catch (e) { /* ignore shutdown errors */ }
-    try {
+        await current.client.disconnect();
+    } finally {
         current.transport.close();
-    } catch (e) { /* ignore close errors */ }
+    }
 
     // Create new client with new board stubs
     const result = await createLSPClient(config);

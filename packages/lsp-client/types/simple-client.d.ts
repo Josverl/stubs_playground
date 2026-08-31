@@ -23,6 +23,8 @@ export class SimpleLSPClient {
      * @param {Object} [config={}] - Client configuration.
      * @param {string} [config.rootUri='file:///workspace'] - Workspace root URI.
      * @param {number} [config.timeout=5000] - Request timeout in milliseconds.
+     * @param {number} [config.shutdownTimeout=1000] - Maximum time to await the
+     *   LSP shutdown response before sending `exit`.
      * @param {string} [config.typeCheckingMode] - Pyright type checking mode
      *   (`off`, `basic`, `standard`, `strict`).
      * @param {string} [config.diagnosticMode='openFilesOnly'] - Pyright diagnostic
@@ -35,6 +37,7 @@ export class SimpleLSPClient {
     constructor(config?: {
         rootUri?: string;
         timeout?: number;
+        shutdownTimeout?: number;
         typeCheckingMode?: string;
         diagnosticMode?: string;
         typeshedPath?: string;
@@ -45,6 +48,7 @@ export class SimpleLSPClient {
     config: {
         rootUri?: string;
         timeout?: number;
+        shutdownTimeout?: number;
         typeCheckingMode?: string;
         diagnosticMode?: string;
         typeshedPath?: string;
@@ -93,12 +97,13 @@ export class SimpleLSPClient {
      *
      * @param {string} method - LSP method name (e.g. `textDocument/hover`).
      * @param {unknown} params - Method parameters.
+     * @param {number} [timeoutMs] - Request-specific timeout override.
      * @returns {Promise<unknown>} Resolves with the server result, or rejects
      *   on server error or timeout.
      * @throws {Error} If the server returns an error, the timeout expires, or
      *   the client is disconnected while the request is pending.
      */
-    request(method: string, params: unknown): Promise<unknown>;
+    request(method: string, params: unknown, timeoutMs?: number): Promise<unknown>;
     /**
      * Send a notification to the server (no response expected).
      *
@@ -158,14 +163,16 @@ export class SimpleLSPClient {
      */
     onNotification(handler: (method: string, params: unknown) => void): () => void;
     /**
-     * Disconnect from the server and reject all pending requests.
+     * Gracefully disconnect from the server and reject remaining requests.
      *
-     * Shutdown transport errors are logged and suppressed. This method does not
-     * close the transport; callers that own it should call `transport.close()`.
+     * Sends the standard `shutdown` request, waits for its response within the
+     * configured bound, then sends the `exit` notification. Shutdown transport
+     * errors are logged and suppressed. This method does not close the transport;
+     * callers that own it should call `transport.close()` after awaiting it.
      *
-     * @returns {void}
+     * @returns {Promise<void>}
      */
-    disconnect(): void;
+    disconnect(): Promise<void>;
 }
 export type LSPTransport = {
     /**

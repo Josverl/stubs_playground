@@ -13,7 +13,10 @@ export interface MsgInitServer {
     workspaceFiles?: Record<string, string>;
     /** Legacy custom typeshed override (unused by current worker implementation) */
     typeshedFallback?: ArrayBuffer | false | undefined;
-    /** Board stubs zip (ArrayBuffer), or false to skip, or undefined to use bundled default */
+    /**
+     * Board stubs zip, or false to skip. Legacy clients that send undefined
+     * without another board selection receive the bundled RP2 compatibility default.
+     */
     boardStubs: ArrayBuffer | false | undefined;
     /** Absolute fallback archive URL fetched only when no selected cached package exists */
     boardStubsUrl?: string;

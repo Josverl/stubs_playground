@@ -10,8 +10,9 @@ import { logVerbose } from './logging.js';
 
 /**
  * @typedef {Object} WorkerTransportOptions
- * @property {ArrayBuffer|false} [boardStubs] - Board stubs zip, `false` to
- *   disable board stubs, or `undefined` to use the bundled default.
+ * @property {ArrayBuffer|false} [boardStubs] - Board stubs zip. `false` or
+ *   omission disables board stubs unless `boardStubsUrl` or
+ *   `boardStubPackage` selects them explicitly.
  * @property {string} [boardStubsUrl] - Absolute fallback archive URL fetched
  *   by the worker only when the preferred cached package is unavailable.
  * @property {{packageName: string, version?: string, fallbackToBundled?: boolean}} [boardStubPackage] -
@@ -132,7 +133,11 @@ export class WorkerTransport {
         /** @type {string[]} */
         this._messageQueue = [];
         this._connectReject = null;
-        this._boardStubs = options.boardStubs; // ArrayBuffer | false | undefined
+        this._boardStubs = options.boardStubs === undefined
+            && !options.boardStubsUrl
+            && !options.boardStubPackage
+            ? false
+            : options.boardStubs;
         this._boardStubsUrl = options.boardStubsUrl;
         this._boardStubPackage = options.boardStubPackage;
         this._typeCheckingMode = options.typeCheckingMode; // string | undefined
@@ -294,7 +299,7 @@ export class WorkerTransport {
                         userFiles: {},
                         workspaceFiles: this._workspaceFiles,
                         typeshedFallback: undefined, // use bundled typeshed
-                        boardStubs: this._boardStubs, // use bundled default or override
+                        boardStubs: this._boardStubs,
                         boardStubsUrl: this._boardStubsUrl,
                         boardStubPackage: this._boardStubPackage,
                         typeCheckingMode: this._typeCheckingMode,

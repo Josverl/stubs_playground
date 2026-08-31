@@ -2,8 +2,10 @@
  * @typedef {Object} LSPClientConfig
  * @property {string} workerUrl - Worker script URL.
  * @property {number} [timeout=5000] - Request timeout in milliseconds.
- * @property {ArrayBuffer|false} [boardStubs] - Board stubs zip; `false` disables
- *   board stubs and `undefined` uses the worker's bundled default.
+ * @property {number} [shutdownTimeout=1000] - Maximum time to await the LSP
+ *   shutdown response before sending `exit`.
+ * @property {ArrayBuffer|false} [boardStubs] - Board stubs zip. `false` or
+ *   omission disables board stubs unless another board source is selected.
  * @property {string} [boardStubsUrl] - Absolute fallback archive URL fetched
  *   only when the preferred cached package is unavailable.
  * @property {{packageName: string, version?: string, fallbackToBundled?: boolean}} [boardStubPackage] -
@@ -103,8 +105,13 @@ export type LSPClientConfig = {
      */
     timeout?: number;
     /**
-     * - Board stubs zip; `false` disables
-     * board stubs and `undefined` uses the worker's bundled default.
+     * - Maximum time to await the LSP
+     * shutdown response before sending `exit`.
+     */
+    shutdownTimeout?: number;
+    /**
+     * - Board stubs zip. `false` or
+     * omission disables board stubs unless another board source is selected.
      */
     boardStubs?: ArrayBuffer | false;
     /**

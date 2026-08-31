@@ -114,8 +114,10 @@ sequenceDiagram
 
     Note over App,OldW: Tear down old LSP
 
-    App->>OldWT: client.disconnect()
-    OldWT->>OldW: (cleanup)
+    App->>OldWT: await client.disconnect()
+    OldWT->>OldW: shutdown request
+    OldW-->>OldWT: shutdown response
+    OldWT->>OldW: exit notification
     App->>OldWT: transport.close()
     OldWT->>OldW: worker.terminate()
 
@@ -214,7 +216,7 @@ flowchart LR
 ```
 
 **Key details:**
-- **typeshed-fallback.zip**, **stubs-stdlib.zip**, and **stubs-rp2.zip** are currently inlined into the worker bundle via `arraybuffer-loader`. This legacy RP2 default conflicts with the ESP32 default in `stubs-manifest.json` and will be removed as part of the runtime-manifest migration below.
+- **typeshed-fallback.zip**, **stubs-stdlib.zip**, and **stubs-rp2.zip** are currently inlined into the worker bundle via `arraybuffer-loader`. New clients explicitly select a board source or start without board stubs; the inlined RP2 archive is retained only for published legacy clients that sent an undefined board selection.
 - Sidecar board archives are available for explicit selection without rebuilding the worker.
 - The webpack config targets `webworker`, polyfills Node APIs (fs → ZenFS, path, crypto, etc.), and uses `ts-loader` in transpile-only mode.
 - `fs` is aliased to `@zenfs/core` so Pyright's filesystem calls work against the in-browser virtual filesystem.
