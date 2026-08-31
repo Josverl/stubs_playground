@@ -1,16 +1,25 @@
 {
 	"folders": [
         {
-            "path": ".."
+            "path": "..",
+            "name": "playground"
+        },
+
+        {
+            "path": "../../ViperIDE",
+            "name": "ViperIDE"
         },
         {
-            "path": "../../micropython-stubs"
+            "path": "../../micropython-unicorn",
+            "name": "unicorn"
+        },        
+        {
+            "path": "../../micropython-stubs",
+            "name": "stubs"
         },
         {
-            "path": "../../micropython-stubber"
-        },
-        {
-            "path": "../../micropython-unicorn"
+            "path": "../../micropython-stubber",
+            "name": "stubber"
         }
     ],
     "settings": {
