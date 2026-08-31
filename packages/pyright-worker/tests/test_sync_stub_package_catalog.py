@@ -65,6 +65,23 @@ def test_build_catalog_includes_circuitpython_placeholder():
     }
 
 
+def test_build_catalog_maps_webassembly_package_to_pyscript_board():
+    catalog = MODULE.build_catalog(
+        {
+            "packages": [
+                ["micropython-webassembly-stubs", "1.29.0", "webassembly", "GENERIC", ""],
+                ["micropython-webassembly-stubs", "1.21.0", "webassembly", "standard", ""],
+            ]
+        }
+    )
+
+    package = next(entry for entry in catalog["packages"] if entry["packageName"] == "micropython-webassembly-stubs")
+    assert package["runtimeVersions"] == ["1.29.0", "1.21.0"]
+    assert package["port"] == "webassembly"
+    assert package["board"] == "PYSCRIPT"
+    assert package["id"] == "webassembly"
+
+
 def test_build_catalog_maps_stdlib_source_row_without_duplicate():
     catalog = MODULE.build_catalog(
         {

@@ -624,7 +624,7 @@
         "1.21.0"
       ],
       "port": "webassembly",
-      "board": "GENERIC",
+      "board": "PYSCRIPT",
       "id": "webassembly"
     },
     {

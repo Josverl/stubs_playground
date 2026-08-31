@@ -25,6 +25,16 @@ def _normalized_name(value: str) -> str:
     return re.sub(r"[-_.]+", "-", value.strip().lower())
 
 
+def _catalog_board(package_name: str, port: str, board: str) -> str:
+    if package_name == "micropython-webassembly-stubs":
+        # MicroPython's generic WebAssembly package is built for the PyScript
+        # runtime and reports that build name as its board identity.
+        return "PYSCRIPT"
+    if package_name == f"micropython-{port}-stubs":
+        return "GENERIC"
+    return board.upper() or "GENERIC"
+
+
 def _stable_runtime_versions(rows: list) -> list[str]:
     stable_versions: dict[tuple[int, int, int], str] = {}
     for row in rows:
@@ -64,8 +74,7 @@ def build_catalog(source_data: dict, source: str = DEFAULT_SOURCE) -> dict:
         normalized_name = _normalized_name(package_name)
         is_stdlib = normalized_name == "micropython-stdlib-stubs"
         normalized_port = "" if is_stdlib else port.lower()
-        is_generic_port_package = normalized_name == f"micropython-{normalized_port}-stubs"
-        normalized_board = "" if is_stdlib else ("GENERIC" if is_generic_port_package else (board.upper() or "GENERIC"))
+        normalized_board = "" if is_stdlib else _catalog_board(normalized_name, normalized_port, board)
         entry = grouped.setdefault(
             (normalized_name, normalized_port, normalized_board),
             {
