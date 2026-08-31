@@ -4,7 +4,7 @@
 # ///
 """Pack Pyright's typeshed-fallback into a zip file for browser use.
 
-Usage: uv run scripts/pack-typeshed.py
+Usage: uv run packages/pyright-worker/scripts/pack-typeshed.py
 Output: packages/pyright-worker/assets/typeshed-fallback.zip
 """
 
@@ -13,9 +13,9 @@ import sys
 import zipfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[3]
 TYPESHED_SRC = ROOT / "node_modules/pyright/packages/pyright-internal/typeshed-fallback"
-ASSETS_DIR = ROOT / "packages" / "pyright-worker" / "assets"
+ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 OUT_FILE = ASSETS_DIR / "typeshed-fallback.zip"
 
 # typeshed's third-party `stubs/` tree is 4043 of 4627 entries but only covers CPython

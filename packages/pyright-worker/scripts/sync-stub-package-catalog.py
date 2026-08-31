@@ -9,9 +9,9 @@ from pathlib import Path
 from urllib.request import urlopen
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_SOURCE = "https://raw.githubusercontent.com/Josverl/micropython-stubs/main/data/stub-packages.json"
-DEFAULT_OUTPUT = ROOT / "packages" / "pyright-worker" / "assets" / "stub-package-catalog.json"
+DEFAULT_OUTPUT = Path(__file__).resolve().parent.parent / "assets" / "stub-package-catalog.json"
 
 
 def _read_source(source: str) -> dict:

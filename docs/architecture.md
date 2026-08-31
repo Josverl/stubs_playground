@@ -160,9 +160,9 @@ flowchart LR
         StubPkgs["micropython-*-stubs<br/>(pip packages)"]
     end
 
-    subgraph Scripts["Build Scripts"]
-        PackTS["scripts/<br/>pack-typeshed.mjs"]
-        PackStubs["scripts/<br/>pack-stubs.mjs"]
+    subgraph Scripts["Worker Build Scripts"]
+        PackTS["packages/pyright-worker/scripts/<br/>pack-typeshed.py"]
+        PackStubs["packages/pyright-worker/scripts/<br/>pack-stubs.py"]
         WP["webpack<br/>(webpack.config.cjs)"]
     end
 

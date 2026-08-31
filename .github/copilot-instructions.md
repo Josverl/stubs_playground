@@ -81,10 +81,8 @@ mp_codemirror/
 │       ├── src/        # Pyright worker and protocol declarations
 │       ├── dist/       # Built worker bundle
 │       ├── assets/     # Typeshed and board stub archives
+│       ├── scripts/    # Worker asset packaging and catalog generation
 │       └── tests/      # Worker protocol and packaging tests
-├── scripts/
-│   ├── pack-typeshed.mjs    # Pack typeshed for browser
-│   └── pack-stubs.mjs       # Pack stubs per board
 ├── tests/
 │   ├── fixtures.py      # Shared, application-neutral Pytest fixtures
 │   ├── timing.py        # Shared test timing constants
@@ -107,7 +105,7 @@ mp_codemirror/
 - **Autocompletion** — context-aware completions from Pyright
 - **Hover tooltips** — type info, docstrings, MicroPython docs
 - **Board selector dropdown** — ESP32, RP2040, STM32
-- **Per-board stub packing** (`scripts/pack-stubs.mjs`) — stubs bundled as zip files
+- **Per-board stub packing** (`packages/pyright-worker/scripts/pack-stubs.py`) — stubs bundled as zip files
 - **Dynamic stub loading** — worker loads/unloads stubs on board switch
 - **ZenFS virtual filesystem** — in-worker filesystem for typeshed + stubs
 - Type stubs sourced from `micropython-esp32-stubs`, `micropython-rp2-stubs`

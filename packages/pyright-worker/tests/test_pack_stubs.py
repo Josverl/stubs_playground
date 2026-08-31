@@ -1,5 +1,5 @@
 """
-Unit tests for scripts/pack-stubs.py
+Unit tests for packages/pyright-worker/scripts/pack-stubs.py
 
 Tests the get_installed_version helper and zip_directory functions.
 """
@@ -21,7 +21,7 @@ pytestmark = [pytest.mark.component, pytest.mark.unit]
 # importlib rather than a plain import statement).
 _spec = importlib.util.spec_from_file_location(
     "pack_stubs",
-    Path(__file__).parents[3] / "scripts" / "pack-stubs.py",
+    Path(__file__).parents[1] / "scripts" / "pack-stubs.py",
 )
 _mod = importlib.util.module_from_spec(_spec)
 sys.modules["pack_stubs"] = _mod
@@ -31,6 +31,14 @@ get_installed_version = _mod.get_installed_version
 get_zip_embedded_version = _mod.get_zip_embedded_version
 get_cached_board = _mod.get_cached_board
 zip_directory = _mod.zip_directory
+
+
+def test_paths_resolve_from_worker_package():
+    package_root = Path(__file__).parents[1]
+
+    assert _mod.ROOT == package_root.parents[1]
+    assert _mod.ASSETS == package_root / "assets"
+    assert _mod.TMP == _mod.ROOT / "tmp_stubs"
 
 
 def test_webassembly_port_is_packaged_as_a_board_target():

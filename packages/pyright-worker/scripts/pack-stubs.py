@@ -10,7 +10,7 @@ For each board defined below:
   3. Write to packages/pyright-worker/assets/stubs-{board}.zip
   4. Generate packages/pyright-worker/assets/stubs-manifest.json
 
-Usage: uv run scripts/pack-stubs.py [board...]
+Usage: uv run packages/pyright-worker/scripts/pack-stubs.py [board...]
   No args -> pack all boards.  Pass board IDs to pack specific ones.
 """
 
@@ -25,8 +25,8 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-ASSETS = ROOT / "packages" / "pyright-worker" / "assets"
+ROOT = Path(__file__).resolve().parents[3]
+ASSETS = Path(__file__).resolve().parent.parent / "assets"
 TMP = ROOT / "tmp_stubs"
 
 

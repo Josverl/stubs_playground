@@ -183,8 +183,8 @@ jobs:
       - name: Pack worker assets
         if: steps.meta.outputs.component == 'pyright-worker'
         run: |
-          uv run scripts/pack-typeshed.py
-          uv run scripts/pack-stubs.py
+          uv run packages/pyright-worker/scripts/pack-typeshed.py
+          uv run packages/pyright-worker/scripts/pack-stubs.py
 
       - name: Build worker
         if: steps.meta.outputs.component == 'pyright-worker'

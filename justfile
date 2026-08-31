@@ -37,11 +37,11 @@ docs:
 
 # pack Pyright's typeshed-fallback into a zip for browser use
 pack-typeshed:
-    uv run scripts/pack-typeshed.py
+    uv run packages/pyright-worker/scripts/pack-typeshed.py
 
 # pack MicroPython board stubs into zip files for each board
 pack-stubs:
-    uv run scripts/pack-stubs.py
+    uv run packages/pyright-worker/scripts/pack-stubs.py
 
 # pack MicroPython board stubs and typeshed-fallback
 pack:

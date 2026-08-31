@@ -43,10 +43,10 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Pack typeshed
-        run: uv run scripts/pack-typeshed.py
+        run: uv run packages/pyright-worker/scripts/pack-typeshed.py
 
       - name: Pack board stubs
-        run: uv run scripts/pack-stubs.py
+        run: uv run packages/pyright-worker/scripts/pack-stubs.py
 
       - name: Build worker
         run: npx webpack --mode production

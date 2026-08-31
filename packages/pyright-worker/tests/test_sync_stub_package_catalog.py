@@ -2,11 +2,15 @@ import importlib.util
 from pathlib import Path
 
 
-SCRIPT = Path(__file__).parents[3] / "scripts" / "sync-stub-package-catalog.py"
+SCRIPT = Path(__file__).parents[1] / "scripts" / "sync-stub-package-catalog.py"
 SPEC = importlib.util.spec_from_file_location("sync_stub_package_catalog", SCRIPT)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
+
+
+def test_default_output_resolves_from_worker_package():
+    assert MODULE.DEFAULT_OUTPUT == Path(__file__).parents[1] / "assets" / "stub-package-catalog.json"
 
 
 def test_build_catalog_groups_versions_and_normalizes_board_names():
