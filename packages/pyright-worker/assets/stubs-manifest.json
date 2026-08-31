@@ -3,40 +3,46 @@
   "default": "esp32",
   "boards": [
     {
-      "id": "stdlib",
-      "package": "micropython-stdlib-stubs",
-      "package_version": "1.28.0.post6",
-      "file": "stubs-stdlib.zip"
-    },
-    {
       "id": "esp32",
       "package": "micropython-esp32-stubs",
-      "package_version": "1.28.0.post4",
+      "package_version": "1.29.0.post1",
       "file": "stubs-esp32.zip"
     },
     {
       "id": "rp2",
       "package": "micropython-rp2-stubs",
-      "package_version": "1.28.0.post4",
+      "package_version": "1.29.0.post1",
       "file": "stubs-rp2.zip"
-    },
-    {
-      "id": "stm32",
-      "package": "micropython-stm32-stubs",
-      "package_version": "1.28.0.post5",
-      "file": "stubs-stm32.zip"
     },
     {
       "id": "samd",
       "package": "micropython-samd-stubs",
-      "package_version": "1.28.0.post4",
+      "package_version": "1.29.0.post1",
       "file": "stubs-samd.zip"
+    },
+    {
+      "id": "stm32",
+      "package": "micropython-stm32-stubs",
+      "package_version": "1.29.0.post1",
+      "file": "stubs-stm32.zip"
+    },
+    {
+      "id": "nrf",
+      "package": "micropython-nrf-stubs",
+      "package_version": "1.29.0.post1",
+      "file": "stubs-nrf.zip"
     },
     {
       "id": "webassembly",
       "package": "micropython-webassembly-stubs",
-      "package_version": "1.28.0.post1",
+      "package_version": "1.29.0.post1",
       "file": "stubs-webassembly.zip"
+    },
+    {
+      "id": "esp8266",
+      "package": "micropython-esp8266-stubs",
+      "package_version": "1.29.0.post1",
+      "file": "stubs-esp8266.zip"
     },
     {
       "id": "circuitpython",

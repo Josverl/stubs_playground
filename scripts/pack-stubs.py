@@ -43,13 +43,19 @@ DEFAULT_BOARD_ID = "esp32"
 
 # Boards that have installable stub packages
 BOARDS: list[Board] = [
-    Board(id="stdlib", package="micropython-stdlib-stubs"),  # Used for stdlib only
+    # Tier 1 boards
     Board(id="esp32", package="micropython-esp32-stubs"),
     Board(id="rp2", package="micropython-rp2-stubs"),
-    Board(id="stm32", package="micropython-stm32-stubs"),
     Board(id="samd", package="micropython-samd-stubs"),
+    Board(id="stm32", package="micropython-stm32-stubs"),
+    # Tier 2 boards
+    Board(id="nrf", package="micropython-nrf-stubs"),
     Board(id="webassembly", package="micropython-webassembly-stubs"),
+    # Tier 3 boards
+    Board(id="esp8266", package="micropython-esp8266-stubs"),
+    # Circuit Python
     Board(id="circuitpython", package="circuitpython-stubs"),
+    # Board(id="stdlib", package="micropython-stdlib-stubs"),  # Used for stdlib only
 ]
 
 # Virtual boards (no stub package, included in manifest only)
