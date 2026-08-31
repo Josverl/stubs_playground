@@ -17,6 +17,7 @@ export {
     WorkerTransport,
 } from './worker-transport.js';
 export { createTransport as createWorkerTransport } from './transport-factory.js';
+export { startWorkerRuntime } from './runtime-loader.js';
 
 // Client factories
 export { createLSPClient, createLSPPlugin, switchBoard, isLSPReady } from './client.js';
@@ -63,6 +64,9 @@ export { renderMarkdown, processInline, renderBlocks, PYRIGHT_SIG_RE } from './m
  * @typedef {import('./worker-transport.js').StubPackageRelease} StubPackageRelease
  * @typedef {import('./worker-transport.js').InstalledStubPackage} InstalledStubPackage
  * @typedef {import('./worker-transport.js').WorkerFsEntry} WorkerFsEntry
+ * @typedef {import('./runtime-loader.js').WorkerRuntimeOptions} WorkerRuntimeOptions
+ * @typedef {import('./runtime-loader.js').WorkerRuntimeCandidate} WorkerRuntimeCandidate
+ * @typedef {import('./runtime-loader.js').RuntimeFallback} RuntimeFallback
  * @typedef {import('./completion-core.mjs').LSPCompletionItem} LSPCompletionItem
  * @typedef {import('./completion-core.mjs').CodeMirrorCompletionOption} CodeMirrorCompletionOption
  */

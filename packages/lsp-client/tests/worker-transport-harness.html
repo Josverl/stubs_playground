@@ -9,6 +9,7 @@
 <body>
     <pre id="log"></pre>
     <script type="module">
+        import {startWorkerRuntime} from '../src/runtime-loader.js';
         import {WorkerTransport} from '../src/worker-transport.js';
         import {SimpleLSPClient} from '../src/simple-client.js';
         import {strToU8, zipSync} from '/node_modules/fflate/esm/browser.js';
@@ -276,6 +277,80 @@
                 const rejectedError = transport.assetFallbacks[0]?.error;
                 transport.close();
                 return {success: true, rejectedError};
+            },
+
+            async 'remote-runtime-cache-and-offline-rollback'() {
+                const cacheName = `runtime-test-${crypto.randomUUID()}`;
+                const storageKey = `runtime-test-${crypto.randomUUID()}`;
+                const options = {
+                    bundledWorkerUrl: '../../pyright-worker/dist/pyright_worker.js',
+                    manifestUrl: new URL(
+                        '../../pyright-worker/assets/runtime-manifest.json',
+                        location.href,
+                    ).href,
+                    allowedOrigins: [location.origin],
+                    cacheName,
+                    storageKey,
+                };
+                const start = async (candidate) => {
+                    const transport = new WorkerTransport(candidate.workerUrl, {
+                        boardStubs: false,
+                    });
+                    await transport.connect();
+                    const protocolVersion = transport.protocolVersion;
+                    transport.close();
+                    return protocolVersion;
+                };
+
+                await caches.delete(cacheName);
+                localStorage.removeItem(storageKey);
+                const remote = await startWorkerRuntime(options, start);
+                const originalFetch = globalThis.fetch;
+                let offline;
+                try {
+                    globalThis.fetch = async () => {
+                        throw new TypeError('simulated offline');
+                    };
+                    offline = await startWorkerRuntime(options, start);
+                } finally {
+                    globalThis.fetch = originalFetch;
+                    await caches.delete(cacheName);
+                    localStorage.removeItem(storageKey);
+                }
+                return {
+                    success: true,
+                    remoteSource: remote.source,
+                    remoteProtocol: remote.value,
+                    offlineSource: offline.source,
+                    offlineProtocol: offline.value,
+                    offlineFallbacks: offline.fallbacks,
+                };
+            },
+
+            async 'invalid-runtime-uses-bundled-fallback'() {
+                const cacheName = `runtime-test-${crypto.randomUUID()}`;
+                const selected = await startWorkerRuntime({
+                    bundledWorkerUrl: '../../pyright-worker/dist/pyright_worker.js',
+                    manifestUrl: new URL('/__test__/redirect-catalog', location.href).href,
+                    allowedOrigins: [location.origin],
+                    cacheName,
+                    storageKey: `runtime-test-${crypto.randomUUID()}`,
+                }, async (candidate) => {
+                    const transport = new WorkerTransport(candidate.workerUrl, {
+                        boardStubs: false,
+                    });
+                    await transport.connect();
+                    const protocolVersion = transport.protocolVersion;
+                    transport.close();
+                    return protocolVersion;
+                });
+                await caches.delete(cacheName);
+                return {
+                    success: true,
+                    source: selected.source,
+                    protocolVersion: selected.value,
+                    fallbacks: selected.fallbacks,
+                };
             },
 
             async 'verbose-logging'() {

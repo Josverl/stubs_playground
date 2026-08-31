@@ -115,6 +115,34 @@ def test_catalog_redirects_are_rejected(page, test_page_url):
     assert "Failed to fetch" in result["rejectedError"]
 
 
+def test_remote_runtime_caches_and_starts_offline_last_known_good(page, test_page_url):
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate(
+        """() => window.runTest('remote-runtime-cache-and-offline-rollback')"""
+    )
+
+    assert result["success"] is True
+    assert result["remoteSource"] == "remote"
+    assert result["remoteProtocol"] == 2
+    assert result["offlineSource"] == "last-known-good"
+    assert result["offlineProtocol"] == 2
+    assert result["offlineFallbacks"][0]["source"] == "remote"
+    assert "simulated offline" in result["offlineFallbacks"][0]["error"]
+
+
+def test_invalid_runtime_uses_bundled_fallback(page, test_page_url):
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate("""() => window.runTest('invalid-runtime-uses-bundled-fallback')""")
+
+    assert result["success"] is True
+    assert result["source"] == "bundled"
+    assert result["protocolVersion"] == 2
+    assert result["fallbacks"][0]["source"] == "remote"
+    assert "download failed" in result["fallbacks"][0]["error"]
+
+
 def test_worker_transport_is_quiet_by_default(page, test_page_url):
     """Default component settings suppress informational console output."""
     messages = []

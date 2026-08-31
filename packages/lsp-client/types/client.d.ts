@@ -1,64 +1,4 @@
 /**
- * @typedef {Object} LSPClientConfig
- * @property {string} workerUrl - Worker script URL.
- * @property {number} [timeout=5000] - Request timeout in milliseconds.
- * @property {number} [shutdownTimeout=1000] - Maximum time to await the LSP
- *   shutdown response before sending `exit`.
- * @property {ArrayBuffer|false} [boardStubs] - Board stubs zip. `false` or
- *   omission disables board stubs unless another board source is selected.
- * @property {string} [boardStubsUrl] - Absolute fallback archive URL fetched
- *   only when the preferred cached package is unavailable.
- * @property {{url?: string, data?: ArrayBuffer, size: number, sha256: string,
- *   allowedOrigins?: string[]}} [boardStubsArchive] - Verified board archive.
- * @property {{url?: string, data?: ArrayBuffer, size: number, sha256: string,
- *   allowedOrigins?: string[]}} [stubPackageCatalog] - Verified external catalog.
- * @property {{packageName: string, version?: string, fallbackToBundled?: boolean}} [boardStubPackage] -
- *   Cached PyPI package to materialize as the active board stubs.
- * @property {Object.<string, string>} [workspaceFiles] - Project files to preload
- *   into `/workspace`, keyed by workspace-relative path.
- * @property {string} [typeCheckingMode] - Pyright type-checking mode.
- * @property {'openFilesOnly'|'workspace'} [diagnosticMode='openFilesOnly'] -
- *   Analyze opened files or every Python file in the workspace.
- * @property {string} [typeshedPath] - Absolute worker-VFS typeshed path.
- * @property {string} [pythonVersion] - Python version in `X.Y` format.
- * @property {boolean} [verboseOutput] - Enable verbose Pyright output.
- * @property {Array<{packageName: string, files: Object.<string, string>}>}
- *   [extraStubPackages] - Additional type-only stub packages.
- * @property {Array<{packageName: string, archive: {url?: string,
- *   data?: ArrayBuffer, size: number, sha256: string, allowedOrigins?: string[]}}>}
- *   [extraStubArchives] - Verified type-only ZIP archives.
- * @property {string[]} [extraPaths] - Absolute extra import search paths.
- * @property {number} [initializationTimeout=120000] - Maximum worker
- *   initialization time after the script loads.
- * @property {(diagnostics: import('./diagnostics.js').WorkspaceDiagnostic[]) => void}
- *   [onWorkspaceDiagnosticsChange] - Receives diagnostics for all files reported
- *   by Pyright, including unopened files in workspace mode.
- */
-/**
- * @typedef {Object} LSPClientResult
- * @property {SimpleLSPClient} client - Initialized LSP client.
- * @property {import('./worker-transport.js').WorkerTransport} transport -
- *   Connected worker transport.
- * @property {string} pyrightVersion - Detected Pyright version, or an empty
- *   string when the worker does not report one.
- * @property {{destroy: () => void}|null} workspaceDiagnosticsSubscription -
- *   Client-level diagnostics subscription, when requested.
- */
-/**
- * @typedef {Object} LSPPluginOptions
- * @property {string} [fileUri='file:///workspace/document.py'] - Document URI.
- * @property {string} [languageId='python'] - LSP language identifier.
- * @property {string} [initialContent=''] - Initial document text.
- * @property {(diagnostics: Array<{uri: string, fileName: string, line: number,
- *   character: number, endLine: number, endCharacter: number, message: string,
- *   severity: string}>) => void}
- *   [onDiagnosticsChange] - Receives a snapshot of workspace diagnostics.
- * @property {number} [diagnosticDelayMs=0] - Idle time before displaying the
- *   latest Pyright diagnostics. Document changes remain immediate.
- * @property {number} [completionDelayMs=320] - Delay auto-triggered dotted
- *   completions when the consumer debounces document synchronization.
- */
-/**
  * Create and initialize an LSP client.
  *
  * @param {LSPClientConfig} config - Worker and Pyright configuration.
@@ -217,6 +157,24 @@ export type LSPClientConfig = {
      */
     initializationTimeout?: number;
     /**
+     * - Optional host-selected runtime
+     * manifest. `workerUrl` remains the deterministic bundled fallback.
+     */
+    runtimeManifestUrl?: string;
+    /**
+     * - Origins permitted for the
+     * manifest and every runtime asset URL.
+     */
+    runtimeAllowedOrigins?: string[];
+    /**
+     * - Cache Storage namespace.
+     */
+    runtimeCacheName?: string;
+    /**
+     * - localStorage last-known-good key.
+     */
+    runtimeStorageKey?: string;
+    /**
      * - Receives diagnostics for all files reported
      * by Pyright, including unopened files in workspace mode.
      */
@@ -244,6 +202,20 @@ export type LSPClientResult = {
     workspaceDiagnosticsSubscription: {
         destroy: () => void;
     } | null;
+    /**
+     * - Selected
+     * worker runtime source.
+     */
+    runtimeSource: "remote" | "last-known-good" | "bundled";
+    /**
+     * - Immutable manifest runtime ID or `bundled`.
+     */
+    runtimeId: string;
+    /**
+     * -
+     * Runtime candidates rejected before the successful selection.
+     */
+    runtimeFallbacks: import("./runtime-loader.js").RuntimeFallback[];
 };
 export type LSPPluginOptions = {
     /**
@@ -281,5 +253,13 @@ export type LSPPluginOptions = {
      * completions when the consumer debounces document synchronization.
      */
     completionDelayMs?: number;
+};
+export type BaseLSPClientResult = {
+    client: SimpleLSPClient;
+    transport: import("./worker-transport.js").WorkerTransport;
+    pyrightVersion: string;
+    workspaceDiagnosticsSubscription: {
+        destroy: () => void;
+    } | null;
 };
 import { SimpleLSPClient } from './simple-client.js';

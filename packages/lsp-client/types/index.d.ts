@@ -1,5 +1,6 @@
 export { SimpleLSPClient } from "./simple-client.js";
 export { createTransport as createWorkerTransport } from "./transport-factory.js";
+export { startWorkerRuntime } from "./runtime-loader.js";
 export { createCompletionSource } from "./completion.js";
 export { createHoverTooltip } from "./hover.js";
 export type LSPClientConfig = import("./client.js").LSPClientConfig;
@@ -12,6 +13,9 @@ export type StubPackageCatalogEntry = import("./worker-transport.js").StubPackag
 export type StubPackageRelease = import("./worker-transport.js").StubPackageRelease;
 export type InstalledStubPackage = import("./worker-transport.js").InstalledStubPackage;
 export type WorkerFsEntry = import("./worker-transport.js").WorkerFsEntry;
+export type WorkerRuntimeOptions = import("./runtime-loader.js").WorkerRuntimeOptions;
+export type WorkerRuntimeCandidate = import("./runtime-loader.js").WorkerRuntimeCandidate;
+export type RuntimeFallback = import("./runtime-loader.js").RuntimeFallback;
 export type LSPCompletionItem = import("./completion-core.mjs").LSPCompletionItem;
 export type CodeMirrorCompletionOption = import("./completion-core.mjs").CodeMirrorCompletionOption;
 export { CURRENT_WORKER_PROTOCOL_VERSION, MIN_SUPPORTED_WORKER_PROTOCOL_VERSION, WORKER_CAPABILITIES, WorkerTransport } from "./worker-transport.js";

@@ -21,6 +21,17 @@ import {
 } from "@mp-codemirror/lsp-client";
 
 const runtime = await createLSPClient({ workerUrl });
+```
+
+Hosts may select a verified runtime dynamically while retaining the exact
+bundled worker as the final offline fallback:
+
+```js
+const runtime = await createLSPClient({
+  workerUrl: "/vendor/pyright_worker.js",
+  runtimeManifestUrl: "https://cdn.example/runtime-manifest.json",
+  runtimeAllowedOrigins: ["https://cdn.example"],
+});
 const extensions = createLSPPlugin(runtime.client, editorView, {
   fileUri: "file:///workspace/main.py",
   initialContent: editorView.state.doc.toString(),

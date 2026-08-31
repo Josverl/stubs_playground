@@ -14,6 +14,7 @@ import {
 } from './diagnostics.js';
 import { createHoverTooltip } from './hover.js';
 import { logVerbose } from './logging.js';
+import { startWorkerRuntime } from './runtime-loader.js';
 import { SimpleLSPClient } from './simple-client.js';
 import { createTransport } from './transport-factory.js';
 
@@ -49,6 +50,12 @@ import { createTransport } from './transport-factory.js';
  * @property {string[]} [extraPaths] - Absolute extra import search paths.
  * @property {number} [initializationTimeout=120000] - Maximum worker
  *   initialization time after the script loads.
+ * @property {string} [runtimeManifestUrl] - Optional host-selected runtime
+ *   manifest. `workerUrl` remains the deterministic bundled fallback.
+ * @property {string[]} [runtimeAllowedOrigins] - Origins permitted for the
+ *   manifest and every runtime asset URL.
+ * @property {string} [runtimeCacheName] - Cache Storage namespace.
+ * @property {string} [runtimeStorageKey] - localStorage last-known-good key.
  * @property {(diagnostics: import('./diagnostics.js').WorkspaceDiagnostic[]) => void}
  *   [onWorkspaceDiagnosticsChange] - Receives diagnostics for all files reported
  *   by Pyright, including unopened files in workspace mode.
@@ -63,6 +70,11 @@ import { createTransport } from './transport-factory.js';
  *   string when the worker does not report one.
  * @property {{destroy: () => void}|null} workspaceDiagnosticsSubscription -
  *   Client-level diagnostics subscription, when requested.
+ * @property {'remote'|'last-known-good'|'bundled'} runtimeSource - Selected
+ *   worker runtime source.
+ * @property {string} runtimeId - Immutable manifest runtime ID or `bundled`.
+ * @property {import('./runtime-loader.js').RuntimeFallback[]} runtimeFallbacks -
+ *   Runtime candidates rejected before the successful selection.
  */
 
 /**
@@ -81,24 +93,27 @@ import { createTransport } from './transport-factory.js';
  */
 
 /**
- * Create and initialize an LSP client.
- *
- * @param {LSPClientConfig} config - Worker and Pyright configuration.
- * @returns {Promise<LSPClientResult>} Connected client, transport, and version.
- * @throws {TypeError} If `config.workerUrl` is missing.
- * @throws {Error} If worker creation, worker initialization, or the LSP
- *   initialization handshake fails.
+ * @typedef {Object} BaseLSPClientResult
+ * @property {SimpleLSPClient} client
+ * @property {import('./worker-transport.js').WorkerTransport} transport
+ * @property {string} pyrightVersion
+ * @property {{destroy: () => void}|null} workspaceDiagnosticsSubscription
  */
-export async function createLSPClient(config) {
-    if (!config?.workerUrl) {
-        throw new TypeError('createLSPClient requires config.workerUrl');
-    }
+
+/**
+ * @param {LSPClientConfig} config
+ * @param {string} workerUrl
+ * @param {{url?: string, data?: ArrayBuffer, size: number, sha256: string,
+ *   allowedOrigins?: string[]}|undefined} stubPackageCatalog
+ * @returns {Promise<BaseLSPClientResult>}
+ */
+async function createLSPClientForWorker(config, workerUrl, stubPackageCatalog) {
     const transport = createTransport({
-        workerUrl: config.workerUrl,
+        workerUrl,
         boardStubs: config.boardStubs,
         boardStubsUrl: config.boardStubsUrl,
         boardStubsArchive: config.boardStubsArchive,
-        stubPackageCatalog: config.stubPackageCatalog,
+        stubPackageCatalog,
         boardStubPackage: config.boardStubPackage,
         workspaceFiles: config.workspaceFiles,
         typeCheckingMode: config.typeCheckingMode,
@@ -137,6 +152,7 @@ export async function createLSPClient(config) {
         logVerbose(config.verboseOutput, 'LSP Client initialized:', client.serverCapabilities);
     } catch (error) {
         workspaceDiagnosticsSubscription?.destroy();
+        transport.close();
         throw error;
     }
 
@@ -145,6 +161,41 @@ export async function createLSPClient(config) {
         transport,
         pyrightVersion: transport.pyrightVersion || "",
         workspaceDiagnosticsSubscription,
+    };
+}
+
+/**
+ * Create and initialize an LSP client.
+ *
+ * @param {LSPClientConfig} config - Worker and Pyright configuration.
+ * @returns {Promise<LSPClientResult>} Connected client, transport, and version.
+ * @throws {TypeError} If `config.workerUrl` is missing.
+ * @throws {Error} If worker creation, worker initialization, or the LSP
+ *   initialization handshake fails.
+ */
+export async function createLSPClient(config) {
+    if (!config?.workerUrl) {
+        throw new TypeError('createLSPClient requires config.workerUrl');
+    }
+    const selected = await startWorkerRuntime(
+        {
+            bundledWorkerUrl: config.workerUrl,
+            manifestUrl: config.runtimeManifestUrl,
+            allowedOrigins: config.runtimeAllowedOrigins,
+            cacheName: config.runtimeCacheName,
+            storageKey: config.runtimeStorageKey,
+        },
+        (candidate) => createLSPClientForWorker(
+            config,
+            candidate.workerUrl,
+            config.stubPackageCatalog ?? candidate.stubPackageCatalog,
+        ),
+    );
+    return {
+        ...selected.value,
+        runtimeSource: selected.source,
+        runtimeId: selected.runtimeId,
+        runtimeFallbacks: selected.fallbacks,
     };
 }
 

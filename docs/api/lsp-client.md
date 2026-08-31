@@ -95,6 +95,10 @@ Important configuration:
 | `timeout` | `number` | `5000` | LSP request timeout in milliseconds. |
 | `shutdownTimeout` | `number` | `1000` | Maximum wait for the shutdown response before `exit`. |
 | `initializationTimeout` | `number` | `120000` | Maximum worker initialization time after the script reports `serverLoaded`; this is separate from the 30-second script startup timeout. |
+| `runtimeManifestUrl` | `string` | none | Optional host-selected runtime manifest. The verified runtime is tried before cached last-known-good and `workerUrl`. |
+| `runtimeAllowedOrigins` | `string[]` | required with manifest | Origins permitted for the manifest and all referenced runtime assets. |
+| `runtimeCacheName` | `string` | internal namespace | Optional Cache Storage namespace override. |
+| `runtimeStorageKey` | `string` | internal key | Optional localStorage last-known-good pointer override. |
 | `workspaceFiles` | `Record<string,string>` | `{}` | Files created under `/workspace` before Pyright starts. |
 | `boardStubs` | `ArrayBuffer \| false` | `false` | Explicit board archive; omission means no board unless another source is selected. |
 | `boardStubsUrl` | `string` | none | Worker-fetched fallback archive. |
@@ -121,6 +125,18 @@ allowed only on loopback) and list the source origin in `allowedOrigins`.
 Redirects are rejected because browser workers cannot inspect every intermediate
 redirect origin. Downloads are streamed within the declared byte bound and are
 not parsed or mounted before size and digest verification.
+
+When `runtimeManifestUrl` is configured, `createLSPClient` verifies the manifest,
+protocol range, every referenced asset URL, and the worker size and digest before
+starting a Blob-backed classic worker. A runtime is recorded as last-known-good
+only after worker and LSP initialization succeed. Failures proceed through a
+digest-verified cached last-known-good runtime and then the explicit bundled
+`workerUrl`. The returned `runtimeSource`, `runtimeId`, and `runtimeFallbacks`
+make the selected path and rejected candidates observable.
+
+`startWorkerRuntime(options, start)` exposes the same selection policy to hosts
+that need to perform custom startup. Omitting the manifest preserves the direct
+bundled-worker flow without Cache Storage or localStorage access.
 | `onWorkspaceDiagnosticsChange` | `function` | none | Complete diagnostics snapshot, including unopened files. |
 
 ```js
