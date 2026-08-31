@@ -7,8 +7,8 @@
     "packages/*"
   ],
   "scripts": {
-    "build:worker": "webpack --mode production",
-    "build:worker:dev": "webpack --mode development",
+    "build:worker": "npm run sync:stub-package-catalog && webpack --mode production",
+    "build:worker:dev": "npm run sync:stub-package-catalog && webpack --mode development",
     "build:typeshed": "uv run packages/pyright-worker/scripts/pack-typeshed.py",
     "sync:stub-package-catalog": "uv run python packages/pyright-worker/scripts/sync-stub-package-catalog.py",
     "generate:component-config": "node scripts/generate-component-config.mjs",

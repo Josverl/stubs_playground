@@ -183,6 +183,7 @@ jobs:
       - name: Pack worker assets
         if: steps.meta.outputs.component == 'pyright-worker'
         run: |
+          npm run sync:stub-package-catalog
           uv run packages/pyright-worker/scripts/pack-typeshed.py
           uv run packages/pyright-worker/scripts/pack-stubs.py
 

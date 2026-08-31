@@ -129,6 +129,9 @@ jobs:
       - name: Verify worker protocol declarations
         run: npm run check:worker-protocol-types
 
+      - name: Sync stub package catalog
+        run: npm run sync:stub-package-catalog
+
       - name: Build worker
         run: npx webpack --mode production
 

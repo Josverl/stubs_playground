@@ -31,6 +31,9 @@ Thank you for your interest in contributing to this project! This document provi
    ```bash
    just build
    ```
+   This also refreshes the stub-package catalog from the published package
+   index. Use `just build-dev` for the faster, unminified worker used during
+   local development.
 
 4. **Start the playground with workspace components:**
    ```bash

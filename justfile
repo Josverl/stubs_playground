@@ -27,6 +27,7 @@ build:
 # build the Pyright web worker (development, unminified); overwrites the tracked dist/ artifact
 build-dev:
     npm run generate:component-config
+    @just sync-stub-package-catalog
     npx webpack --mode development
     @echo "NOTE: dist/pyright_worker.js is now an unminified DEVELOPMENT build."
     @echo "      Run 'just build' before committing or releasing."
@@ -43,8 +44,13 @@ pack-typeshed:
 pack-stubs:
     uv run packages/pyright-worker/scripts/pack-stubs.py
 
-# pack MicroPython board stubs and typeshed-fallback
+# synchronize the installable stub package catalog
+sync-stub-package-catalog:
+    npm run sync:stub-package-catalog
+
+# pack the package catalog, MicroPython board stubs, and typeshed-fallback
 pack:
+    @just sync-stub-package-catalog
     @just pack-typeshed
     @just pack-stubs
 
