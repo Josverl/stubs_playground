@@ -15,6 +15,10 @@ import { WorkerTransport } from './worker-transport.js';
  * @param {ArrayBuffer|false} [options.boardStubs] - Board-specific stubs zip.
  *   `false` or omission disables board stubs unless another source is selected.
  * @param {string} [options.boardStubsUrl] - Absolute fallback archive URL.
+ * @param {{url?: string, data?: ArrayBuffer, size: number, sha256: string,
+ *   allowedOrigins?: string[]}} [options.boardStubsArchive] - Verified board archive.
+ * @param {{url?: string, data?: ArrayBuffer, size: number, sha256: string,
+ *   allowedOrigins?: string[]}} [options.stubPackageCatalog] - Verified catalog.
  * @param {{packageName: string, version?: string, fallbackToBundled?: boolean}} [options.boardStubPackage] -
  *   Cached PyPI package to use as `/typings`.
  * @param {Object.<string, string>} [options.workspaceFiles] - Project files to
@@ -25,7 +29,11 @@ import { WorkerTransport } from './worker-transport.js';
  * @param {boolean} [options.verboseOutput] - Enable verbose Pyright output.
  * @param {Array<{packageName: string, files: Object.<string, string>}>}
  *   [options.extraStubPackages] - Additional type-only stub packages.
+ * @param {Array<{packageName: string, archive: {url?: string,
+ *   data?: ArrayBuffer, size: number, sha256: string, allowedOrigins?: string[]}}>}
+ *   [options.extraStubArchives] - Verified type-only ZIP archives.
  * @param {string[]} [options.extraPaths] - Absolute extra import search paths.
+ * @param {number} [options.initializationTimeout=120000] - Worker init timeout.
  * @returns {WorkerTransport} Unconnected worker transport.
  * @throws {TypeError} If `options.workerUrl` is missing.
  */
@@ -38,6 +46,8 @@ export function createTransport(options) {
     return new WorkerTransport(url, {
         boardStubs: options.boardStubs,
         boardStubsUrl: options.boardStubsUrl,
+        boardStubsArchive: options.boardStubsArchive,
+        stubPackageCatalog: options.stubPackageCatalog,
         boardStubPackage: options.boardStubPackage,
         workspaceFiles: options.workspaceFiles,
         typeCheckingMode: options.typeCheckingMode,
@@ -45,6 +55,8 @@ export function createTransport(options) {
         pythonVersion: options.pythonVersion,
         verboseOutput: options.verboseOutput,
         extraStubPackages: options.extraStubPackages,
+        extraStubArchives: options.extraStubArchives,
         extraPaths: options.extraPaths,
+        initializationTimeout: options.initializationTimeout,
     });
 }

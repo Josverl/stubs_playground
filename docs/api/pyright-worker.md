@@ -58,11 +58,14 @@ Important `initServer` properties:
 | `workspaceFiles` | Creates text files below `/workspace` before Pyright starts. |
 | `boardStubs` | Archive buffer or `false` for none. Published legacy clients that send `undefined` retain the bundled RP2 compatibility default; current clients always select a board source or send `false`. |
 | `boardStubsUrl` | HTTPS fallback fetched only when a preferred cached board package is unavailable. |
+| `boardStubsArchive` | Size- and SHA-256-verified URL or `ArrayBuffer`; rejection uses the explicitly configured `boardStubs` fallback. |
 | `boardStubPackage` | Cached package mounted as `/typings`; may permit bundled fallback. |
+| `stubPackageCatalog` | Verified external catalog using schema version `2.0`; invalid content is reported in `serverInitialized.assetFallbacks` and uses the bundled catalog. |
 | `typeCheckingMode` | Pyright checking mode. |
 | `typeshedPath` | Worker-VFS typeshed path. |
 | `pythonVersion` | Python `X.Y` version. |
 | `extraStubPackages` | Host-supplied type-only files mounted under `/extra/<package>`. |
+| `extraStubArchives` | Verified type-only ZIP overlays; unsafe paths, runtime Python, invalid UTF-8, excessive files, and excessive extracted bytes are rejected. |
 | `extraPaths` | Additional absolute import roots. |
 
 ## Raw control messages

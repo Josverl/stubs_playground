@@ -308,13 +308,16 @@ contains at least:
 Cache keys include the absolute URL and declared SHA-256 digest. A changed digest
 therefore creates a new cache entry rather than mutating trusted cached content.
 Only HTTPS resources are accepted, except HTTP on loopback during development.
-Redirects must resolve to allowed origins, downloads remain size-bounded, and no
-asset is used before its digest is verified.
+Redirects are rejected because browser workers cannot inspect every intermediate
+redirect origin. Downloads remain size-bounded, and no asset is used before its
+digest is verified. External catalogs must use schema version `2.0`.
 
 The external catalog and archives are optional. Their bundled snapshots remain
 the failure fallback. Invalid, incompatible, or unverifiable external content
-must fail explicitly and trigger the documented fallback chain; it must not be
-silently treated as current content.
+is reported through `serverInitialized.assetFallbacks` and triggers the
+documented fallback chain; it is never silently treated as current content.
+Client-owned overlay archives have no shared fallback and therefore fail worker
+initialization when validation or safe type-only extraction fails.
 
 ### Client-defined stub overlays
 

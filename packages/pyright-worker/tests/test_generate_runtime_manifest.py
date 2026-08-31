@@ -98,7 +98,11 @@ def test_manifest_binds_one_runtime_and_verified_assets(tmp_path):
     assert first["controlProtocol"] == {
         "minimumVersion": 1,
         "maximumVersion": 2,
-        "capabilities": ["runtimeStubPackages"],
+        "capabilities": [
+            "runtimeStubPackages",
+            "externalCatalog",
+            "externalStubArchives",
+        ],
     }
     assert first["catalog"]["schemaVersion"] == "2.0"
     assert [archive["id"] for archive in first["fallbackArchives"]] == ["stdlib", "esp32"]

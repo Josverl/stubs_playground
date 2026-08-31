@@ -18,6 +18,21 @@ def main():
     os.chdir(directory)
 
     class Handler(http.server.SimpleHTTPRequestHandler):
+        def do_GET(self):
+            redirects = {
+                "/__test__/redirect-catalog": (
+                    "/packages/pyright-worker/assets/micropython-stub-package-catalog.json"
+                ),
+            }
+            location = redirects.get(self.path)
+            if location:
+                self.send_response(302)
+                self.send_header("Location", location)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            super().do_GET()
+
         def log_message(self, format, *args):
             pass  # suppress access logs
 

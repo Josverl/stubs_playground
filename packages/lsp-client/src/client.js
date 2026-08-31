@@ -27,6 +27,10 @@ import { createTransport } from './transport-factory.js';
  *   omission disables board stubs unless another board source is selected.
  * @property {string} [boardStubsUrl] - Absolute fallback archive URL fetched
  *   only when the preferred cached package is unavailable.
+ * @property {{url?: string, data?: ArrayBuffer, size: number, sha256: string,
+ *   allowedOrigins?: string[]}} [boardStubsArchive] - Verified board archive.
+ * @property {{url?: string, data?: ArrayBuffer, size: number, sha256: string,
+ *   allowedOrigins?: string[]}} [stubPackageCatalog] - Verified external catalog.
  * @property {{packageName: string, version?: string, fallbackToBundled?: boolean}} [boardStubPackage] -
  *   Cached PyPI package to materialize as the active board stubs.
  * @property {Object.<string, string>} [workspaceFiles] - Project files to preload
@@ -39,7 +43,12 @@ import { createTransport } from './transport-factory.js';
  * @property {boolean} [verboseOutput] - Enable verbose Pyright output.
  * @property {Array<{packageName: string, files: Object.<string, string>}>}
  *   [extraStubPackages] - Additional type-only stub packages.
+ * @property {Array<{packageName: string, archive: {url?: string,
+ *   data?: ArrayBuffer, size: number, sha256: string, allowedOrigins?: string[]}}>}
+ *   [extraStubArchives] - Verified type-only ZIP archives.
  * @property {string[]} [extraPaths] - Absolute extra import search paths.
+ * @property {number} [initializationTimeout=120000] - Maximum worker
+ *   initialization time after the script loads.
  * @property {(diagnostics: import('./diagnostics.js').WorkspaceDiagnostic[]) => void}
  *   [onWorkspaceDiagnosticsChange] - Receives diagnostics for all files reported
  *   by Pyright, including unopened files in workspace mode.
@@ -88,6 +97,8 @@ export async function createLSPClient(config) {
         workerUrl: config.workerUrl,
         boardStubs: config.boardStubs,
         boardStubsUrl: config.boardStubsUrl,
+        boardStubsArchive: config.boardStubsArchive,
+        stubPackageCatalog: config.stubPackageCatalog,
         boardStubPackage: config.boardStubPackage,
         workspaceFiles: config.workspaceFiles,
         typeCheckingMode: config.typeCheckingMode,
@@ -95,7 +106,9 @@ export async function createLSPClient(config) {
         pythonVersion: config.pythonVersion,
         verboseOutput: config.verboseOutput,
         extraStubPackages: config.extraStubPackages,
+        extraStubArchives: config.extraStubArchives,
         extraPaths: config.extraPaths,
+        initializationTimeout: config.initializationTimeout,
     });
 
     logVerbose(config.verboseOutput, 'Creating LSP client...');

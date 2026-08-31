@@ -8,7 +8,18 @@ export interface MsgServerLoaded {
     protocolVersion?: 2;
     capabilities?: WorkerCapability[];
 }
-export type WorkerCapability = "runtimeStubPackages";
+export type WorkerCapability = "runtimeStubPackages" | "externalCatalog" | "externalStubArchives";
+export interface VerifiedAssetSource {
+    url?: string;
+    data?: ArrayBuffer;
+    size: number;
+    sha256: string;
+    allowedOrigins?: string[];
+}
+export interface ExtraStubArchive {
+    packageName: string;
+    archive: VerifiedAssetSource;
+}
 export interface MsgInitServer {
     type: "initServer";
     /** User type stubs as nested folder structure */
@@ -24,6 +35,10 @@ export interface MsgInitServer {
     boardStubs: ArrayBuffer | false | undefined;
     /** Absolute fallback archive URL fetched only when no selected cached package exists */
     boardStubsUrl?: string;
+    /** Integrity-verified board archive preferred over legacy boardStubsUrl */
+    boardStubsArchive?: VerifiedAssetSource;
+    /** Integrity-verified catalog; invalid content falls back to the bundled snapshot */
+    stubPackageCatalog?: VerifiedAssetSource;
     /** Cached PyPI package to materialize as /typings instead of boardStubs */
     boardStubPackage?: StubPackageSelection;
     /** Pyright type checking mode: off, basic, standard, strict */
@@ -36,6 +51,8 @@ export interface MsgInitServer {
     verboseOutput?: boolean;
     /** Additional type-only stub packages materialized under /extra/<packageName> */
     extraStubPackages?: ExtraStubPackage[];
+    /** Additional integrity-verified type-only ZIP archives mounted under /extra */
+    extraStubArchives?: ExtraStubArchive[];
     /** Absolute extra search paths used for LSP workspace/configuration */
     extraPaths?: string[];
 }
@@ -142,6 +159,10 @@ export interface MsgClearStubPackagesResult {
 export interface MsgServerInitialized {
     type: "serverInitialized";
     pyrightVersion: string;
+    assetFallbacks?: Array<{
+        asset: string;
+        error: string;
+    }>;
     /** Per-phase init timings in ms; only sent when `verboseOutput` is enabled */
     startupTimings?: Record<string, number>;
 }

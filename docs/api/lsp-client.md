@@ -94,15 +94,19 @@ Important configuration:
 | `workerUrl` | `string` | required | Worker script URL or same-origin Blob URL. |
 | `timeout` | `number` | `5000` | LSP request timeout in milliseconds. |
 | `shutdownTimeout` | `number` | `1000` | Maximum wait for the shutdown response before `exit`. |
+| `initializationTimeout` | `number` | `120000` | Maximum worker initialization time after the script reports `serverLoaded`; this is separate from the 30-second script startup timeout. |
 | `workspaceFiles` | `Record<string,string>` | `{}` | Files created under `/workspace` before Pyright starts. |
 | `boardStubs` | `ArrayBuffer \| false` | `false` | Explicit board archive; omission means no board unless another source is selected. |
 | `boardStubsUrl` | `string` | none | Worker-fetched fallback archive. |
+| `boardStubsArchive` | verified asset | none | Preferred board ZIP from a URL or `ArrayBuffer`; falls back to `boardStubs` on rejection. |
 | `boardStubPackage` | `object` | none | Cached package preferred as `/typings`. |
+| `stubPackageCatalog` | verified asset | none | External catalog; rejection is reported in `transport.assetFallbacks` and uses the bundled snapshot. |
 | `typeCheckingMode` | `string` | `standard` | `off`, `basic`, `standard`, or `strict`. |
 | `diagnosticMode` | `string` | `openFilesOnly` | `openFilesOnly` or `workspace`. |
 | `typeshedPath` | `string` | `/typeshed-micropython` | Worker-VFS typeshed path. |
 | `pythonVersion` | `string` | `3.11` | Python `X.Y` version exposed to Pyright. |
 | `extraStubPackages` | `Array` | `[]` | In-memory type-only packages under `/extra`. |
+| `extraStubArchives` | `Array` | `[]` | Verified type-only ZIP overlays under `/extra`; invalid overlays fail initialization. |
 | `extraPaths` | `string[]` | `[]` | Additional absolute worker-VFS import paths. |
 
 `WorkerTransport` exposes the negotiated `protocolVersion`, a capability set,
@@ -110,6 +114,13 @@ and `supportsCapability(name)`. The public
 `CURRENT_WORKER_PROTOCOL_VERSION`, `MIN_SUPPORTED_WORKER_PROTOCOL_VERSION`, and
 `WORKER_CAPABILITIES` constants let hosts validate or conditionally expose
 worker-specific features without coupling them to LSP JSON-RPC.
+
+A verified asset contains exactly one of `url` or `data`, plus the exact
+`size` and lowercase hexadecimal `sha256`. URL sources must use HTTPS (HTTP is
+allowed only on loopback) and list the source origin in `allowedOrigins`.
+Redirects are rejected because browser workers cannot inspect every intermediate
+redirect origin. Downloads are streamed within the declared byte bound and are
+not parsed or mounted before size and digest verification.
 | `onWorkspaceDiagnosticsChange` | `function` | none | Complete diagnostics snapshot, including unopened files. |
 
 ```js

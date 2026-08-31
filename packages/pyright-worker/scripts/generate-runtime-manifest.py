@@ -103,7 +103,11 @@ def build_runtime_manifest(root: Path = ROOT) -> dict:
         "controlProtocol": {
             "minimumVersion": 1,
             "maximumVersion": 2,
-            "capabilities": ["runtimeStubPackages"],
+            "capabilities": [
+                "runtimeStubPackages",
+                "externalCatalog",
+                "externalStubArchives",
+            ],
         },
         "catalog": catalog,
         "fallbackArchives": fallback_archives,

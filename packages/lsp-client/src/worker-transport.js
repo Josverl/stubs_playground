@@ -12,6 +12,8 @@ export const CURRENT_WORKER_PROTOCOL_VERSION = 2;
 export const MIN_SUPPORTED_WORKER_PROTOCOL_VERSION = 1;
 export const WORKER_CAPABILITIES = Object.freeze({
     RUNTIME_STUB_PACKAGES: 'runtimeStubPackages',
+    EXTERNAL_CATALOG: 'externalCatalog',
+    EXTERNAL_STUB_ARCHIVES: 'externalStubArchives',
 });
 
 const LEGACY_WORKER_CAPABILITIES = [
@@ -25,6 +27,10 @@ const LEGACY_WORKER_CAPABILITIES = [
  *   `boardStubPackage` selects them explicitly.
  * @property {string} [boardStubsUrl] - Absolute fallback archive URL fetched
  *   by the worker only when the preferred cached package is unavailable.
+ * @property {{url?: string, data?: ArrayBuffer, size: number, sha256: string,
+ *   allowedOrigins?: string[]}} [boardStubsArchive] - Verified board archive.
+ * @property {{url?: string, data?: ArrayBuffer, size: number, sha256: string,
+ *   allowedOrigins?: string[]}} [stubPackageCatalog] - Verified external catalog.
  * @property {{packageName: string, version?: string, fallbackToBundled?: boolean}} [boardStubPackage] -
  *   Cached PyPI package to use as `/typings` instead of `boardStubs`.
  * @property {Object.<string, string>} [workspaceFiles] - Files to preload into
@@ -35,7 +41,12 @@ const LEGACY_WORKER_CAPABILITIES = [
  * @property {boolean} [verboseOutput] - Enable verbose Pyright output.
  * @property {Array<{packageName: string, files: Object.<string, string>}>}
  *   [extraStubPackages] - Additional type-only stub packages.
+ * @property {Array<{packageName: string, archive: {url?: string,
+ *   data?: ArrayBuffer, size: number, sha256: string, allowedOrigins?: string[]}}>}
+ *   [extraStubArchives] - Verified type-only ZIP archives.
  * @property {string[]} [extraPaths] - Absolute extra import search paths.
+ * @property {number} [initializationTimeout=120000] - Maximum worker
+ *   initialization time after the script reports `serverLoaded`.
  */
 
 /**
@@ -93,6 +104,8 @@ const LEGACY_WORKER_CAPABILITIES = [
  * @property {string} [pyrightVersion] - Worker-reported Pyright version.
  * @property {number} [protocolVersion] - Worker control-protocol version.
  * @property {string[]} [capabilities] - Optional worker control capabilities.
+ * @property {Array<{asset: string, error: string}>} [assetFallbacks] - External
+ *   assets rejected during initialization in favor of configured fallbacks.
  * @property {StubPackageCatalogEntry[]|InstalledStubPackage[]} [packages] - Catalog or installed stub packages.
  * @property {string[]} [availableRuntimeVersions] - Firmware versions offered by the catalog.
  * @property {string} [defaultRuntimeVersion] - Default firmware version.
@@ -151,14 +164,21 @@ export class WorkerTransport {
             ? false
             : options.boardStubs;
         this._boardStubsUrl = options.boardStubsUrl;
+        this._boardStubsArchive = options.boardStubsArchive;
+        this._stubPackageCatalog = options.stubPackageCatalog;
         this._boardStubPackage = options.boardStubPackage;
         this._typeCheckingMode = options.typeCheckingMode; // string | undefined
         this._typeshedPath = options.typeshedPath; // string | undefined
         this._pythonVersion = options.pythonVersion; // string | undefined
         this._verboseOutput = options.verboseOutput === true;
         this._extraStubPackages = options.extraStubPackages || [];
+        this._extraStubArchives = options.extraStubArchives || [];
         this._extraPaths = options.extraPaths || [];
         this._workspaceFiles = options.workspaceFiles || {};
+        this._initializationTimeout = options.initializationTimeout ?? 120000;
+        if (!Number.isSafeInteger(this._initializationTimeout) || this._initializationTimeout <= 0) {
+            throw new TypeError('WorkerTransport initializationTimeout must be a positive integer');
+        }
         /** @type {Map<string, {resolve: (value: any) => void, reject: (reason?: unknown) => void, timeout?: ReturnType<typeof setTimeout>}>} */
         this._debugRequests = new Map();
         /** @type {Map<string, {resolve: (value: any) => void, reject: (reason?: unknown) => void, timeout?: ReturnType<typeof setTimeout>}>} */
@@ -166,6 +186,8 @@ export class WorkerTransport {
         /** @type {Map<string, {resolve: (value: any) => void, reject: (reason?: unknown) => void, timeout?: ReturnType<typeof setTimeout>}>} */
         this._stubPackageRequests = new Map();
         this.pyrightVersion = ""; // set when serverInitialized is received
+        /** @type {Array<{asset: string, error: string}>} */
+        this.assetFallbacks = [];
         this.protocolVersion = MIN_SUPPORTED_WORKER_PROTOCOL_VERSION;
         /** @type {Set<string>} */
         this.capabilities = new Set();
@@ -229,6 +251,15 @@ export class WorkerTransport {
                 `WorkerTransport: worker protocol ${this.protocolVersion} `
                 + `does not support capability "${capability}"`,
             );
+        }
+    }
+
+    _validateSelectedCapabilities() {
+        if (this._stubPackageCatalog) {
+            this._requireCapability(WORKER_CAPABILITIES.EXTERNAL_CATALOG);
+        }
+        if (this._boardStubsArchive || this._extraStubArchives.length > 0) {
+            this._requireCapability(WORKER_CAPABILITIES.EXTERNAL_STUB_ARCHIVES);
         }
     }
 
@@ -333,7 +364,7 @@ export class WorkerTransport {
             this._connectReject = reject;
             let phase = 'loading';
 
-            const timeout = setTimeout(() => {
+            let timeout = setTimeout(() => {
                 this._cleanup();
                 reject(new Error(`WorkerTransport: timeout in phase "${phase}" (30s)`));
             }, 30000);
@@ -371,6 +402,7 @@ export class WorkerTransport {
                 if (msg.type === 'serverLoaded') {
                     try {
                         this._negotiateProtocol(msg);
+                        this._validateSelectedCapabilities();
                     } catch (error) {
                         clearTimeout(timeout);
                         this._cleanup();
@@ -378,6 +410,14 @@ export class WorkerTransport {
                         return;
                     }
                     phase = 'initializing';
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        this._cleanup();
+                        reject(new Error(
+                            `WorkerTransport: timeout in phase "${phase}" `
+                            + `(${this._initializationTimeout}ms)`,
+                        ));
+                    }, this._initializationTimeout);
                     this.worker.postMessage({
                         type: 'initServer',
                         userFiles: {},
@@ -385,12 +425,15 @@ export class WorkerTransport {
                         typeshedFallback: undefined, // use bundled typeshed
                         boardStubs: this._boardStubs,
                         boardStubsUrl: this._boardStubsUrl,
+                        boardStubsArchive: this._boardStubsArchive,
+                        stubPackageCatalog: this._stubPackageCatalog,
                         boardStubPackage: this._boardStubPackage,
                         typeCheckingMode: this._typeCheckingMode,
                         typeshedPath: this._typeshedPath,
                         pythonVersion: this._pythonVersion,
                         verboseOutput: this._verboseOutput,
                         extraStubPackages: this._extraStubPackages,
+                        extraStubArchives: this._extraStubArchives,
                         extraPaths: this._extraPaths,
                     });
                     return;
@@ -401,6 +444,9 @@ export class WorkerTransport {
                     this.connected = true;
                     this._connectReject = null;
                     this.pyrightVersion = msg.pyrightVersion || "";
+                    this.assetFallbacks = Array.isArray(msg.assetFallbacks)
+                        ? msg.assetFallbacks
+                        : [];
 
                     // Replace onmessage with the steady-state handler
                     this.worker.onmessage = this._onSteadyStateMessage.bind(this);

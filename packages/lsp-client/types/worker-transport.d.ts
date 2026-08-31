@@ -2,6 +2,8 @@ export const CURRENT_WORKER_PROTOCOL_VERSION: 2;
 export const MIN_SUPPORTED_WORKER_PROTOCOL_VERSION: 1;
 export const WORKER_CAPABILITIES: Readonly<{
     RUNTIME_STUB_PACKAGES: "runtimeStubPackages";
+    EXTERNAL_CATALOG: "externalCatalog";
+    EXTERNAL_STUB_ARCHIVES: "externalStubArchives";
 }>;
 /**
  * Transport that adapts a classic Web Worker to the string-based interface
@@ -27,6 +29,20 @@ export class WorkerTransport {
     _connectReject: (reason?: any) => void;
     _boardStubs: false | ArrayBuffer;
     _boardStubsUrl: string;
+    _boardStubsArchive: {
+        url?: string;
+        data?: ArrayBuffer;
+        size: number;
+        sha256: string;
+        allowedOrigins?: string[];
+    };
+    _stubPackageCatalog: {
+        url?: string;
+        data?: ArrayBuffer;
+        size: number;
+        sha256: string;
+        allowedOrigins?: string[];
+    };
     _boardStubPackage: {
         packageName: string;
         version?: string;
@@ -42,10 +58,21 @@ export class WorkerTransport {
             [x: string]: string;
         };
     }[];
+    _extraStubArchives: {
+        packageName: string;
+        archive: {
+            url?: string;
+            data?: ArrayBuffer;
+            size: number;
+            sha256: string;
+            allowedOrigins?: string[];
+        };
+    }[];
     _extraPaths: string[];
     _workspaceFiles: {
         [x: string]: string;
     };
+    _initializationTimeout: number;
     /** @type {Map<string, {resolve: (value: any) => void, reject: (reason?: unknown) => void, timeout?: ReturnType<typeof setTimeout>}>} */
     _debugRequests: Map<string, {
         resolve: (value: any) => void;
@@ -65,6 +92,11 @@ export class WorkerTransport {
         timeout?: ReturnType<typeof setTimeout>;
     }>;
     pyrightVersion: string;
+    /** @type {Array<{asset: string, error: string}>} */
+    assetFallbacks: Array<{
+        asset: string;
+        error: string;
+    }>;
     protocolVersion: number;
     /** @type {Set<string>} */
     capabilities: Set<string>;
@@ -86,6 +118,7 @@ export class WorkerTransport {
      * @throws {Error} If the worker did not advertise the capability.
      */
     _requireCapability(capability: string): void;
+    _validateSelectedCapabilities(): void;
     /**
      * @param {WorkerResponseMessage} msg - Worker control message.
      * @returns {boolean} Whether the message was consumed.
@@ -308,6 +341,26 @@ export type WorkerTransportOptions = {
      */
     boardStubsUrl?: string;
     /**
+     * - Verified board archive.
+     */
+    boardStubsArchive?: {
+        url?: string;
+        data?: ArrayBuffer;
+        size: number;
+        sha256: string;
+        allowedOrigins?: string[];
+    };
+    /**
+     * - Verified external catalog.
+     */
+    stubPackageCatalog?: {
+        url?: string;
+        data?: ArrayBuffer;
+        size: number;
+        sha256: string;
+        allowedOrigins?: string[];
+    };
+    /**
      * -
      * Cached PyPI package to use as `/typings` instead of `boardStubs`.
      */
@@ -349,9 +402,27 @@ export type WorkerTransportOptions = {
         };
     }>;
     /**
+     * - Verified type-only ZIP archives.
+     */
+    extraStubArchives?: Array<{
+        packageName: string;
+        archive: {
+            url?: string;
+            data?: ArrayBuffer;
+            size: number;
+            sha256: string;
+            allowedOrigins?: string[];
+        };
+    }>;
+    /**
      * - Absolute extra import search paths.
      */
     extraPaths?: string[];
+    /**
+     * - Maximum worker
+     * initialization time after the script reports `serverLoaded`.
+     */
+    initializationTimeout?: number;
 };
 export type WorkerFsEntry = {
     /**
@@ -510,6 +581,14 @@ export type WorkerResponseMessage = {
      * - Optional worker control capabilities.
      */
     capabilities?: string[];
+    /**
+     * - External
+     * assets rejected during initialization in favor of configured fallbacks.
+     */
+    assetFallbacks?: Array<{
+        asset: string;
+        error: string;
+    }>;
     /**
      * - Catalog or installed stub packages.
      */

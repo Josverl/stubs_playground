@@ -32,6 +32,13 @@ test('WorkerTransport makes no-board selection explicit by default', () => {
     assert.equal(remoteBoard._boardStubs, undefined);
 });
 
+test('WorkerTransport validates initializationTimeout', () => {
+    assert.throws(
+        () => new WorkerTransport('worker.js', { initializationTimeout: 0 }),
+        /initializationTimeout must be a positive integer/,
+    );
+});
+
 class HandshakeWorker {
     static loadedMessage = { type: 'serverLoaded' };
     static instances = [];
@@ -96,6 +103,64 @@ test('WorkerTransport accepts current protocol capabilities', async () => {
         [WORKER_CAPABILITIES.RUNTIME_STUB_PACKAGES],
     );
     transport.close();
+});
+
+test('WorkerTransport resets its timeout after serverLoaded', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const originalWorker = globalThis.Worker;
+
+    class SlowInitializingWorker extends HandshakeWorker {
+        postMessage(message) {
+            this.messages.push(message);
+            if (message.type === 'initServer') {
+                setTimeout(() => this.onmessage?.({
+                    data: { type: 'serverInitialized', pyrightVersion: 'test' },
+                }), 30001);
+            }
+        }
+    }
+
+    globalThis.Worker = SlowInitializingWorker;
+    const transport = new WorkerTransport('worker.js', { initializationTimeout: 60000 });
+    try {
+        const connection = transport.connect();
+        await Promise.resolve();
+        t.mock.timers.tick(30001);
+        await connection;
+        assert.equal(transport.isConnected(), true);
+    } finally {
+        transport.close();
+        globalThis.Worker = originalWorker;
+    }
+});
+
+test('WorkerTransport rejects selected features missing from worker capabilities', async () => {
+    const originalWorker = globalThis.Worker;
+    HandshakeWorker.loadedMessage = {
+        type: 'serverLoaded',
+        protocolVersion: CURRENT_WORKER_PROTOCOL_VERSION,
+        capabilities: [WORKER_CAPABILITIES.RUNTIME_STUB_PACKAGES],
+    };
+    HandshakeWorker.instances = [];
+    globalThis.Worker = HandshakeWorker;
+    const transport = new WorkerTransport('worker.js', {
+        stubPackageCatalog: {
+            data: new ArrayBuffer(1),
+            size: 1,
+            sha256: '0'.repeat(64),
+        },
+    });
+
+    try {
+        await assert.rejects(
+            transport.connect(),
+            /does not support capability "externalCatalog"/,
+        );
+    } finally {
+        globalThis.Worker = originalWorker;
+    }
+
+    assert.deepEqual(HandshakeWorker.instances[0].messages, []);
 });
 
 test('WorkerTransport rejects unsupported protocol before initServer', async () => {

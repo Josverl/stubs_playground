@@ -11,9 +11,34 @@
     <script type="module">
         import {WorkerTransport} from '../src/worker-transport.js';
         import {SimpleLSPClient} from '../src/simple-client.js';
+        import {strToU8, zipSync} from '/node_modules/fflate/esm/browser.js';
 
         function log(msg) {
             document.getElementById('log').textContent += msg + '\n';
+        }
+
+        async function sha256(data) {
+            const digest = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(
+                new Uint8Array(digest),
+                (byte) => byte.toString(16).padStart(2, '0'),
+            ).join('');
+        }
+
+        async function verifiedData(url) {
+            const response = await fetch(url);
+            const data = await response.arrayBuffer();
+            return {data, size: data.byteLength, sha256: await sha256(data)};
+        }
+
+        async function verifiedUrl(url) {
+            const source = await verifiedData(url);
+            return {
+                url: new URL(url, location.href).href,
+                size: source.size,
+                sha256: source.sha256,
+                allowedOrigins: [location.origin],
+            };
         }
 
         // Helper: connect transport + do LSP init + return {transport, initResponse}
@@ -105,6 +130,152 @@
                     success: true,
                     hasMachineStubs: entries.some((entry) => entry.path.endsWith('/machine.pyi')),
                 };
+            },
+
+            async 'verified-external-assets'() {
+                const catalog = await verifiedData(
+                    '../../pyright-worker/assets/micropython-stub-package-catalog.json',
+                );
+                const board = await verifiedUrl(
+                    '../../pyright-worker/assets/stubs-esp32.zip',
+                );
+                const overlayData = zipSync({
+                    'viper_tools/__init__.pyi': strToU8('def connect() -> None: ...\n'),
+                }).buffer;
+                const overlay = {
+                    data: overlayData,
+                    size: overlayData.byteLength,
+                    sha256: await sha256(overlayData),
+                };
+                const transport = new WorkerTransport(
+                    '../../pyright-worker/dist/pyright_worker.js',
+                    {
+                        boardStubs: false,
+                        boardStubsArchive: board,
+                        stubPackageCatalog: catalog,
+                        extraStubArchives: [{
+                            packageName: 'viper-tools-stubs',
+                            archive: overlay,
+                        }],
+                    },
+                );
+                await transport.connect();
+                const typings = await transport.debugListFs('/typings', 1);
+                const extras = await transport.debugListFs('/extra/viper-tools-stubs', 2);
+                transport.close();
+                return {
+                    success: true,
+                    assetFallbacks: transport.assetFallbacks,
+                    boardMounted: typings.entries.some((entry) => entry.path.endsWith('/machine.pyi')),
+                    overlayMounted: extras.entries.some(
+                        (entry) => entry.path.endsWith('/viper_tools/__init__.pyi'),
+                    ),
+                };
+            },
+
+            async 'rejected-external-assets-fall-back'() {
+                const bundled = await verifiedData('../../pyright-worker/assets/stubs-rp2.zip');
+                const transport = new WorkerTransport(
+                    '../../pyright-worker/dist/pyright_worker.js',
+                    {
+                        boardStubs: bundled.data,
+                        boardStubsArchive: {
+                            url: 'https://example.invalid/stubs.zip',
+                            size: bundled.size,
+                            sha256: bundled.sha256,
+                            allowedOrigins: [location.origin],
+                        },
+                        stubPackageCatalog: {
+                            ...await verifiedData(
+                                '../../pyright-worker/assets/micropython-stub-package-catalog.json',
+                            ),
+                            sha256: '0'.repeat(64),
+                        },
+                    },
+                );
+                await transport.connect();
+                const typings = await transport.debugListFs('/typings', 1);
+                transport.close();
+                return {
+                    success: true,
+                    assetFallbacks: transport.assetFallbacks,
+                    fallbackMounted: typings.entries.some(
+                        (entry) => entry.path.endsWith('/machine.pyi'),
+                    ),
+                };
+            },
+
+            async 'invalid-catalog-variants-fall-back'() {
+                const invalidCatalog = new TextEncoder().encode('{}').buffer;
+                const wrongVersionCatalog = new TextEncoder().encode(JSON.stringify({
+                    version: '1.0',
+                    availableRuntimeVersions: ['1.26'],
+                    defaultRuntimeVersion: '1.26',
+                    packages: [],
+                })).buffer;
+                const cases = [
+                    {
+                        name: 'oversized',
+                        source: {
+                            data: invalidCatalog,
+                            size: 3 * 1024 * 1024,
+                            sha256: await sha256(invalidCatalog),
+                        },
+                    },
+                    {
+                        name: 'incompatible',
+                        source: {
+                            data: invalidCatalog,
+                            size: invalidCatalog.byteLength,
+                            sha256: await sha256(invalidCatalog),
+                        },
+                    },
+                    {
+                        name: 'wrong-version',
+                        source: {
+                            data: wrongVersionCatalog,
+                            size: wrongVersionCatalog.byteLength,
+                            sha256: await sha256(wrongVersionCatalog),
+                        },
+                    },
+                ];
+                const errors = {};
+                for (const testCase of cases) {
+                    const transport = new WorkerTransport(
+                        '../../pyright-worker/dist/pyright_worker.js',
+                        {
+                            boardStubs: false,
+                            stubPackageCatalog: testCase.source,
+                        },
+                    );
+                    await transport.connect();
+                    errors[testCase.name] = transport.assetFallbacks[0]?.error;
+                    transport.close();
+                }
+                return {success: true, errors};
+            },
+
+            async 'catalog-redirects-are-rejected'() {
+                const catalog = await verifiedData(
+                    '../../pyright-worker/assets/micropython-stub-package-catalog.json',
+                );
+                const makeSource = (url) => ({
+                    url: new URL(url, location.href).href,
+                    size: catalog.size,
+                    sha256: catalog.sha256,
+                    allowedOrigins: [location.origin],
+                });
+                const transport = new WorkerTransport(
+                    '../../pyright-worker/dist/pyright_worker.js',
+                    {
+                        boardStubs: false,
+                        stubPackageCatalog: makeSource('/__test__/redirect-catalog'),
+                    },
+                );
+                await transport.connect();
+                const rejectedError = transport.assetFallbacks[0]?.error;
+                transport.close();
+                return {success: true, rejectedError};
             },
 
             async 'verbose-logging'() {
@@ -397,7 +568,7 @@
                     ),
                     dependencyMounted: filesystem.entries.some((entry) =>
                         entry.kind === 'file'
-                        && entry.path.endsWith('/_mpy_shed/mp_implementation.py')
+                        && /\/_mpy_shed\/mp_implementation\.pyi?$/.test(entry.path)
                     ),
                     otherBoardExcluded: !extras.entries.some((entry) =>
                         entry.path.includes('/micropython-esp32-stubs')

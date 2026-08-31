@@ -1,6 +1,6 @@
 import { unzipSync } from "fflate";
 
-import stubPackageCatalog from "../assets/stub-package-catalog.json";
+import bundledStubPackageCatalog from "../assets/stub-package-catalog.json";
 import type {
     ExtraStubPackage,
     InstalledStubPackage,
@@ -18,6 +18,8 @@ const PACKAGE_STORE = "packages";
 const MAX_WHEEL_BYTES = 15 * 1024 * 1024;
 const MAX_EXTRACTED_BYTES = 30 * 1024 * 1024;
 const MAX_STUB_FILES = 10_000;
+const MAX_CATALOG_PACKAGES = 1_000;
+const MAX_CATALOG_RUNTIME_VERSIONS = 100;
 const PYPI_REQUEST_TIMEOUT_MS = 15_000;
 const INSTALL_DEADLINE_MS = 55_000;
 const STDLIB_SUPPORT_FILES = new Set([
@@ -65,15 +67,20 @@ interface CachedStubPackage extends ExtraStubPackage {
 }
 
 interface StubPackageCatalogDocument {
+    version: "2.0";
     packages: unknown;
     availableRuntimeVersions: string[];
     defaultRuntimeVersion: string;
 }
 
-function packageCatalogDocument(): StubPackageCatalogDocument {
-    const candidate = stubPackageCatalog as Record<string, unknown>;
+let activeStubPackageCatalog: unknown = bundledStubPackageCatalog;
+
+function validatePackageCatalogDocument(candidateValue: unknown): StubPackageCatalogDocument {
+    const candidate = candidateValue as Record<string, unknown>;
     if (
-        !Array.isArray(candidate.availableRuntimeVersions)
+        candidate.version !== "2.0"
+        || !Array.isArray(candidate.availableRuntimeVersions)
+        || candidate.availableRuntimeVersions.length > MAX_CATALOG_RUNTIME_VERSIONS
         || !candidate.availableRuntimeVersions.every((version) => typeof version === "string")
         || typeof candidate.defaultRuntimeVersion !== "string"
         || candidate.availableRuntimeVersions[0] !== candidate.defaultRuntimeVersion
@@ -83,10 +90,17 @@ function packageCatalogDocument(): StubPackageCatalogDocument {
     return candidate as unknown as StubPackageCatalogDocument;
 }
 
-function packageCatalog(): StubPackageCatalogEntry[] {
-    const packages = packageCatalogDocument().packages;
+function packageCatalogDocument(): StubPackageCatalogDocument {
+    return validatePackageCatalogDocument(activeStubPackageCatalog);
+}
+
+function validatePackageCatalog(candidateValue: unknown): StubPackageCatalogEntry[] {
+    const packages = validatePackageCatalogDocument(candidateValue).packages;
     if (!Array.isArray(packages)) {
         throw new Error("Stub package catalog must contain a packages array");
+    }
+    if (packages.length > MAX_CATALOG_PACKAGES) {
+        throw new Error(`Stub package catalog exceeds ${MAX_CATALOG_PACKAGES} packages`);
     }
 
     return packages.map((entry, index) => {
@@ -120,6 +134,28 @@ function packageCatalog(): StubPackageCatalogEntry[] {
             board: candidate.board,
         };
     });
+}
+
+function packageCatalog(): StubPackageCatalogEntry[] {
+    return validatePackageCatalog(activeStubPackageCatalog);
+}
+
+export function useStubPackageCatalog(candidateValue?: unknown): void {
+    const selected = candidateValue ?? bundledStubPackageCatalog;
+    validatePackageCatalog(selected);
+    activeStubPackageCatalog = selected;
+}
+
+export function extractTypeStubArchive(
+    data: ArrayBuffer,
+    packageName: string,
+): Record<string, string> {
+    return extractStubFiles(
+        data,
+        normalizePackageName(packageName),
+        { bytes: 0, files: 0 },
+        Date.now() + 10_000,
+    );
 }
 
 export function availableRuntimeVersions(): string[] {

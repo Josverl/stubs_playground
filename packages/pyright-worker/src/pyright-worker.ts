@@ -54,20 +54,24 @@ import type {
     WorkerMessage,
 } from "./messages";
 import { logVerbose, setVerboseOutput } from "./logging";
+import { loadVerifiedAsset } from "./verified-assets";
 import {
     activeCachedStubPackages,
     availableRuntimeVersions,
     clearStubPackages,
     defaultRuntimeVersion,
+    extractTypeStubArchive,
     installStubPackage,
     isBoardStubPackage,
     listAvailableStubPackages,
     listInstalledStubPackages,
     selectCachedBoardPackage,
+    useStubPackageCatalog,
 } from "./stub-packages";
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 const MAX_BOARD_STUB_ARCHIVE_BYTES = 30 * 1024 * 1024;
+const MAX_CATALOG_BYTES = 2 * 1024 * 1024;
 
 function validateBoardStubsUrl(value: string): URL {
     const url = new URL(value);
@@ -405,6 +409,23 @@ async function handleInitServer(msg: MsgInitServer) {
         }
     };
     try {
+        const assetFallbacks: Array<{ asset: string; error: string }> = [];
+        useStubPackageCatalog();
+        if (msg.stubPackageCatalog) {
+            try {
+                const catalogData = await loadVerifiedAsset(
+                    msg.stubPackageCatalog,
+                    MAX_CATALOG_BYTES,
+                );
+                const catalogText = new TextDecoder("utf-8", { fatal: true }).decode(catalogData);
+                useStubPackageCatalog(JSON.parse(catalogText));
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                assetFallbacks.push({ asset: "stubPackageCatalog", error: message });
+                console.warn(`[pyright-worker] External catalog rejected; using bundled snapshot: ${message}`);
+            }
+        }
+
         let cachedPackages: Awaited<ReturnType<typeof activeCachedStubPackages>> = [];
         try {
             cachedPackages = await timePhase("stubCache", () => activeCachedStubPackages());
@@ -451,7 +472,18 @@ async function handleInitServer(msg: MsgInitServer) {
 
         logVerbose("[pyright-worker] Initializing filesystem...");
         let boardStubs = msg.boardStubs;
-        if (!selectedBoardPackage && msg.boardStubsUrl && boardStubs === undefined) {
+        if (!selectedBoardPackage && msg.boardStubsArchive) {
+            try {
+                boardStubs = await loadVerifiedAsset(
+                    msg.boardStubsArchive,
+                    MAX_BOARD_STUB_ARCHIVE_BYTES,
+                );
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                assetFallbacks.push({ asset: "boardStubsArchive", error: message });
+                console.warn(`[pyright-worker] External board archive rejected; using configured fallback: ${message}`);
+            }
+        } else if (!selectedBoardPackage && msg.boardStubsUrl && boardStubs === undefined) {
             boardStubs = await fetchBoardStubsArchive(msg.boardStubsUrl);
         }
         await timePhase("mountFs", () => initFs(selectedBoardPackage ? false : boardStubs));
@@ -485,6 +517,22 @@ async function handleInitServer(msg: MsgInitServer) {
                 );
             }
             extraPackagesByName.set(normalizeExtraPackageName(pkg.packageName), pkg);
+        }
+        for (const pkg of msg.extraStubArchives || []) {
+            const packageName = normalizeExtraPackageName(pkg.packageName);
+            if (isBoardStubPackage(packageName)) {
+                throw new Error(
+                    `Board stub package must be selected through boardStubsArchive: ${pkg.packageName}`,
+                );
+            }
+            const archiveData = await loadVerifiedAsset(
+                pkg.archive,
+                MAX_BOARD_STUB_ARCHIVE_BYTES,
+            );
+            extraPackagesByName.set(packageName, {
+                packageName,
+                files: extractTypeStubArchive(archiveData, packageName),
+            });
         }
         const extraStubPackages = Array.from(extraPackagesByName.values());
         if (extraStubPackages.length > 0) {
@@ -574,6 +622,7 @@ async function handleInitServer(msg: MsgInitServer) {
         ctx.postMessage({
             type: "serverInitialized",
             pyrightVersion: __PYRIGHT_VERSION__,
+            ...(assetFallbacks.length > 0 ? { assetFallbacks } : {}),
             ...(msg.verboseOutput ? { startupTimings } : {}),
         } as WorkerMessage);
     } catch (err: any) {
@@ -833,5 +882,9 @@ ctx.onmessage = (event: MessageEvent) => {
 ctx.postMessage({
     type: "serverLoaded",
     protocolVersion: 2,
-    capabilities: ["runtimeStubPackages"],
+    capabilities: [
+        "runtimeStubPackages",
+        "externalCatalog",
+        "externalStubArchives",
+    ],
 } as WorkerMessage);

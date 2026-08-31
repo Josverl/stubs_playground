@@ -1,6 +1,6 @@
 {
   "$schema": "runtime-manifest.schema.json",
-  "runtimeId": "@mp-codemirror/pyright-worker@0.4.3+sha256.a8d80fb78a6222963c17727e46536ef8acf1a5349636fd19a2d90e39be50bb8a",
+  "runtimeId": "@mp-codemirror/pyright-worker@0.4.3+sha256.0ae28a44aec851476eb601f85519d183d7403981c124c3b91cb5c7fbcd930753",
   "schemaVersion": 1,
   "package": {
     "name": "@mp-codemirror/pyright-worker",
@@ -8,8 +8,8 @@
   },
   "worker": {
     "url": "../dist/pyright_worker.js",
-    "size": 5374738,
-    "sha256": "e62c9c78b3dbd601e88e19402a4f06b018fc05b0f4a65b6be5cbb5cc6d431fb3"
+    "size": 5378366,
+    "sha256": "c2c3238855bf5a019ca1d4cdc99bbc0f23fb2de1f75c9ba60e77dd454e6c0b81"
   },
   "pyrightVersion": "1.1.386",
   "typeshed": {
@@ -22,7 +22,9 @@
     "minimumVersion": 1,
     "maximumVersion": 2,
     "capabilities": [
-      "runtimeStubPackages"
+      "runtimeStubPackages",
+      "externalCatalog",
+      "externalStubArchives"
     ]
   },
   "catalog": {

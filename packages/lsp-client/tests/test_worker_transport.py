@@ -67,6 +67,54 @@ def test_legacy_client_retains_bundled_rp2_default(page, test_page_url):
     assert result == {"success": True, "hasMachineStubs": True}
 
 
+def test_verified_external_catalog_board_and_overlay_load(page, test_page_url):
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate("""() => window.runTest('verified-external-assets')""")
+
+    assert result == {
+        "success": True,
+        "assetFallbacks": [],
+        "boardMounted": True,
+        "overlayMounted": True,
+    }
+
+
+def test_invalid_external_assets_surface_errors_and_use_fallbacks(page, test_page_url):
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate("""() => window.runTest('rejected-external-assets-fall-back')""")
+
+    assert result["success"] is True
+    assert result["fallbackMounted"] is True
+    assert {failure["asset"] for failure in result["assetFallbacks"]} == {
+        "stubPackageCatalog",
+        "boardStubsArchive",
+    }
+    assert any("SHA-256" in failure["error"] for failure in result["assetFallbacks"])
+    assert any("origin is not allowed" in failure["error"] for failure in result["assetFallbacks"])
+
+
+def test_oversized_and_incompatible_catalogs_use_bundled_snapshot(page, test_page_url):
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate("""() => window.runTest('invalid-catalog-variants-fall-back')""")
+
+    assert result["success"] is True
+    assert "between 1 and 2097152 bytes" in result["errors"]["oversized"]
+    assert "runtime version metadata is invalid" in result["errors"]["incompatible"]
+    assert "runtime version metadata is invalid" in result["errors"]["wrong-version"]
+
+
+def test_catalog_redirects_are_rejected(page, test_page_url):
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate("""() => window.runTest('catalog-redirects-are-rejected')""")
+
+    assert result["success"] is True
+    assert "Failed to fetch" in result["rejectedError"]
+
+
 def test_worker_transport_is_quiet_by_default(page, test_page_url):
     """Default component settings suppress informational console output."""
     messages = []

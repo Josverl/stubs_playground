@@ -8,6 +8,10 @@
  *   omission disables board stubs unless another board source is selected.
  * @property {string} [boardStubsUrl] - Absolute fallback archive URL fetched
  *   only when the preferred cached package is unavailable.
+ * @property {{url?: string, data?: ArrayBuffer, size: number, sha256: string,
+ *   allowedOrigins?: string[]}} [boardStubsArchive] - Verified board archive.
+ * @property {{url?: string, data?: ArrayBuffer, size: number, sha256: string,
+ *   allowedOrigins?: string[]}} [stubPackageCatalog] - Verified external catalog.
  * @property {{packageName: string, version?: string, fallbackToBundled?: boolean}} [boardStubPackage] -
  *   Cached PyPI package to materialize as the active board stubs.
  * @property {Object.<string, string>} [workspaceFiles] - Project files to preload
@@ -20,7 +24,12 @@
  * @property {boolean} [verboseOutput] - Enable verbose Pyright output.
  * @property {Array<{packageName: string, files: Object.<string, string>}>}
  *   [extraStubPackages] - Additional type-only stub packages.
+ * @property {Array<{packageName: string, archive: {url?: string,
+ *   data?: ArrayBuffer, size: number, sha256: string, allowedOrigins?: string[]}}>}
+ *   [extraStubArchives] - Verified type-only ZIP archives.
  * @property {string[]} [extraPaths] - Absolute extra import search paths.
+ * @property {number} [initializationTimeout=120000] - Maximum worker
+ *   initialization time after the script loads.
  * @property {(diagnostics: import('./diagnostics.js').WorkspaceDiagnostic[]) => void}
  *   [onWorkspaceDiagnosticsChange] - Receives diagnostics for all files reported
  *   by Pyright, including unopened files in workspace mode.
@@ -120,6 +129,26 @@ export type LSPClientConfig = {
      */
     boardStubsUrl?: string;
     /**
+     * - Verified board archive.
+     */
+    boardStubsArchive?: {
+        url?: string;
+        data?: ArrayBuffer;
+        size: number;
+        sha256: string;
+        allowedOrigins?: string[];
+    };
+    /**
+     * - Verified external catalog.
+     */
+    stubPackageCatalog?: {
+        url?: string;
+        data?: ArrayBuffer;
+        size: number;
+        sha256: string;
+        allowedOrigins?: string[];
+    };
+    /**
      * -
      * Cached PyPI package to materialize as the active board stubs.
      */
@@ -166,9 +195,27 @@ export type LSPClientConfig = {
         };
     }>;
     /**
+     * - Verified type-only ZIP archives.
+     */
+    extraStubArchives?: Array<{
+        packageName: string;
+        archive: {
+            url?: string;
+            data?: ArrayBuffer;
+            size: number;
+            sha256: string;
+            allowedOrigins?: string[];
+        };
+    }>;
+    /**
      * - Absolute extra import search paths.
      */
     extraPaths?: string[];
+    /**
+     * - Maximum worker
+     * initialization time after the script loads.
+     */
+    initializationTimeout?: number;
     /**
      * - Receives diagnostics for all files reported
      * by Pyright, including unopened files in workspace mode.
