@@ -53,6 +53,7 @@
             "titleBar.inactiveForeground": "#15202b99"
         },
         "peacock.remoteColor": "azure",
-        "scm.defaultViewMode": "tree"
+        "scm.defaultViewMode": "tree",
+        "beadsDashboard.showClosed": false
     }
 }
