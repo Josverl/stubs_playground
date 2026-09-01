@@ -53,12 +53,16 @@ def test_webassembly_archive_and_manifest_expose_micropython_modules():
     board = next(item for item in manifest["boards"] if item["id"] == "webassembly")
 
     assert board["package"] == "micropython-webassembly-stubs"
-    assert board["package_version"] == "1.28.0.post1"
     assert board["file"] == "stubs-webassembly.zip"
 
     with zipfile.ZipFile(assets / board["file"]) as archive:
         names = set(archive.namelist())
+        metadata = json.loads(archive.read("stubs-metadata.json"))
 
+    assert metadata == {
+        "package": board["package"],
+        "version": board["package_version"],
+    }
     assert {"micropython.pyi", "uasyncio.pyi", "umachine.pyi", "js.pyi"} <= names
 
 
