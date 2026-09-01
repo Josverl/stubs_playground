@@ -25,7 +25,7 @@ def test_local_consumer_harness_uses_public_lsp_api(page: Page, project_server: 
     page.on("pageerror", lambda error: uncaught_errors.append(str(error)))
 
     page.goto(
-        f"{project_server}/packages/lsp-client/tests/consumer-harness.html",
+        f"{project_server}/packages/lsp-client/tests/consumer-harness.html?board=rp2",
         wait_until="domcontentloaded",
     )
     page.wait_for_function(

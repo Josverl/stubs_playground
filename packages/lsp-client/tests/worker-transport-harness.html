@@ -12,7 +12,6 @@
         import {startWorkerRuntime} from '../src/runtime-loader.js';
         import {WorkerTransport} from '../src/worker-transport.js';
         import {SimpleLSPClient} from '../src/simple-client.js';
-        import {strToU8, zipSync} from '/node_modules/fflate/esm/browser.js';
 
         function log(msg) {
             document.getElementById('log').textContent += msg + '\n';
@@ -140,14 +139,9 @@
                 const board = await verifiedUrl(
                     '../../pyright-worker/assets/stubs-esp32.zip',
                 );
-                const overlayData = zipSync({
-                    'viper_tools/__init__.pyi': strToU8('def connect() -> None: ...\n'),
-                }).buffer;
-                const overlay = {
-                    data: overlayData,
-                    size: overlayData.byteLength,
-                    sha256: await sha256(overlayData),
-                };
+                const overlay = await verifiedData(
+                    '../../pyright-worker/assets/stubs-rp2.zip',
+                );
                 const transport = new WorkerTransport(
                     '../../pyright-worker/dist/pyright_worker.js',
                     {
@@ -169,7 +163,7 @@
                     assetFallbacks: transport.assetFallbacks,
                     boardMounted: typings.entries.some((entry) => entry.path.endsWith('/machine.pyi')),
                     overlayMounted: extras.entries.some(
-                        (entry) => entry.path.endsWith('/viper_tools/__init__.pyi'),
+                        (entry) => entry.path.endsWith('/machine.pyi'),
                     ),
                 };
             },

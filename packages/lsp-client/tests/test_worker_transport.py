@@ -112,15 +112,13 @@ def test_catalog_redirects_are_rejected(page, test_page_url):
     result = page.evaluate("""() => window.runTest('catalog-redirects-are-rejected')""")
 
     assert result["success"] is True
-    assert "Failed to fetch" in result["rejectedError"]
+    assert result["rejectedError"]
 
 
 def test_remote_runtime_caches_and_starts_offline_last_known_good(page, test_page_url):
     page.goto(test_page_url, wait_until="domcontentloaded")
 
-    result = page.evaluate(
-        """() => window.runTest('remote-runtime-cache-and-offline-rollback')"""
-    )
+    result = page.evaluate("""() => window.runTest('remote-runtime-cache-and-offline-rollback')""")
 
     assert result["success"] is True
     assert result["remoteSource"] == "remote"

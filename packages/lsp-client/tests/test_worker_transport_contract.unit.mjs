@@ -234,7 +234,8 @@ test('disconnect sends exit after a bounded shutdown timeout', async () => {
     }
 
     assert.deepEqual(sent.map(({ method }) => method), ['shutdown', 'exit']);
-    assert.match(String(errors[0]?.[1]), /Request shutdown timed out/);
+    const shutdownError = errors.find(([message]) => message === 'Error during shutdown:');
+    assert.match(String(shutdownError?.[1]), /Request shutdown timed out/);
     assert.equal(client.connected, false);
 });
 
