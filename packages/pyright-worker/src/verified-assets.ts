@@ -98,10 +98,6 @@ export async function loadVerifiedAsset(
             if (!response.ok) {
                 throw new Error(`Asset download failed (${response.status})`);
             }
-            const contentLength = Number(response.headers.get("content-length") || 0);
-            if (contentLength && contentLength !== declaredSize) {
-                throw new Error(`Asset Content-Length ${contentLength} does not match declared size ${declaredSize}`);
-            }
             data = await readBoundedResponse(response, declaredSize);
         } catch (error) {
             if (controller.signal.aborted) {
