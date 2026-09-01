@@ -22,8 +22,8 @@ The packages are published on npm. Unbundled consumers can load the same files
 from the npm CDN:
 
 ```text
-https://cdn.jsdelivr.net/npm/@mp-codemirror/lsp-client@0.3.2/src/index.js
-https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.1/dist/pyright_worker.js
+https://cdn.jsdelivr.net/npm/@mp-codemirror/lsp-client@0.3.3/src/index.js
+https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.3/dist/pyright_worker.js
 ```
 
 ## TypeScript
@@ -107,6 +107,7 @@ Important configuration:
 | `stubPackageCatalog` | verified asset | none | External catalog; rejection is reported in `transport.assetFallbacks` and uses the bundled snapshot. |
 | `typeCheckingMode` | `string` | `standard` | `off`, `basic`, `standard`, or `strict`. |
 | `diagnosticMode` | `string` | `openFilesOnly` | `openFilesOnly` or `workspace`. |
+| `onWorkspaceDiagnosticsChange` | `function` | none | Complete diagnostics snapshot, including unopened files. |
 | `typeshedPath` | `string` | `/typeshed-micropython` | Worker-VFS typeshed path. |
 | `pythonVersion` | `string` | `3.11` | Python `X.Y` version exposed to Pyright. |
 | `extraStubPackages` | `Array` | `[]` | In-memory type-only packages under `/extra`. |
@@ -137,7 +138,6 @@ make the selected path and rejected candidates observable.
 `startWorkerRuntime(options, start)` exposes the same selection policy to hosts
 that need to perform custom startup. Omitting the manifest preserves the direct
 bundled-worker flow without Cache Storage or localStorage access.
-| `onWorkspaceDiagnosticsChange` | `function` | none | Complete diagnostics snapshot, including unopened files. |
 
 ```js
 const runtime = await createLSPClient({
