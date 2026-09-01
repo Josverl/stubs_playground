@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 0.3.4 - 2026-09-01
+
+### Added
+
+- Added verified remote worker runtime selection with immutable manifests,
+  same-origin caching, and last-known-good fallback behavior.
+- Added worker control protocol and capability negotiation before initialization.
+- Added verified external stub catalogs, board archives, and type-only overlays.
+
+### Fixed
+
+- Graceful disconnect now follows the LSP `shutdown` and `exit` sequence with a
+  bounded shutdown timeout.
+- Browser package harnesses no longer depend on the repository's `node_modules`
+  tree and now exercise explicit board selection consistently.
+
 ## 0.3.2 - 2026-08-23
 
 ### Added
