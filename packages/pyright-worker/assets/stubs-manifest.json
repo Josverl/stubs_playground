@@ -47,7 +47,7 @@
     {
       "id": "circuitpython",
       "package": "circuitpython-stubs",
-      "package_version": "10.2.1",
+      "package_version": "10.3.0",
       "file": "stubs-circuitpython.zip"
     },
     {

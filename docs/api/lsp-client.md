@@ -23,7 +23,7 @@ from the npm CDN:
 
 ```text
 https://cdn.jsdelivr.net/npm/@mp-codemirror/lsp-client@0.3.3/src/index.js
-https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.3/dist/pyright_worker.js
+https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.4/dist/pyright_worker.js
 ```
 
 ## TypeScript

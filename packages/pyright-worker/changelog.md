@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+## 0.4.4 - 2026-09-01
+
+### Added
+
+- Added worker control protocol version and capability negotiation.
+- Added an immutable runtime manifest with exact Pyright/typeshed compatibility,
+  asset sizes, and SHA-256 digests.
+- Added verified external stub catalogs, board archives, and client-owned
+  type-only overlays with bundled fallback behavior.
+
+### Changed
+
+- Updated the generated MicroPython package catalog to default to firmware
+  1.29.0 and synchronized catalog generation with build and release workflows.
+- Identified `micropython-webassembly-stubs` as the `PYSCRIPT` board so
+  downstream clients can select its board-specific stubs.
+- Refreshed the bundled CircuitPython fallback archive to 10.3.0.
+
+### Fixed
+
+- Worker shutdown now follows the standard LSP `shutdown` and `exit` ordering.
+
 ## 0.4.1 - 2026-08-23
 
 ### Changed

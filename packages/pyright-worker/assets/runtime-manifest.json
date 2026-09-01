@@ -1,10 +1,10 @@
 {
   "$schema": "runtime-manifest.schema.json",
-  "runtimeId": "@mp-codemirror/pyright-worker@0.4.3+sha256.0ae28a44aec851476eb601f85519d183d7403981c124c3b91cb5c7fbcd930753",
+  "runtimeId": "@mp-codemirror/pyright-worker@0.4.4+sha256.165c2f0766ba0c2aad615955e44bb36ece83ab259c12f9a3b745fd56240c1b73",
   "schemaVersion": 1,
   "package": {
     "name": "@mp-codemirror/pyright-worker",
-    "version": "0.4.3"
+    "version": "0.4.4"
   },
   "worker": {
     "url": "../dist/pyright_worker.js",
