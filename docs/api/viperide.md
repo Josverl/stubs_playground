@@ -163,6 +163,46 @@ self-update.
 `prepare()` prefers an active cached board package and configures the published
 board archive as its fallback.
 
+### Viper tools overlay
+
+ViperIDE can enable its bundled tool-module stubs independently from the active
+board package:
+
+```js
+const runtimeConfig = await assets.prepare({
+  boardId: "esp32",
+  viperToolsStubs: true,
+});
+```
+
+The returned `extraStubArchives` entry references ViperIDE's pinned
+`viper-tools-stubs` wheel with its exact size, SHA-256 digest, and allowed
+origin. `createLSPClient()` forwards that public configuration unchanged. The
+worker mounts the verified type-only archive under `/extra/viper-tools-stubs`
+and adds it to Pyright automatically; hosts must not add that path manually.
+
+Passing `viperToolsStubs: false` omits the bundled overlay without changing the
+selected board stubs or deleting cached packages. Explicit caller-provided
+`extraStubArchives` remain supported and may replace the bundled entry by
+package name.
+
+#### Ownership boundary
+
+The overlay is a ViperIDE release asset, not a Pyright-worker asset. The
+responsibilities are deliberately split:
+
+| ViperIDE | Reusable packages |
+|---|---|
+| Chooses the `viper-tools-stubs` version. | Accept any host-provided type-only archive through `extraStubArchives`. |
+| Obtains and bundles or publishes the wheel. | Forward the descriptor without client-specific policy. |
+| Computes and supplies size, SHA-256, URL/data, and allowed origins. | Verify integrity and archive safety before use. |
+| Owns the default-on setting, restart, errors, and update cadence. | Mount accepted stubs under a normalized `/extra/<package>` path. |
+
+Neither `@mp-typing/lsp-client` nor `@mp-typing/pyright-worker` produces or
+includes the Viper tools wheel. They contain no ViperIDE-specific package or
+version knowledge. A different application can use the same API with its own
+archive without requesting a backend release.
+
 ## Settings helpers
 
 | Helper | Behavior |

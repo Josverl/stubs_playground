@@ -321,13 +321,35 @@ initialization when validation or safe type-only extraction fails.
 
 ### Client-defined stub overlays
 
-Client-specific packages such as ViperIDE's proposed `viper-tools-stubs` do not
-belong in the shared runtime manifest. ViperIDE may ship a versioned npm/static
-ZIP asset, or install a type-only PyPI wheel, and pass it as a client-owned
-overlay. Updating that package must not require rebuilding the Pyright worker.
-The existing `extraStubPackages` files API remains supported; the planned archive
-form adds URL or `ArrayBuffer`, size and digest validation, and an `/extra/...`
-mount path.
+Client-specific packages such as ViperIDE's `viper-tools-stubs` do not belong
+in the shared runtime manifest or worker package. A reusable backend must not
+build, select, publish, or bundle wheels for its clients.
+
+| Responsibility | Owner |
+|---|---|
+| Author and test client-specific stubs | Stub-package maintainer |
+| Build or obtain a versioned type-only wheel or ZIP | Host application or its release process |
+| Select the overlay version and decide whether it is enabled | Host application |
+| Publish or bundle the archive and provide its URL/data, size, digest, and allowed origins | Host application |
+| Forward the generic `extraStubArchives` configuration | `@mp-typing/lsp-client` |
+| Validate integrity, reject runtime Python and unsafe paths, and mount accepted type information | `@mp-typing/pyright-worker` |
+| Present settings, failures, and retry/update policy | Host application |
+
+The dependency direction is one-way: a host supplies an archive through the
+generic API, while the reusable client and worker know only the archive
+contract. Shared worker releases contain no ViperIDE package name, version,
+descriptor, build step, or artifact. Adding another host-specific overlay must
+therefore require changes only in that host and its stub-package release process.
+
+For ViperIDE, ViperIDE ships its selected type-only wheel and integrity
+metadata, then passes the resulting descriptor through `extraStubArchives` as
+a client-owned overlay. The worker validates its size and digest, extracts only
+type information, mounts it under `/extra/viper-tools-stubs`, and adds that
+mount to Pyright's search paths. Updating the package does not require rebuilding
+the Pyright worker.
+
+The generic API also accepts another host's verified ZIP or wheel by URL or
+`ArrayBuffer`. The existing `extraStubPackages` files API remains supported.
 
 ### Migration sequence
 

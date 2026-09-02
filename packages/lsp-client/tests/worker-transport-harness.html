@@ -149,14 +149,14 @@
                         boardStubsArchive: board,
                         stubPackageCatalog: catalog,
                         extraStubArchives: [{
-                            packageName: 'viper-tools-stubs',
+                            packageName: 'host-tools-stubs',
                             archive: overlay,
                         }],
                     },
                 );
                 await transport.connect();
                 const typings = await transport.debugListFs('/typings', 1);
-                const extras = await transport.debugListFs('/extra/viper-tools-stubs', 2);
+                const extras = await transport.debugListFs('/extra/host-tools-stubs', 2);
                 transport.close();
                 return {
                     success: true,
