@@ -5,8 +5,8 @@
 ### Step 1: Clone and Setup
 
 ```bash
-git clone <repository-url>
-cd mp_codemirror
+git clone https://github.com/Josverl/stubs_playground.git
+cd stubs_playground
 just setup
 ```
 
@@ -16,19 +16,19 @@ Worker (`packages/pyright-worker/dist/pyright_worker.js`).
 ### Step 2: Start the HTTP Server
 
 ```bash
-just serve
+just serve local
 ```
 
 No LSP bridge server is needed — Pyright runs in the browser.
 
 ### Step 3: Open in Browser
 
-`just serve` opens `http://localhost:8888/apps/playground/?components=local`.
+`just serve local` opens `http://localhost:8888/apps/playground/?components=local`.
 
 To prove the same application works with the published components, run:
 
 ```bash
-just serve cdn
+just serve npm
 ```
 
 You get full LSP features (diagnostics, completions, hover, board switching) with no server-side components.
@@ -224,13 +224,13 @@ Before committing changes:
 ## 📚 Resources
 
 ### CodeMirror Documentation
-- [Main Docs](https://codemirror.net/6/)
+- [Main Docs](https://codemirror.net/)
 - [Examples](https://codemirror.net/examples/)
 - [API Reference](https://codemirror.net/docs/ref/)
 
 ### Development
 - [ES Modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)
-- [Import Maps](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap)
+- [Import Maps](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap)
 
 ### Python
 - [MicroPython](https://micropython.org/)
@@ -266,8 +266,7 @@ import('/app.js').then(module => {
 ## 🤝 Get Help
 
 - Open an [Issue](https://github.com/Josverl/stubs_playground/issues)
-- Check [Discussions](https://github.com/Josverl/stubs_playground/discussions)
-- Read the [Contributing Guide](https://github.com/Josverl/stubs_playground/blob/integrate/CONTRIBUTING.md)
+- Read the [Contributing Guide](contributing.md)
 
 ---
 

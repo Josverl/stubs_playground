@@ -2,6 +2,10 @@
 
 This App provides shows that Type Checking for MicroPython can be used by anyone, and that no complex setup is needed.
 
+Try the [hosted playground](https://josverl.github.io/stubs_playground/) or
+follow the [user guide](docs/user-guide.md) to check code for a specific board
+and configure type checking in a local project.
+
 The goal of this repo are to provide a simple tool that: 
 1. Help to spot a code issue that might otherwise first show up during runtime.
 2. Allows for simple reporting of bugs to the the MicroPython stubs repo.
@@ -33,7 +37,16 @@ I have used Pyright as an LSP, but in principle that is replacable by any other 
 Yes you can. 
 There are extensions/add-ins for the most used IDEs, and as this is all standards based - you can just configure it yourself, using any combination of tooling that you prefer.
 To a degree this works even if you prefer to using Nano and rshell - you'll just need to run pyright from the prompt.
-There are setup instuctions in the MicroPython-Stubs repo, but I would like to offer a simple setup-script to cover the common cases. That still needs to be written and tested though.
+The `micropython-stubs` setup wizard covers the common cases. From your project
+directory, run:
+
+```bash
+uv run https://raw.githubusercontent.com/Josverl/micropython-stubs/refs/heads/main/setup_micropython_stubs.py
+```
+
+It helps select a matching stub package, installs it locally, and configures a
+supported type checker. See the [user guide](docs/user-guide.md) for the short
+workflow and links to the authoritative installation documentation.
 
 **Non goals:**
 This app does not aim to provide a live connection to an physical or emulated board.There are several great apps that do this today. I hope and would support that some of them will look at this repo and integrate the code or concepts.
@@ -77,7 +90,7 @@ versioned, reusable components for other CodeMirror 6 editors (e.g.
 Custom worker implementations can use the stable control-plane types published as
 `packages/pyright-worker/src/messages.d.ts`.
 
-They are published as public packages on npm under the `@mp-codemirror` scope.
+They are published as public packages on npm under the `@mp-typing` scope.
 Releases use npm trusted publishing through the
 [`Release npm package`](.github/workflows/release-npm.yml) workflow. Unbundled
 consumers can load the same files from the npm CDN; see the
@@ -98,12 +111,19 @@ packages/lsp-client/      Reusable CodeMirror LSP bridge
 packages/pyright-worker/  Worker source, built bundle, and board assets
 ```
 
-Run `just serve` to use workspace packages, or `just serve cdn` to run the same
+Run `just serve local` to use workspace packages, or `just serve npm` to run the same
 application against the published immutable component tags. The playground owns its exact
 component versions in `apps/playground/package.json`; `npm run generate:component-config`
 turns that package metadata into the browser configuration. The local/CDN switch remains
 isolated in `apps/playground/component-source.js`, so application code uses the same public
 package API in both modes.
+
+## Project identity
+
+**MicroPython Stubs Playground** is the user-facing application. Its source is
+the [`Josverl/stubs_playground`](https://github.com/Josverl/stubs_playground)
+repository. The reusable browser packages have their own public npm identity:
+`@mp-typing/lsp-client` and `@mp-typing/pyright-worker`.
 
 ## License
 

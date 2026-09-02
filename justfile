@@ -36,7 +36,11 @@ build-dev:
 
 # build Sphinx API documentation
 docs:
-    uv run --with-requirements docs/requirements.txt sphinx-build -b html docs docs/_build/html
+    uv run --with-requirements docs/requirements.txt sphinx-build -W --keep-going -b html docs docs/_build/html
+
+# check documentation links; external services may fail transiently
+docs-linkcheck:
+    uv run --with-requirements docs/requirements.txt sphinx-build -b linkcheck docs docs/_build/linkcheck
 
 # pack Pyright's typeshed-fallback into a zip for browser use
 pack-typeshed:

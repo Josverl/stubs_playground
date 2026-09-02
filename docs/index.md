@@ -1,4 +1,14 @@
-# MicroPython browser type-checking APIs
+# MicroPython Stubs Playground
+
+The MicroPython Stubs Playground provides browser-based type checking for
+MicroPython and CircuitPython, backed by board-specific stubs and Pyright.
+
+```{toctree}
+:maxdepth: 2
+:caption: Using the playground
+
+user-guide
+```
 
 ## Python and MicroPython stubs
 
@@ -43,7 +53,7 @@ api/viperide
 
 ```{toctree}
 :maxdepth: 1
-:caption: Other topics
+:caption: Development and contribution
 
 quickstart
 technical

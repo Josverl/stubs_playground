@@ -16,8 +16,8 @@ Thank you for your interest in contributing to this project! This document provi
 
 1. **Fork and clone the repository:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/mp_codemirror.git
-   cd mp_codemirror
+   git clone https://github.com/YOUR_USERNAME/stubs_playground.git
+   cd stubs_playground
    ```
 
 2. **Run the setup recipe** (installs dependencies, builds the worker):
@@ -27,12 +27,12 @@ Thank you for your interest in contributing to this project! This document provi
 
 3. **Start the playground with workspace components:**
    ```bash
-   just serve
+   just serve local
    ```
 
 4. **Open in browser:**
-   `just serve` opens `http://localhost:8888/apps/playground/?components=local`.
-   Use `just serve cdn` to run the same application with published components.
+   `just serve local` opens `http://localhost:8888/apps/playground/?components=local`.
+   Use `just serve npm` to run the same application with published components.
 
 ## Development Workflow
 
@@ -200,7 +200,7 @@ When adding features, update:
 ## Project Structure
 
 ```
-mp_codemirror/
+stubs_playground/
 ├── .github/
 │   ├── workflows/
 │   │   └── deploy.yml              # GitHub Actions deployment

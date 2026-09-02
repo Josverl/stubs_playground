@@ -13,9 +13,8 @@
 
 <body>
     <header>
-        <a class="header-icon-wrap" href="https://github.com/Josverl/stubs_playground#micropython-stubs-playground"
-            target="_blank" rel="noopener noreferrer"
-            aria-label="Open MicroPython-Stubs Playground repository on GitHub">
+        <a class="header-icon-wrap" href="https://github.com/Josverl/stubs_playground" target="_blank"
+            rel="noopener noreferrer" aria-label="Open MicroPython-Stubs Playground repository on GitHub">
             <img id="headerIcon" alt="Open project on GitHub">
         </a>
         <h1>MicroPython-Stubs Playground</h1>
@@ -62,7 +61,68 @@
             tabindex="0"></div>
         <div class="options-header">
             <h2>Options</h2>
+            <button id="helpBtn" aria-label="Help" title="Help" aria-controls="keyboard-help"
+                aria-expanded="false">?</button>
         </div>
+        <section id="keyboard-help" role="region" aria-labelledby="help-panel-title" hidden>
+            <div class="help-guide">
+                <h2 id="help-panel-title">Using the playground</h2>
+                <ol>
+                    <li>Select the family, version, port, and board for your device.</li>
+                    <li>Load an example or edit a file in the workspace.</li>
+                    <li>Inspect diagnostics, hover for type information, and use completion.</li>
+                </ol>
+                <p class="help-links">
+                    <a id="userGuideLink"
+                        href="https://github.com/Josverl/stubs_playground/blob/main/docs/user-guide.md" target="_blank"
+                        rel="noopener noreferrer">User guide</a>
+                    <span aria-hidden="true">·</span>
+                    <a id="localSetupLink" href="https://micropython-stubs.readthedocs.io/en/main/11_install_stubs.html"
+                        target="_blank" rel="noopener noreferrer">Set up a local project</a>
+                </p>
+            </div>
+            <div class="help-shortcuts">
+                <h2>Keyboard shortcuts</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><kbd>F8</kbd></td>
+                            <td>Next diagnostic &amp; open panel</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>Shift</kbd>+<kbd>F8</kbd></td>
+                            <td>Previous diagnostic</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd></td>
+                            <td>Toggle diagnostics panel</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>Ctrl</kbd>+<kbd>Space</kbd></td>
+                            <td>Autocomplete</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>Ctrl</kbd>+<kbd>/</kbd></td>
+                            <td>Toggle comment</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>Ctrl</kbd>+<kbd>[</kbd> / <kbd>]</kbd></td>
+                            <td>Indent / Dedent</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>[</kbd> / <kbd>]</kbd></td>
+                            <td>Fold / Unfold</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
         <div class="controls">
 
             <div class="sample-selector">
@@ -71,8 +131,6 @@
                 </select>
                 <button id="loadSampleBtn" aria-label="Load selected sample">Load</button>
             </div>
-            <button id="helpBtn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">⌨</button>
-
             <hr class="options-separator">
             <span id="boardLoading" class="loading-indicator" hidden>⏳</span>
 
@@ -174,46 +232,6 @@
             <div id="editor-column">
                 <div id="tab-bar"></div>
                 <div id="editor-container"></div>
-                <div id="keyboard-help" hidden>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Key</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><kbd>F8</kbd></td>
-                                <td>Next diagnostic &amp; open panel</td>
-                            </tr>
-                            <tr>
-                                <td><kbd>Shift</kbd>+<kbd>F8</kbd></td>
-                                <td>Previous diagnostic</td>
-                            </tr>
-                            <tr>
-                                <td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd></td>
-                                <td>Toggle diagnostics panel</td>
-                            </tr>
-                            <tr>
-                                <td><kbd>Ctrl</kbd>+<kbd>Space</kbd></td>
-                                <td>Autocomplete</td>
-                            </tr>
-                            <tr>
-                                <td><kbd>Ctrl</kbd>+<kbd>/</kbd></td>
-                                <td>Toggle comment</td>
-                            </tr>
-                            <tr>
-                                <td><kbd>Ctrl</kbd>+<kbd>[</kbd> / <kbd>]</kbd></td>
-                                <td>Indent / Dedent</td>
-                            </tr>
-                            <tr>
-                                <td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>[</kbd> / <kbd>]</kbd></td>
-                                <td>Fold / Unfold</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
                 <div id="diagnostics-status"><span class="status-main">Errors: <span class="count-error">0</span> |
                         Warnings: <span class="count-warning">0</span> | Info: <span class="count-info">0</span></span>
                 </div>
@@ -223,6 +241,9 @@
 
     <footer>
         <p class="footer-links">
+            <a href="https://github.com/Josverl/stubs_playground" target="_blank" rel="noopener noreferrer">Playground
+                source</a>
+            &
             <a href="https://github.com/josverl/micropython-stubs" target="_blank" rel="noopener">MicroPython-Stubs</a>
             &
             <a href="https://github.com/microsoft/pyright" target="_blank" rel="noopener">Pyright (LSP) </a> &
@@ -231,8 +252,8 @@
         <div class="github-stars" aria-label="GitHub star links">
             <a class="github-button" href="https://github.com/Josverl/micropython-stubs" data-icon="octicon-star"
                 data-show-count="true" aria-label="Star Josverl/micropython-stubs on GitHub">Star</a>
-            <a class="github-button" href="https://github.com/Josverl/mp_codemirror" data-icon="octicon-star"
-                data-show-count="true" aria-label="Star Josverl/mp_codemirror on GitHub">Star</a>
+            <a class="github-button" href="https://github.com/Josverl/stubs_playground" data-icon="octicon-star"
+                data-show-count="true" aria-label="Star Josverl/stubs_playground on GitHub">Star</a>
         </div>
     </footer>
 

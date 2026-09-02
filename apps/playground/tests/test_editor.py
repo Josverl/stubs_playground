@@ -131,6 +131,27 @@ def test_generated_config_button_exists(editor_page):
     expect(editor_page.locator("#openGeneratedConfigBtn")).to_be_visible()
 
 
+def test_help_panel_guides_users_to_browser_and_local_workflows(editor_page):
+    """Help opens with basic guidance and a link to the user guide."""
+    _open_options_panel(editor_page)
+    help_button = editor_page.locator("#helpBtn")
+    help_panel = editor_page.locator("#keyboard-help")
+
+    expect(help_button).to_have_attribute("aria-expanded", "false")
+    help_button.click()
+
+    expect(help_panel).to_be_visible()
+    expect(help_button).to_have_attribute("aria-expanded", "true")
+    expect(help_panel.get_by_role("heading", name="Using the playground")).to_be_visible()
+    expect(help_panel.locator("#userGuideLink")).to_have_attribute(
+        "href",
+        "https://github.com/Josverl/stubs_playground/blob/main/docs/user-guide.md",
+    )
+
+    help_button.click()
+    expect(help_panel).to_be_hidden()
+
+
 def test_generated_config_opens_read_only_tab_when_lsp_ready(editor_page):
     """Open Read-Only creates a pyproject.toml tab with non-editable editor content."""
     lsp_state = editor_page.evaluate(
@@ -183,8 +204,8 @@ def test_footer_has_github_star_buttons_with_counts(editor_page):
     assert 'aria-label="Star Josverl/micropython-stubs on GitHub"' in raw_html, (
         "micropython-stubs star button aria-label missing from source HTML"
     )
-    assert 'aria-label="Star Josverl/mp_codemirror on GitHub"' in raw_html, (
-        "mp_codemirror star button aria-label missing from source HTML"
+    assert 'aria-label="Star Josverl/stubs_playground on GitHub"' in raw_html, (
+        "stubs_playground star button aria-label missing from source HTML"
     )
     assert 'data-show-count="true"' in raw_html, "data-show-count attribute missing from star button source HTML"
 

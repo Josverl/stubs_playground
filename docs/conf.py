@@ -1,4 +1,4 @@
-project = "MicroPython browser type checking"
+project = "MicroPython Stubs Playground"
 author = "Jos Verlinde"
 copyright = "2026, Jos Verlinde"
 
@@ -19,7 +19,7 @@ exclude_patterns = [
 ]
 
 html_theme = "furo"
-html_title = "MicroPython browser type-checking APIs"
+html_title = "MicroPython Stubs Playground"
 
 myst_enable_extensions = [
     "colon_fence",

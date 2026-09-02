@@ -1937,6 +1937,14 @@ function initOptionsPanel() {
             // restore focus to it late in the event cycle.
             moveFocusOutsidePanelIfNeeded();
             setTimeout(moveFocusOutsidePanelIfNeeded, 0);
+            const helpPanel = document.getElementById('keyboard-help');
+            const helpButton = document.getElementById('helpBtn');
+            if (helpPanel instanceof HTMLElement) {
+                helpPanel.hidden = true;
+            }
+            if (helpButton instanceof HTMLElement) {
+                helpButton.setAttribute('aria-expanded', 'false');
+            }
         }
         document.body.classList.toggle('options-panel-open', open);
         if (optionsHeader instanceof HTMLElement) {
@@ -2068,9 +2076,11 @@ export function setEditorContent(content) {
 
 // Event listeners
 document.getElementById('themeToggle').addEventListener('click', toggleTheme);
-document.getElementById('helpBtn').addEventListener('click', () => {
+const helpButton = document.getElementById('helpBtn');
+helpButton.addEventListener('click', () => {
     const panel = document.getElementById('keyboard-help');
     panel.hidden = !panel.hidden;
+    helpButton.setAttribute('aria-expanded', String(!panel.hidden));
 });
 document.getElementById('loadSampleBtn').addEventListener('click', loadSample);
 for (const id of ['stubFamily', 'stubVersion', 'stubPort', 'stubBoard']) {
