@@ -23,7 +23,7 @@ bd where
 
 ## Preferred Route
 
-Use the `bd` CLI when shell access is available. It is the most compact and direct Beads interface.
+Use #beads-mcp-wsl MCP server or the `bd` CLI when shell access is available. It is the most compact and direct Beads interface.
 
 ## Core CLI Workflow
 
