@@ -36,7 +36,7 @@ const [generatedFiles, committedFiles] = await Promise.all([
 assert.deepEqual(
     committedFiles.filter(isDeclaration).sort(),
     generatedFiles.filter(isDeclaration).sort(),
-    'packages/lsp-client/types is out of sync; run "npm run build:types --workspace @mp-codemirror/lsp-client"',
+    'packages/lsp-client/types is out of sync; run "npm run build:types --workspace @mp-typing/lsp-client"',
 );
 
 for (const file of generatedFiles.filter(isDeclaration)) {
@@ -47,13 +47,13 @@ for (const file of generatedFiles.filter(isDeclaration)) {
     assert.equal(
         committed.replaceAll('\r\n', '\n'),
         generated.replaceAll('\r\n', '\n'),
-        `packages/lsp-client/types/${file} is stale; run "npm run build:types --workspace @mp-codemirror/lsp-client"`,
+        `packages/lsp-client/types/${file} is stale; run "npm run build:types --workspace @mp-typing/lsp-client"`,
     );
 }
 
 // Verify the published surface is usable from TypeScript exactly as consumers resolve it.
 const consumerDir = await mkdtemp(join(tmpdir(), 'mp-codemirror-lsp-client-consumer-'));
-const packageDir = join(consumerDir, 'node_modules', '@mp-codemirror', 'lsp-client');
+const packageDir = join(consumerDir, 'node_modules', '@mp-typing', 'lsp-client');
 await mkdir(packageDir, { recursive: true });
 await Promise.all([
     cp(new URL('../packages/lsp-client/package.json', import.meta.url), join(packageDir, 'package.json')),
@@ -82,7 +82,7 @@ await writeFile(
         '    type WorkspaceDiagnostic,',
         '    type InstalledStubPackage,',
         '    type StubPackageCatalogEntry,',
-        "} from '@mp-codemirror/lsp-client';",
+        "} from '@mp-typing/lsp-client';",
         '',
         'export async function start(workerUrl: string, view: EditorView): Promise<void> {',
         '    const config: LSPClientConfig = {',

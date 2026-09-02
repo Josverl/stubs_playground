@@ -48,7 +48,7 @@ try {
     const packageDir = join(
         outputDir,
         'node_modules',
-        '@mp-codemirror',
+        '@mp-typing',
         'pyright-worker',
     );
     const packageSourceDir = join(packageDir, 'src');
@@ -69,8 +69,8 @@ try {
         writeFile(
             join(outputDir, 'consumer.ts'),
             [
-                "import type { WorkerMessage as RootMessage } from '@mp-codemirror/pyright-worker';",
-                "import type { WorkerMessage as SubpathMessage } from '@mp-codemirror/pyright-worker/messages';",
+                "import type { WorkerMessage as RootMessage } from '@mp-typing/pyright-worker';",
+                "import type { WorkerMessage as SubpathMessage } from '@mp-typing/pyright-worker/messages';",
                 'declare const message: RootMessage;',
                 'const compatible: SubpathMessage = message;',
                 'void compatible;',

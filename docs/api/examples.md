@@ -14,7 +14,7 @@ import {
   type LSPClientConfig,
   type LSPClientResult,
   type WorkspaceDiagnostic,
-} from "@mp-codemirror/lsp-client";
+} from "@mp-typing/lsp-client";
 
 const config: LSPClientConfig = {
   workerUrl,
@@ -54,10 +54,10 @@ import {
   createLSPPlugin,
   notifyDocumentChange,
   notifyDocumentClose,
-} from "@mp-codemirror/lsp-client";
+} from "@mp-typing/lsp-client";
 
 const remoteWorker =
-  "https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.4" +
+  "https://cdn.jsdelivr.net/npm/@mp-typing/pyright-worker@0.4.5" +
   "/dist/pyright_worker.js";
 const workerUrl = URL.createObjectURL(new Blob(
   [`importScripts(${JSON.stringify(remoteWorker)});`],

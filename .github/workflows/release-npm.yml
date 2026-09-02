@@ -92,11 +92,11 @@ jobs:
           case "$component" in
             lsp-client)
               package_dir='packages/lsp-client'
-              package_name='@mp-codemirror/lsp-client'
+              package_name='@mp-typing/lsp-client'
               ;;
             pyright-worker)
               package_dir='packages/pyright-worker'
-              package_name='@mp-codemirror/pyright-worker'
+              package_name='@mp-typing/pyright-worker'
               ;;
             *)
               echo "::error::Unknown component '$component'."

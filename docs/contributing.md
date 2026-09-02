@@ -64,9 +64,9 @@ Thank you for your interest in contributing to this project! This document provi
 Both packages are type-checked in CI, and the checks run as part of each
 package's unit test command:
 
-- `@mp-codemirror/pyright-worker` is TypeScript; `npm run test:pyright-worker:unit`
+- `@mp-typing/pyright-worker` is TypeScript; `npm run test:pyright-worker:unit`
   runs `tsc --noEmit` before the tests.
-- `@mp-codemirror/lsp-client` is JavaScript with JSDoc types. Its sources are
+- `@mp-typing/lsp-client` is JavaScript with JSDoc types. Its sources are
   checked with `checkJs` and `noImplicitAny`, so every parameter must carry a
   JSDoc type. `npm run test:lsp-client:unit` regenerates the declarations in
   `packages/lsp-client/types/`, fails if the committed output is stale, and
@@ -75,7 +75,7 @@ package's unit test command:
 After changing JSDoc in `packages/lsp-client/src/`, refresh the declarations:
 
 ```bash
-npm run build:types --workspace @mp-codemirror/lsp-client
+npm run build:types --workspace @mp-typing/lsp-client
 ```
 
    - Test in multiple browsers if possible

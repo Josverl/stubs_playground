@@ -1,4 +1,4 @@
-# @mp-codemirror/lsp-client
+# @mp-typing/lsp-client
 
 Reusable Language Server Protocol integration for CodeMirror 6, including
 diagnostics, completion, hover, document lifecycle helpers, and Web Worker
@@ -7,7 +7,7 @@ transport.
 ## Install
 
 ```bash
-npm install @mp-codemirror/lsp-client \
+npm install @mp-typing/lsp-client \
   @codemirror/autocomplete @codemirror/lint \
   @codemirror/state @codemirror/view
 ```
@@ -18,7 +18,7 @@ npm install @mp-codemirror/lsp-client \
 import {
   createLSPClient,
   createLSPPlugin,
-} from "@mp-codemirror/lsp-client";
+} from "@mp-typing/lsp-client";
 
 const runtime = await createLSPClient({ workerUrl });
 ```
@@ -40,7 +40,7 @@ const extensions = createLSPPlugin(runtime.client, editorView, {
 
 Install `extensions` in a CodeMirror compartment or editor configuration. The
 worker URL is supplied by the host application; use
-`@mp-codemirror/pyright-worker` for the packaged Pyright worker.
+`@mp-typing/pyright-worker` for the packaged Pyright worker.
 
 ## TypeScript
 
@@ -52,7 +52,7 @@ import {
   createLSPClient,
   type LSPClientConfig,
   type LSPClientResult,
-} from "@mp-codemirror/lsp-client";
+} from "@mp-typing/lsp-client";
 
 const config: LSPClientConfig = { workerUrl, diagnosticMode: "workspace" };
 const runtime: LSPClientResult = await createLSPClient(config);

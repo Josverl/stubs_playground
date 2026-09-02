@@ -18,8 +18,8 @@
     "check:worker-protocol-types": "node scripts/check-worker-protocol-types.mjs",
     "check:test-boundaries": "node scripts/check-test-boundaries.mjs",
     "test:app:unit": "npm test --workspace @mp-codemirror/playground",
-    "test:lsp-client:unit": "npm test --workspace @mp-codemirror/lsp-client",
-    "test:pyright-worker:unit": "npm test --workspace @mp-codemirror/pyright-worker",
+    "test:lsp-client:unit": "npm test --workspace @mp-typing/lsp-client",
+    "test:pyright-worker:unit": "npm test --workspace @mp-typing/pyright-worker",
     "test:components:unit": "npm run test:lsp-client:unit && npm run test:pyright-worker:unit",
     "test:unit": "npm run test:app:unit && npm run test:components:unit"
   },

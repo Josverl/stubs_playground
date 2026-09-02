@@ -1,6 +1,6 @@
 # LSP client API
 
-`@mp-codemirror/lsp-client` is the public CodeMirror 6 bridge. Its source entry
+`@mp-typing/lsp-client` is the public CodeMirror 6 bridge. Its source entry
 point is `packages/lsp-client/src/index.js`.
 
 ## Import
@@ -15,15 +15,15 @@ import {
   notifyDocumentChange,
   notifyDocumentClose,
   switchBoard,
-} from "@mp-codemirror/lsp-client";
+} from "@mp-typing/lsp-client";
 ```
 
 The packages are published on npm. Unbundled consumers can load the same files
 from the npm CDN:
 
 ```text
-https://cdn.jsdelivr.net/npm/@mp-codemirror/lsp-client@0.3.4/src/index.js
-https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.4/dist/pyright_worker.js
+https://cdn.jsdelivr.net/npm/@mp-typing/lsp-client@0.3.5/src/index.js
+https://cdn.jsdelivr.net/npm/@mp-typing/pyright-worker@0.4.5/dist/pyright_worker.js
 ```
 
 ## TypeScript
@@ -40,7 +40,7 @@ import {
   type LSPClientConfig,
   type LSPClientResult,
   type WorkspaceDiagnostic,
-} from "@mp-codemirror/lsp-client";
+} from "@mp-typing/lsp-client";
 
 const config: LSPClientConfig = {
   workerUrl,
@@ -63,7 +63,7 @@ the source, so unbundled consumers can vendor them and map the path explicitly:
   "compilerOptions": {
     "moduleResolution": "bundler",
     "paths": {
-      "@mp-codemirror/lsp-client": ["./vendor/lsp-client/types/index.d.ts"]
+      "@mp-typing/lsp-client": ["./vendor/lsp-client/types/index.d.ts"]
     }
   }
 }

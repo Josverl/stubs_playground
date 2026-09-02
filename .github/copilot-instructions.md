@@ -104,7 +104,7 @@ just format
 npm run check:test-boundaries
 npm run check:component-config
 npm run check:worker-protocol-types
-npm run build:types --workspace @mp-codemirror/lsp-client
+npm run build:types --workspace @mp-typing/lsp-client
 ```
 
 `just format` currently formats only `tests/`; format package-owned Python tests
@@ -127,7 +127,7 @@ the workspace package versions; change manifests and run
 
 ### LSP client boundary
 
-`@mp-codemirror/lsp-client` is JavaScript with JSDoc types and generated
+`@mp-typing/lsp-client` is JavaScript with JSDoc types and generated
 declarations. `src/index.js` is the supported public surface; consumers and
 application tests must not import package internals. `SimpleLSPClient` handles
 standard JSON-RPC/LSP, while `WorkerTransport` owns the Pyright worker-specific
@@ -137,13 +137,13 @@ is application-owned.
 When changing a public JSDoc signature, regenerate and commit
 `packages/lsp-client/types/`. Its package test checks declaration drift and a
 real TypeScript consumer import. For a new public module or substantial public
-API change, run `npm run build:types --workspace @mp-codemirror/lsp-client`
+API change, run `npm run build:types --workspace @mp-typing/lsp-client`
 after the first implementation slice, before wiring application or browser
 integration; do not defer JSDoc type errors until the end.
 
 ### Worker boundary
 
-`@mp-codemirror/pyright-worker` bundles Pyright, ZenFS, compatible typeshed, and
+`@mp-typing/pyright-worker` bundles Pyright, ZenFS, compatible typeshed, and
 worker glue. Webpack aliases Node filesystem APIs to ZenFS. The worker mounts
 `/workspace`, `/typings`, `/extra`, `/typeshed-fallback`, and
 `/typeshed-micropython`, then forwards standard LSP messages over `postMessage`.

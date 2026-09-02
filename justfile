@@ -122,10 +122,10 @@ release-lsp-client: (_release-npm "lsp-client" "packages/lsp-client/package.json
 release-pyright-worker: (_release-npm "pyright-worker" "packages/pyright-worker/package.json")
 
 # bump the LSP client version and synchronize generated package metadata
-bump-lsp-client bump="patch": (_bump-npm "lsp-client" "@mp-codemirror/lsp-client" bump)
+bump-lsp-client bump="patch": (_bump-npm "lsp-client" "@mp-typing/lsp-client" bump)
 
 # bump the Pyright worker version and synchronize generated package metadata
-bump-pyright-worker bump="patch": (_bump-npm "pyright-worker" "@mp-codemirror/pyright-worker" bump)
+bump-pyright-worker bump="patch": (_bump-npm "pyright-worker" "@mp-typing/pyright-worker" bump)
 
 [private]
 [script("uv", "run", "python")]
@@ -214,7 +214,7 @@ _release-npm component package_json:
 
     package = json.loads(manifest.read_text(encoding="utf-8"))
     package_name = package.get("name")
-    expected_name = f"@mp-codemirror/{component}"
+    expected_name = f"@mp-typing/{component}"
     if package_name != expected_name:
         raise SystemExit(
             f"Unexpected package name {package_name!r} in {manifest}; "
@@ -233,11 +233,14 @@ _release-npm component package_json:
         capture_output=True,
     )
     if registry.returncode != 0:
-        raise SystemExit(
-            registry.stderr.strip()
-            or f"Unable to query published versions for {package_name}."
-        )
-    published_versions = json.loads(registry.stdout)
+        if "E404" not in registry.stderr:
+            raise SystemExit(
+                registry.stderr.strip()
+                or f"Unable to query published versions for {package_name}."
+            )
+        published_versions = []
+    else:
+        published_versions = json.loads(registry.stdout)
     if version in published_versions:
         raise SystemExit(f"{package_name}@{version} is already published and immutable.")
 
@@ -428,7 +431,7 @@ sizes:
 
     echo "=== CDN Component Sizes ==="
     echo
-    echo "@mp-codemirror/pyright-worker"
+    echo "@mp-typing/pyright-worker"
     worker_gzip=0
     if [ -f packages/pyright-worker/dist/pyright_worker.js ]; then
         worker_size=$(file_size packages/pyright-worker/dist/pyright_worker.js)
@@ -443,7 +446,7 @@ sizes:
     print_file "worker package.json" "packages/pyright-worker/package.json"
 
     echo
-    echo "@mp-codemirror/lsp-client (CDN source modules)"
+    echo "@mp-typing/lsp-client (CDN source modules)"
     lsp_size=0
     lsp_gzip=0
     lsp_count=0

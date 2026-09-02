@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.3.5 - 2026-09-02
+
+### Changed
+
+- Moved the npm package to the `@mp-typing/lsp-client` name.
+
 ## 0.3.4 - 2026-09-01
 
 ### Added

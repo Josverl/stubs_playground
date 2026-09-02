@@ -18,11 +18,11 @@ test('generated npm config matches playground dependencies', async () => {
     const app = JSON.parse(await readFile(new URL('../package.json', import.meta.url)));
     assert.equal(
         componentConfig.lspClient.version,
-        app.dependencies['@mp-codemirror/lsp-client'],
+        app.dependencies['@mp-typing/lsp-client'],
     );
     assert.equal(
         componentConfig.pyrightWorker.version,
-        app.dependencies['@mp-codemirror/pyright-worker'],
+        app.dependencies['@mp-typing/pyright-worker'],
     );
 });
 

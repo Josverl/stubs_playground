@@ -1,6 +1,6 @@
 # Pyright worker API
 
-`@mp-codemirror/pyright-worker` is a prebuilt classic Web Worker containing
+`@mp-typing/pyright-worker` is a prebuilt classic Web Worker containing
 Pyright, ZenFS, typeshed, and bundled MicroPython stubs. The stable control
 contract is declared in
 [`messages.d.ts`](../../packages/pyright-worker/src/messages.d.ts).
@@ -18,7 +18,7 @@ Blob shim:
 
 ```js
 const remoteWorker =
-  "https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.4" +
+  "https://cdn.jsdelivr.net/npm/@mp-typing/pyright-worker@0.4.5" +
   "/dist/pyright_worker.js";
 
 const shim = `importScripts(${JSON.stringify(remoteWorker)});`;

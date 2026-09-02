@@ -103,8 +103,8 @@ The goal is to follow **CodeMirror 6's own plugin conventions**: factory functio
 Two logical packages emerge naturally:
 
 ```
-@mp-codemirror/lsp-client    (Tier 1 + cleaned Tier 2 — reusable LSP bridge)
-@mp-codemirror/pyright-worker (Pyright Web Worker bundle — built artefact)
+@mp-typing/lsp-client    (Tier 1 + cleaned Tier 2 — reusable LSP bridge)
+@mp-typing/pyright-worker (Pyright Web Worker bundle — built artefact)
 ```
 
 The rest of the application (`app.js`, `ui/`, `storage/`, `share.js`) stays in this repo and is
@@ -112,7 +112,7 @@ The rest of the application (`app.js`, `ui/`, `storage/`, `share.js`) stays in t
 
 ---
 
-### 2.2 `@mp-codemirror/lsp-client`
+### 2.2 `@mp-typing/lsp-client`
 
 #### Transport interface (already stable)
 
@@ -255,14 +255,14 @@ CodeMirror tooltip lifecycle (LSP request, range mapping, tooltip creation).
 
 ---
 
-### 2.3 `@mp-codemirror/pyright-worker` (built artifact)
+### 2.3 `@mp-typing/pyright-worker` (built artifact)
 
 This is the compiled `packages/pyright-worker/dist/pyright_worker.js` published to npm, so
 consumers reference the built file directly:
 
 ```js
 const workerUrl =
-  'https://cdn.jsdelivr.net/npm/@mp-codemirror/pyright-worker@0.4.1/dist/pyright_worker.js';
+  'https://cdn.jsdelivr.net/npm/@mp-typing/pyright-worker@0.4.1/dist/pyright_worker.js';
 ```
 
 The worker's internal control-plane protocol (`serverLoaded` / `initServer` / `serverInitialized`)
@@ -276,9 +276,9 @@ be published as TypeScript declarations.
 ### Option A: npm (selected)
 
 Both components are published under the `@mp-codemirror` scope. Bundled applications install
-exact package versions and commit their lockfile. ViperIDE imports `@mp-codemirror/lsp-client`
+exact package versions and commit their lockfile. ViperIDE imports `@mp-typing/lsp-client`
 through Rollup's normal node resolver and copies the installed
-`@mp-codemirror/pyright-worker` `dist/` and `assets/` directories into its static build.
+`@mp-typing/pyright-worker` `dist/` and `assets/` directories into its static build.
 This keeps the package manifest and lockfile as the only version authority.
 
 ### Option B: immutable CDN versions
@@ -289,7 +289,7 @@ Point unbundled consumers at the npm CDN, pinning an exact version:
 <script type="importmap">
 {
   "imports": {
-    "@mp-codemirror/lsp-client": "https://cdn.jsdelivr.net/npm/@mp-codemirror/lsp-client@0.3.2/src/index.js"
+    "@mp-typing/lsp-client": "https://cdn.jsdelivr.net/npm/@mp-typing/lsp-client@0.3.2/src/index.js"
   }
 }
 </script>
@@ -709,10 +709,10 @@ multi-browser coverage and the optional MCP exposure decision.
    bundle, document versions, diagnostic status, editor bindings, persistent workspace files, and
    lifecycle.
   `typechecking_assets.js` owns runtime asset loading from the static build.
-2. ViperIDE imports `@mp-codemirror/lsp-client` from npm through
+2. ViperIDE imports `@mp-typing/lsp-client` from npm through
   `@rollup/plugin-node-resolve`, using the exact version declared in ViperIDE's package manifest
   and lockfile. The former restricted HTTPS-module loader has been removed.
-3. Rollup copies the installed `@mp-codemirror/pyright-worker` `dist/` and `assets/` trees into
+3. Rollup copies the installed `@mp-typing/pyright-worker` `dist/` and `assets/` trees into
   ViperIDE's build. The browser starts that same-origin worker directly, so no CDN URL, duplicate
   version pin, or Blob worker shim remains.
 4. Each editable `.py` `EditorView` receives its own LSP `Compartment` and URI derived from the
@@ -835,8 +835,8 @@ Allow downloading/using , additional, type stubs from PyPI [Only Advanced mode ?
 - Markdown documentation to be published via Sphinx to RTD
 
 
-1. Completed: publish both packages to npm as `@mp-codemirror/lsp-client` and
-  `@mp-codemirror/pyright-worker`.
+1. Completed: publish both packages to npm as `@mp-typing/lsp-client` and
+  `@mp-typing/pyright-worker`.
 2. Completed: ViperIDE declares exact package versions only in `package.json`; `package-lock.json`
   records the resolved artifacts. Source and Rollup configuration contain no duplicated version
   constants. Rollup resolves the client package and copies the installed worker package by name.

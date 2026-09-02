@@ -9,7 +9,7 @@ package and the tagged CDN tree.
 Refresh them after changing any JSDoc in `src/`:
 
 ```bash
-npm run build:types --workspace @mp-codemirror/lsp-client
+npm run build:types --workspace @mp-typing/lsp-client
 ```
 
 CI fails if the committed output is stale, via

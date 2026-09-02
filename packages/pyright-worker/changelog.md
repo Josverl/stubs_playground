@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.4.5 - 2026-09-02
+
+### Changed
+
+- Moved the npm package to the `@mp-typing/pyright-worker` name.
+
 ## 0.4.4 - 2026-09-01
 
 ### Added

@@ -7,7 +7,7 @@
     <title>mp-codemirror — CDN consumer harness</title>
     <!--
       Minimal standalone harness that embeds the reusable LSP components using
-      ONLY the public API (@mp-codemirror/lsp-client + the Pyright worker).
+    ONLY the public API (@mp-typing/lsp-client + the Pyright worker).
       It deliberately does not import app.js, ui/, storage/, or share.js.
 
       Sources are switchable via query params so the same page validates both
@@ -86,8 +86,8 @@
         import {diagnosticCount} from '@codemirror/lint';
 
         const params = new URLSearchParams(location.search);
-        const CLIENT_PACKAGE = '@mp-codemirror/lsp-client';
-        const WORKER_PACKAGE = '@mp-codemirror/pyright-worker';
+        const CLIENT_PACKAGE = '@mp-typing/lsp-client';
+        const WORKER_PACKAGE = '@mp-typing/pyright-worker';
         const cdn = (pkg, version, path) =>
             `https://cdn.jsdelivr.net/npm/${pkg}@${version}/${path}`;
         // Required rather than defaulted so a stale pinned version cannot go unnoticed.

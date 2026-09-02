@@ -69,9 +69,9 @@ The LSP bridge and the Pyright Web Worker are packaged as two independently
 versioned, reusable components for other CodeMirror 6 editors (e.g.
 [ViperIDE](https://github.com/Josverl/ViperIDE)):
 
-- `@mp-codemirror/lsp-client` — the LSP bridge
+- `@mp-typing/lsp-client` — the LSP bridge
   (`packages/lsp-client/src/index.js`)
-- `@mp-codemirror/pyright-worker` — the pre-built Pyright worker
+- `@mp-typing/pyright-worker` — the pre-built Pyright worker
   (`packages/pyright-worker/dist/pyright_worker.js`)
 
 Custom worker implementations can use the stable control-plane types published as

@@ -2,7 +2,7 @@
 
 > **Legacy distribution path:** The CDN instructions below remain available for unbundled
 > applications and older releases. Bundled applications such as ViperIDE should install
-> `@mp-codemirror/lsp-client` and `@mp-codemirror/pyright-worker` from npm, resolve the client
+> `@mp-typing/lsp-client` and `@mp-typing/pyright-worker` from npm, resolve the client
 > normally, and copy the worker package's `dist/` and `assets/` directories into their static
 > output. Package versions should be owned by the application's manifest and lockfile.
 
@@ -12,8 +12,8 @@ type checking without npm, a bundler, or a server.
 
 | Component | What it is | Served from |
 |-----------|------------|-------------|
-| `@mp-codemirror/lsp-client` | Reusable LSP bridge for CodeMirror 6 (client, transport, diagnostics, completion, hover, markdown renderer) | `packages/lsp-client/src/index.js` at tag `lsp-client-v<version>` |
-| `@mp-codemirror/pyright-worker` | Pre-built Pyright Web Worker bundle (~9 MB) with typeshed + default MicroPython stubs inlined | `packages/pyright-worker/dist/pyright_worker.js` at tag `pyright-worker-v<version>` |
+| `@mp-typing/lsp-client` | Reusable LSP bridge for CodeMirror 6 (client, transport, diagnostics, completion, hover, markdown renderer) | `packages/lsp-client/src/index.js` at tag `lsp-client-v<version>` |
+| `@mp-typing/pyright-worker` | Pre-built Pyright Web Worker bundle (~9 MB) with typeshed + default MicroPython stubs inlined | `packages/pyright-worker/dist/pyright_worker.js` at tag `pyright-worker-v<version>` |
 
 The currently published v0.2.1 artifacts follow **Option B — CDN-only** from the
 [`component-reusability-plan.md`](https://github.com/Josverl/stubs_playground/blob/integrate/docs/component-reusability-plan.md):
@@ -113,7 +113,7 @@ dedicated tag rather than uploaded as a release asset.
 
 ---
 
-## 2. `@mp-codemirror/lsp-client` — import map + peer dependencies
+## 2. `@mp-typing/lsp-client` — import map + peer dependencies
 
 The library imports bare `@codemirror/*` specifiers and does **not** bundle them, so
 the consuming page supplies them via an [import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap).
@@ -143,7 +143,7 @@ work together:
 <script type="importmap">
 {
   "imports": {
-    "@mp-codemirror/lsp-client": "https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.1/packages/lsp-client/src/index.js",
+    "@mp-typing/lsp-client": "https://cdn.jsdelivr.net/gh/Josverl/stubs_playground@lsp-client-v0.2.1/packages/lsp-client/src/index.js",
 
     "@codemirror/state": "https://esm.sh/@codemirror/state@6.6.0",
     "@codemirror/view": "https://esm.sh/@codemirror/view@6.41.1?deps=@codemirror/state@6.6.0",
@@ -199,7 +199,7 @@ complete prior result is supplied.
 
 ---
 
-## 3. `@mp-codemirror/pyright-worker` — cross-origin worker
+## 3. `@mp-typing/pyright-worker` — cross-origin worker
 
 The worker is a **classic** worker started with `new Worker(url)`. Browsers block
 constructing a `Worker` from a **cross-origin** script URL, so a CDN-hosted worker
@@ -304,7 +304,7 @@ board while keeping the bundled archive as an offline fallback, pass:
 import { EditorView, basicSetup } from 'https://esm.sh/codemirror@6.0.1';
 import { Compartment } from '@codemirror/state';
 import { python } from '@codemirror/lang-python'; // add to the import map too
-import { createLSPClient, createLSPPlugin } from '@mp-codemirror/lsp-client';
+import { createLSPClient, createLSPPlugin } from '@mp-typing/lsp-client';
 
 const workerUrl = makeSameOriginWorkerUrl(WORKER_CDN_URL); // from §3
 

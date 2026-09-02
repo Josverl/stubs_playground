@@ -72,7 +72,7 @@ def test_local_mode_uses_workspace_component_interfaces(page: Page, project_serv
     assert state["activeBoard"] == "esp32"
     assert state["source"]["mode"] == "local"
     assert state["runtimeSource"] == "remote"
-    assert state["runtimeId"].startswith("@mp-codemirror/pyright-worker@")
+    assert state["runtimeId"].startswith("@mp-typing/pyright-worker@")
     assert state["runtimeFallbacks"] == []
     assert "Pyright" in state["status"]
     assert any("/apps/playground/app.js" in url for url in requests)

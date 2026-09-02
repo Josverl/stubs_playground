@@ -1,11 +1,11 @@
 /**
- * Public API surface for @mp-codemirror/lsp-client
+ * Public API surface for @mp-typing/lsp-client
  * 
  * This entry point consolidates all stable, reusable exports from the LSP library.
  * Consumers should import from this file, not from individual modules.
  * 
  * Example:
- *   import { createLSPClient, createLSPPlugin } from '@mp-codemirror/lsp-client';
+ *   import { createLSPClient, createLSPPlugin } from '@mp-typing/lsp-client';
  */
 
 // Transport layer

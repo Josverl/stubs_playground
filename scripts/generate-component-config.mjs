@@ -49,12 +49,12 @@ export async function createComponentConfig() {
     const clientVersion = requireDependencyVersion(
         app,
         client,
-        '@mp-codemirror/lsp-client',
+        '@mp-typing/lsp-client',
     );
     const workerVersion = requireDependencyVersion(
         app,
         worker,
-        '@mp-codemirror/pyright-worker',
+        '@mp-typing/pyright-worker',
     );
     return {
         lspClient: {
