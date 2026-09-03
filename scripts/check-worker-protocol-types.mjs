@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const tscPath = require.resolve('typescript/bin/tsc');
-const outputDir = await mkdtemp(join(tmpdir(), 'mp-codemirror-worker-types-'));
+const outputDir = await mkdtemp(join(tmpdir(), 'mp-typing-worker-types-'));
 
 function runTsc(args, cwd) {
     const result = spawnSync(process.execPath, [tscPath, ...args], {

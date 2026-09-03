@@ -79,7 +79,7 @@ def test_local_mode_uses_workspace_component_interfaces(page: Page, project_serv
     assert any("/packages/lsp-client/src/index.js" in url for url in requests)
     assert any("/packages/pyright-worker/dist/pyright_worker.js" in url for url in requests)
     assert any("/packages/pyright-worker/assets/runtime-manifest.json" in url for url in requests)
-    assert not any("cdn.jsdelivr.net/npm/@mp-codemirror/" in url for url in requests)
+    assert not any("cdn.jsdelivr.net/npm/@mp-typing/" in url for url in requests)
     RESULTS.mkdir(exist_ok=True)
     page.screenshot(path=RESULTS / "playground-runtime-manifest.png", full_page=True)
 

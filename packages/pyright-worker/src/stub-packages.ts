@@ -12,7 +12,7 @@ import type {
 } from "./messages";
 
 const PYPI_JSON_BASE = "https://pypi.org/pypi";
-const DATABASE_NAME = "mp-codemirror-stub-packages";
+const DATABASE_NAME = "mp-typing-stub-packages";
 const DATABASE_VERSION = 1;
 const PACKAGE_STORE = "packages";
 const MAX_WHEEL_BYTES = 15 * 1024 * 1024;
@@ -844,6 +844,10 @@ export async function installStubPackage(
     };
     if (Date.now() >= deadlineAt) throw new Error("Stub package installation timed out");
     await saveCachedPackage(record, deadlineAt);
+    console.info(
+        `[pyright-worker] Downloaded stub package ${record.packageName}@${record.version}`
+        + ` (${Object.keys(record.files).length} files)`,
+    );
     return publicInstalledPackage(record);
 }
 

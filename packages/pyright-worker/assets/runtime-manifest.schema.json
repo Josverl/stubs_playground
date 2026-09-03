@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://mp-codemirror.github.io/schemas/runtime-manifest.schema.json",
+  "$id": "https://mp-typing.github.io/schemas/runtime-manifest.schema.json",
   "title": "Pyright worker runtime manifest",
   "type": "object",
   "additionalProperties": false,

@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 const tscPath = require.resolve('typescript/bin/tsc');
 const repoRoot = new URL('..', import.meta.url);
 const committedTypesDir = new URL('../packages/lsp-client/types/', import.meta.url);
-const generatedDir = await mkdtemp(join(tmpdir(), 'mp-codemirror-lsp-client-types-'));
+const generatedDir = await mkdtemp(join(tmpdir(), 'mp-typing-lsp-client-types-'));
 
 function runTsc(args, cwd) {
     const result = spawnSync(process.execPath, [tscPath, ...args], { cwd, encoding: 'utf8' });
@@ -52,7 +52,7 @@ for (const file of generatedFiles.filter(isDeclaration)) {
 }
 
 // Verify the published surface is usable from TypeScript exactly as consumers resolve it.
-const consumerDir = await mkdtemp(join(tmpdir(), 'mp-codemirror-lsp-client-consumer-'));
+const consumerDir = await mkdtemp(join(tmpdir(), 'mp-typing-lsp-client-consumer-'));
 const packageDir = join(consumerDir, 'node_modules', '@mp-typing', 'lsp-client');
 await mkdir(packageDir, { recursive: true });
 await Promise.all([

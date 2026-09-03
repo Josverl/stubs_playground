@@ -39,7 +39,7 @@ implemented workspace/package boundaries.
 >   settings system, with safe worker reconfiguration and cross-browser E2E coverage. The
 >   consumer list excludes the internal `stdlib` debug bundle and shows normalized releases.
 > - *August 2026 npm consumer update* — migrated ViperIDE from tagged GitHub/jsDelivr
->   artifacts to the published `@mp-codemirror` packages. Exact versions now live only in
+>   artifacts to the published `@mp-typing` packages. Exact versions now live only in
 >   ViperIDE's package manifest and lockfile; Rollup resolves the client normally and copies
 >   the installed worker distribution into the static build.
 
@@ -275,7 +275,7 @@ be published as TypeScript declarations.
 
 ### Option A: npm (selected)
 
-Both components are published under the `@mp-codemirror` scope. Bundled applications install
+Both components are published under the `@mp-typing` scope. Bundled applications install
 exact package versions and commit their lockfile. ViperIDE imports `@mp-typing/lsp-client`
 through Rollup's normal node resolver and copies the installed
 `@mp-typing/pyright-worker` `dist/` and `assets/` directories into its static build.

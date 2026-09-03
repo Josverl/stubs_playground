@@ -454,6 +454,15 @@ async function handleInitServer(msg: MsgInitServer) {
                 `Cached board stub package not found: ${msg.boardStubPackage.packageName}${requestedVersion}`,
             );
         }
+        if (msg.boardStubPackage && !selectedBoardPackage) {
+            const requestedVersion = msg.boardStubPackage.version
+                ? `@${msg.boardStubPackage.version}`
+                : '';
+            console.info(
+                `[pyright-worker] Stub package ${msg.boardStubPackage.packageName}${requestedVersion}`
+                + " not cached; using bundled stubs",
+            );
+        }
 
         // Deactivate/clear any previously cached board stub packages to prevent them
         // from leaking into the 'extra stubs' state and piling up after a board switch.
@@ -490,8 +499,10 @@ async function handleInitServer(msg: MsgInitServer) {
 
         if (selectedBoardPackage) {
             writePackageFiles("/typings", selectedBoardPackage.files);
-            logVerbose(
-                `[pyright-worker] Using cached ${selectedBoardPackage.packageName}@${selectedBoardPackage.version}`,
+            console.info(
+                `[pyright-worker] Using stub package ${selectedBoardPackage.packageName}`
+                + `@${selectedBoardPackage.version}`
+                + ` (${Object.keys(selectedBoardPackage.files).length} files)`,
             );
         }
 

@@ -1,7 +1,7 @@
 {
-  "name": "mp-codemirror-monorepo",
+  "name": "mp-typing-monorepo",
   "version": "0.2.1",
-  "description": "CodeMirror MicroPython playground and reusable browser LSP packages",
+  "description": "MicroPython playground and reusable browser LSP packages",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -17,7 +17,7 @@
     "check:component-config": "node scripts/generate-component-config.mjs --check",
     "check:worker-protocol-types": "node scripts/check-worker-protocol-types.mjs",
     "check:test-boundaries": "node scripts/check-test-boundaries.mjs",
-    "test:app:unit": "npm test --workspace @mp-codemirror/playground",
+    "test:app:unit": "npm test --workspace @mp-typing/playground",
     "test:lsp-client:unit": "npm test --workspace @mp-typing/lsp-client",
     "test:pyright-worker:unit": "npm test --workspace @mp-typing/pyright-worker",
     "test:components:unit": "npm run test:lsp-client:unit && npm run test:pyright-worker:unit",

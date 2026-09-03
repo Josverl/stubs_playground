@@ -155,7 +155,7 @@ board packages are rejected because board packages must be selected explicitly.
 
 ### Persistence and activation
 
-The IndexedDB database is `mp-codemirror-stub-packages`, store `packages`.
+The IndexedDB database is `mp-typing-stub-packages`, store `packages`.
 Records are restored before Pyright configuration is generated on later worker
 starts.
 

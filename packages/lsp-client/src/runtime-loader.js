@@ -3,8 +3,8 @@ import {
     MIN_SUPPORTED_WORKER_PROTOCOL_VERSION,
 } from './worker-transport.js';
 
-const DEFAULT_CACHE_NAME = 'mp-codemirror-worker-runtimes-v1';
-const DEFAULT_STORAGE_KEY = 'mp-codemirror:last-known-good-runtime';
+const DEFAULT_CACHE_NAME = 'mp-typing-worker-runtimes-v1';
+const DEFAULT_STORAGE_KEY = 'mp-typing:last-known-good-runtime';
 const MAX_MANIFEST_BYTES = 256 * 1024;
 const MAX_WORKER_BYTES = 16 * 1024 * 1024;
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
