@@ -2,12 +2,12 @@
 export const componentConfig = Object.freeze({
     "lspClient": {
         "packageName": "@mp-typing/lsp-client",
-        "version": "0.3.5",
+        "version": "0.3.6",
         "entry": "src/index.js"
     },
     "pyrightWorker": {
         "packageName": "@mp-typing/pyright-worker",
-        "version": "0.4.5",
+        "version": "0.4.6",
         "worker": "dist/pyright_worker.js",
         "assets": "assets"
     }
