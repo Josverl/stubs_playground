@@ -34,7 +34,7 @@ jobs:
   release:
     if: github.event_name != 'push' || github.event.deleted == false
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout release source
         uses: actions/checkout@v6
@@ -235,22 +235,24 @@ jobs:
         run: npm publish "./$PACKAGE_DIR" --tag "$NPM_TAG"
 
       - name: Verify published registry version
+        timeout-minutes: 11
         env:
           PACKAGE_NAME: ${{ steps.meta.outputs.package_name }}
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 12); do
+          for attempt in $(seq 1 120); do
             published=$(npm view "$PACKAGE_NAME@$VERSION" version --json 2>/dev/null || true)
             if [ "$published" = "\"$VERSION\"" ]; then
               echo "Verified $PACKAGE_NAME@$VERSION on npm."
               exit 0
             fi
-            if [ "$attempt" -lt 12 ]; then
+            if [ "$attempt" -lt 120 ]; then
+              echo "Waiting for npm automated review ($attempt/120)..."
               sleep 5
             fi
           done
-          echo "::error::npm did not serve $PACKAGE_NAME@$VERSION after publication."
+          echo "::error::npm did not serve $PACKAGE_NAME@$VERSION within 10 minutes after publication."
           exit 1
 
       - name: Create and push the immutable version tag
