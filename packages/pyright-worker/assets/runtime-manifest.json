@@ -1,6 +1,6 @@
 {
   "$schema": "runtime-manifest.schema.json",
-  "runtimeId": "@mp-typing/pyright-worker@0.4.5+sha256.0d5b071bf3e672ee25999f9ff3ea3013eaeaaf36ef9a73a75acd86cb60d62ec9",
+  "runtimeId": "@mp-typing/pyright-worker@0.4.5+sha256.f8097639d844344dd2963d2a9b5962427d4e47ab5b2bdf178d10e7e33d4f0faa",
   "schemaVersion": 1,
   "package": {
     "name": "@mp-typing/pyright-worker",
@@ -9,11 +9,11 @@
   "worker": {
     "url": "../dist/pyright_worker.js",
     "size": 5378224,
-    "sha256": "53e75ecdc41a256e47098b4366c8164b7d914dfa1ec2ae9ab027ce9d39e80f77"
+    "sha256": "d152afe4df11b686a243b0534a379b396de6886c494bc48ddaadbb1094527556"
   },
-  "pyrightVersion": "1.1.386",
+  "pyrightVersion": "1.1.412",
   "typeshed": {
-    "identity": "pyright@1.1.386/typeshed-fallback",
+    "identity": "pyright@1.1.412/typeshed-fallback",
     "url": "typeshed-fallback.zip",
     "size": 593836,
     "sha256": "bc9f9529931540a04e0a849d44d4ef4cca43f0db1a3a266a65641b70ecc1a91e"

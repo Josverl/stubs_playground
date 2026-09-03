@@ -6,7 +6,7 @@ const os = require("os");
 // Extract pyright version from the git tag in package.json
 // e.g. "git+https://github.com/microsoft/pyright.git#1.1.386" → "1.1.386"
 function getPyrightVersion() {
-    const pkgJson = require("./package.json");
+    const pkgJson = require("./packages/pyright-worker/package.json");
     const dep = pkgJson.devDependencies?.pyright || "";
     const tag = dep.includes("#") ? dep.split("#").pop() : "";
     return tag || "unknown";

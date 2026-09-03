@@ -13,6 +13,7 @@
     "assets/",
     "dist/",
     "changelog.md",
+    "THIRD_PARTY_LICENSES.txt",
     "src/declarations.d.ts",
     "src/messages.d.ts"
   ],
@@ -22,6 +23,9 @@
   "scripts": {
     "test": "npm run typecheck && node ../../scripts/check-worker-protocol-types.mjs && node --test tests/*.unit.mjs",
     "typecheck": "tsc --noEmit -p ../../tsconfig.json"
+  },
+  "devDependencies": {
+    "pyright": "git+https://github.com/microsoft/pyright.git#1.1.412"
   },
   "types": "./src/messages.d.ts",
   "exports": {

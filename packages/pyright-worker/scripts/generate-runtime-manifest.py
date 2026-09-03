@@ -31,11 +31,11 @@ def _asset(path: Path, url: str) -> dict[str, object]:
     }
 
 
-def _pyright_version(root: Path) -> str:
-    dependency = _read_json(root / "package.json").get("devDependencies", {}).get("pyright", "")
+def _pyright_version(package: dict) -> str:
+    dependency = package.get("devDependencies", {}).get("pyright", "")
     _, separator, version = dependency.rpartition("#")
     if not separator or not version:
-        raise ValueError("The root pyright dependency must contain an exact #version")
+        raise ValueError("The worker pyright dependency must contain an exact #version")
     return version
 
 
@@ -55,7 +55,7 @@ def build_runtime_manifest(root: Path = ROOT) -> dict:
     package = _read_json(package_root / "package.json")
     package_name = package["name"]
     package_version = package["version"]
-    pyright_version = _pyright_version(root)
+    pyright_version = _pyright_version(package)
 
     worker = _asset(package_root / "dist" / "pyright_worker.js", "../dist/pyright_worker.js")
     typeshed = _asset(assets / "typeshed-fallback.zip", "typeshed-fallback.zip")
@@ -112,9 +112,7 @@ def build_runtime_manifest(root: Path = ROOT) -> dict:
         "catalog": catalog,
         "fallbackArchives": fallback_archives,
     }
-    content_id = hashlib.sha256(
-        json.dumps(runtime, sort_keys=True, separators=(",", ":")).encode()
-    ).hexdigest()
+    content_id = hashlib.sha256(json.dumps(runtime, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return {
         "$schema": "runtime-manifest.schema.json",
         "runtimeId": f"{package_name}@{package_version}+sha256.{content_id}",

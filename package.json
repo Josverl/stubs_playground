@@ -34,7 +34,6 @@
     "crypto-browserify": "^3.12.1",
     "os-browserify": "^0.3.0",
     "process": "^0.11.10",
-    "pyright": "git+https://github.com/microsoft/pyright.git#1.1.386",
     "stream-browserify": "^3.0.0",
     "ts-loader": "^9.5.1",
     "typescript": "^5.5.0",

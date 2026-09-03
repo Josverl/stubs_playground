@@ -38,10 +38,13 @@ def _runtime_tree(tmp_path: Path) -> Path:
     package_root = root / "packages" / "pyright-worker"
     assets = package_root / "assets"
     _write_json(
-        root / "package.json",
-        {"devDependencies": {"pyright": "git+https://example.test/pyright.git#1.2.3"}},
+        package_root / "package.json",
+        {
+            "name": "@example/worker",
+            "version": "4.5.6",
+            "devDependencies": {"pyright": "git+https://example.test/pyright.git#1.2.3"},
+        },
     )
-    _write_json(package_root / "package.json", {"name": "@example/worker", "version": "4.5.6"})
     (package_root / "dist").mkdir(parents=True)
     (package_root / "dist" / "pyright_worker.js").write_bytes(b"worker")
     _write_zip(assets / "typeshed-fallback.zip")
