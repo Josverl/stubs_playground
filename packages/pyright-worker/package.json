@@ -1,6 +1,6 @@
 {
   "name": "@mp-typing/pyright-worker",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "description": "Worker-side protocol contract and packaging metadata",
   "license": "MIT",
   "repository": {

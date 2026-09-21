@@ -7,7 +7,7 @@ export const componentConfig = Object.freeze({
     },
     "pyrightWorker": {
         "packageName": "@mp-typing/pyright-worker",
-        "version": "0.4.7",
+        "version": "0.4.8",
         "worker": "dist/pyright_worker.js",
         "assets": "assets"
     }

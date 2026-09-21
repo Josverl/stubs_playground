@@ -7,6 +7,6 @@
   },
   "dependencies": {
     "@mp-typing/lsp-client": "0.3.6",
-    "@mp-typing/pyright-worker": "0.4.7"
+    "@mp-typing/pyright-worker": "0.4.8"
   }
 }

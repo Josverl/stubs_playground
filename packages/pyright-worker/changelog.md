@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.4.8 - 2026-09-22
+
+### Security
+
+- Upgraded fflate 0.8.2 -> 0.8.3 (CVE-2026-45820), fixing an infinite loop in
+  `unzipSync` on a malformed ZIP64 archive. The worker unzips downloaded stub
+  wheels, so a crafted wheel could hang it.
+
 ### Changed
 
 - `listStubPackages` now derives the offered versions from the catalog's
