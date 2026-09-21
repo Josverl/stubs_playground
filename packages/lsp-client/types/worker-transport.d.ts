@@ -444,21 +444,21 @@ export type WorkerFsEntry = {
 };
 export type StubPackageRelease = {
     /**
-     * - PyPI release version.
+     * - Installable release version, possibly a `1.29.0.*` wildcard.
      */
     version: string;
     /**
-     * - Selected universal wheel filename.
+     * - Selected universal wheel filename, when known from PyPI.
      */
-    filename: string;
+    filename?: string;
     /**
-     * - Wheel size in bytes.
+     * - Wheel size in bytes, when known from PyPI.
      */
-    size: number;
+    size?: number;
     /**
-     * - PyPI upload timestamp.
+     * - PyPI upload timestamp, when known from PyPI.
      */
-    uploadTime: string;
+    uploadTime?: string;
 };
 export type StubPackageCatalogEntry = {
     /**

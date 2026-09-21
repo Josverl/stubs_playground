@@ -87,8 +87,9 @@ The worker discovers releases from PyPI, validates a universal type-stub wheel,
 and persists it in IndexedDB. Pyright restarts so the installed package becomes
 available. Reload the page to confirm that the cached package is reused.
 
-Catalog suggestions cover known MicroPython packages, but versions are obtained
-from PyPI at runtime rather than pinned to the worker release. The detailed
+Catalog suggestions cover known MicroPython packages, and the offered versions come
+from the catalog itself as `1.29.0.*` specifiers, so the list is available offline.
+Only the install resolves a concrete release from PyPI. The detailed
 package rules and security limits are documented in the
 [Pyright worker API](api/pyright-worker.md#runtime-stub-packages).
 

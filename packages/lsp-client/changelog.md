@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+
+- `StubPackageRelease.filename`, `.size`, and `.uploadTime` are optional. The
+  worker now derives most releases from its catalog, where no wheel metadata
+  exists, and `version` may be a `1.29.0.*` specifier.
+
 ## 0.3.5 - 2026-09-02
 
 ### Changed

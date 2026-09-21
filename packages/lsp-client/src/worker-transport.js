@@ -59,10 +59,10 @@ const LEGACY_WORKER_CAPABILITIES = [
 
 /**
  * @typedef {Object} StubPackageRelease
- * @property {string} version - PyPI release version.
- * @property {string} filename - Selected universal wheel filename.
- * @property {number} size - Wheel size in bytes.
- * @property {string} uploadTime - PyPI upload timestamp.
+ * @property {string} version - Installable release version, possibly a `1.29.0.*` wildcard.
+ * @property {string} [filename] - Selected universal wheel filename, when known from PyPI.
+ * @property {number} [size] - Wheel size in bytes, when known from PyPI.
+ * @property {string} [uploadTime] - PyPI upload timestamp, when known from PyPI.
  */
 
 /**

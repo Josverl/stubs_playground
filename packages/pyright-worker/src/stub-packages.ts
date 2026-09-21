@@ -792,6 +792,17 @@ function matchesCatalogFilters(
     return true;
 }
 
+// Published stub releases are always `{runtimeVersion}.postN`, so the catalog's runtime
+// versions describe the installable set without asking PyPI.
+function catalogReleases(
+    entry: StubPackageCatalogEntry,
+    requestedVersion: string,
+): StubPackageRelease[] {
+    return entry.runtimeVersions
+        .filter((version) => !requestedVersion || majorMinorVersion(version) === requestedVersion)
+        .map((version) => ({ version: `${version}.*` }));
+}
+
 function publicInstalledPackage(record: CachedStubPackage): InstalledStubPackage {
     return {
         packageName: record.packageName,
@@ -821,10 +832,22 @@ export async function listAvailableStubPackages(
         version: filters.version ?? (resolvedFamily === "micropython" ? defaultRuntimeVersion() : ""),
     };
     const publicCatalog = packageCatalog().filter((entry) => matchesCatalogFilters(entry, resolvedFilters));
+    const requestedVersion = majorMinorVersion(resolvedFilters.version || "");
     return Promise.all(publicCatalog.map(async (catalogEntry) => {
+        const installedVersion = activeVersions.get(catalogEntry.packageName);
+        const knownReleases = catalogReleases(catalogEntry, requestedVersion);
+        if (knownReleases.length > 0) {
+            return {
+                ...catalogEntry,
+                latestVersion: knownReleases[0].version,
+                versions: knownReleases,
+                installedVersion,
+            };
+        }
+
+        // Entries without catalog runtime versions (circuitpython) still need PyPI.
         try {
             const index = await fetchPyPIIndex(catalogEntry.packageName);
-            const requestedVersion = majorMinorVersion(resolvedFilters.version || "");
             const installable = installableReleases(index).filter(
                 (release) => !requestedVersion
                     || majorMinorVersion(release.version) === requestedVersion,
@@ -838,14 +861,14 @@ export async function listAvailableStubPackages(
                 ...catalogEntry,
                 latestVersion,
                 versions,
-                installedVersion: activeVersions.get(catalogEntry.packageName),
+                installedVersion,
             };
         } catch (error) {
             return {
                 ...catalogEntry,
                 latestVersion: "",
                 versions: [],
-                installedVersion: activeVersions.get(catalogEntry.packageName),
+                installedVersion,
                 error: error instanceof Error ? error.message : String(error),
             };
         }
@@ -933,6 +956,7 @@ export function selectCachedBoardPackage(
     return packages.find((entry) => (
         entry.packageName === packageName
         && entry.active
-        && (!selection.version || entry.version === selection.version)
+        // A catalog-derived selection is a `1.29.0.*` specifier, not an exact pin.
+        && (!selection.version || matchesWildcardVersion(entry.version, selection.version))
     ));
 }

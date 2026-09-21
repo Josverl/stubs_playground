@@ -629,7 +629,7 @@
                     version: installed.version,
                     persisted: cached.some((entry) =>
                         entry.packageName === packageName
-                        && entry.version === version
+                        && entry.version === installed.version
                         && entry.active
                     ),
                     mounted: filesystem.entries.some((entry) =>

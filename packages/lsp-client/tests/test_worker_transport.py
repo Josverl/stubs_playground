@@ -262,8 +262,8 @@ def test_worker_transport_syncs_and_deletes_workspace_files(page, test_page_url)
     assert result["absentAfterDelete"] is True
 
 
-def test_worker_transport_lists_current_pypi_stub_releases(page, test_page_url):
-    """The worker groups post releases and omits dependency-only packages."""
+def test_worker_transport_lists_catalog_stub_releases(page, test_page_url):
+    """The worker derives wildcard releases from the catalog and omits dependency-only packages."""
     page.goto(test_page_url, wait_until="domcontentloaded")
 
     result = page.evaluate("""() => window.runTest('stub-package-catalog')""")
@@ -276,6 +276,19 @@ def test_worker_transport_lists_current_pypi_stub_releases(page, test_page_url):
     assert result["includesStdlib"] is False
     assert result["postReleaseVersions"] == []
     assert result["wildcardVersionCount"] > 0
+    assert result["errors"] == []
+
+
+def test_worker_transport_lists_stub_releases_without_pypi(page, test_page_url):
+    """Listing must not depend on pypi.org now that the catalog carries the runtime versions."""
+    page.route("https://pypi.org/**", lambda route: route.abort())
+    page.goto(test_page_url, wait_until="domcontentloaded")
+
+    result = page.evaluate("""() => window.runTest('stub-package-catalog')""")
+
+    assert result["success"] is True
+    assert result["esp32LatestVersion"]
+    assert result["esp32VersionCount"] >= 1
     assert result["errors"] == []
 
 

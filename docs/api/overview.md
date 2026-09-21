@@ -28,7 +28,7 @@ application service around it, as ViperIDE does.
 | Worker control messages | [`packages/pyright-worker/src/messages.d.ts`](../../packages/pyright-worker/src/messages.d.ts) | Correlated main-thread/worker protocol. |
 | ViperIDE lifecycle adapter | [`TypecheckingService`](https://github.com/Josverl/ViperIDE/blob/typechecking_1/src/typechecking_service.js) | Reference integration; copied or imported by a host application. |
 | Board asset metadata | `packages/pyright-worker/assets/stubs-manifest.json` | Runtime manifest, separate from package-release discovery. |
-| Installable package identities | `packages/pyright-worker/assets/stub-package-catalog.json` | Package identities only; versions come from PyPI. |
+| Installable package identities | `packages/pyright-worker/assets/stub-package-catalog.json` | Identities plus runtime versions; the offered version list is derived from them. |
 
 ## Lifecycle invariants
 

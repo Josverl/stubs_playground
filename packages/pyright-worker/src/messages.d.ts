@@ -84,9 +84,9 @@ export interface StubPackageFilters {
 }
 export interface StubPackageRelease {
     version: string;
-    filename: string;
-    size: number;
-    uploadTime: string;
+    filename?: string;
+    size?: number;
+    uploadTime?: string;
 }
 export interface StubPackageCatalogResultEntry extends StubPackageCatalogEntry {
     latestVersion: string;

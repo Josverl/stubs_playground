@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Changed
+
+- `listStubPackages` now derives the offered versions from the catalog's
+  `runtimeVersions` instead of querying PyPI for every matching project, so
+  discovery works offline. Published stub releases are always
+  `{runtimeVersion}.postN`, and the response was already collapsed to a
+  `1.29.0.*` wildcard, so the version strings are unchanged.
+- `latestVersion` is therefore a specifier rather than an exact pin, and
+  `selectCachedBoardPackage` matches a cached package against it as a wildcard.
+- `StubPackageRelease.filename`, `.size`, and `.uploadTime` are optional; they
+  are only known for entries still resolved through PyPI, such as
+  `circuitpython-stubs`, which has no catalog runtime versions.
+
 ## 0.4.7 - 2026-09-21
 
 ### Changed

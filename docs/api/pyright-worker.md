@@ -76,7 +76,7 @@ Every request/response operation uses a caller-generated `requestId`.
 |---|---|---|
 | `syncFile` | none | Write one complete workspace file. |
 | `deleteFile` | none | Delete one workspace file. |
-| `listStubPackages` | `listStubPackagesResult` | Discover catalog releases from PyPI. |
+| `listStubPackages` | `listStubPackagesResult` | Discover catalog releases. |
 | `installStubPackage` | `installStubPackageResult` | Download, validate, extract, and persist a wheel. |
 | `listInstalledStubPackages` | `listInstalledStubPackagesResult` | Read persistent cache metadata. |
 | `clearStubPackages` | `clearStubPackagesResult` | Remove one version, one package, or all packages. |
@@ -97,14 +97,16 @@ provides timeouts, correlation, validation, and teardown.
 
 ### Discovery
 
-`listStubPackages(filters?)` reads package identities from the worker catalog
-and asks PyPI for current releases. Filters may include `family`, `version`,
+`listStubPackages(filters?)` reads package identities and runtime versions from
+the worker catalog. Published stub releases are always `{runtimeVersion}.postN`,
+so the offered versions are derived from the catalog as `1.29.0.*` specifiers
+and discovery needs no network access. Filters may include `family`, `version`,
 `port`, and `board`. MicroPython version matching compares major and minor
 only, so `1.28.0` also selects package metadata for patch and post releases in
 the `1.28` line. If family and version are omitted, the worker selects
 MicroPython and the highest non-preview value in `availableRuntimeVersions`.
-The worker prefers stable releases with compatible universal wheels. Versions
-are not pinned to the worker release.
+A catalog entry without runtime versions, such as `circuitpython-stubs`, still
+falls back to a PyPI query.
 
 `getStubPackageCatalog(filters?)` returns `packages`,
 `availableRuntimeVersions`, and `defaultRuntimeVersion`. `listStubPackages()`
@@ -114,8 +116,9 @@ Each catalog item includes:
 
 - `id`, `packageName`, `label`, and `kind`
 - `family`, `runtimeVersions`, `port`, and `board`
-- `latestVersion`
-- compatible `versions`, including filename, byte size, and upload timestamp
+- `latestVersion`, a specifier such as `1.29.0.*` rather than an exact pin
+- compatible `versions`; `filename`, `size`, and `uploadTime` are present only
+  for entries resolved through PyPI
 - `installedVersion` when an active cached version exists
 - `error` when that package could not be discovered
 

@@ -98,9 +98,10 @@ export interface StubPackageFilters {
 
 export interface StubPackageRelease {
     version: string;
-    filename: string;
-    size: number;
-    uploadTime: string;
+    // Wheel metadata is only known for releases discovered through a PyPI query.
+    filename?: string;
+    size?: number;
+    uploadTime?: string;
 }
 
 export interface StubPackageCatalogResultEntry extends StubPackageCatalogEntry {
