@@ -196,23 +196,44 @@ export function processInline(text) {
     const fragment = document.createDocumentFragment();
     if (!text) return fragment;
 
-    // Combined pattern – order of alternatives matters.
-    // Groups: 1=rst-substitution name, 2=rst-dbl-bt content, 3=rst-role content,
-    //         4=bold content, 5=italic content, 6=code content,
-    //         7=md-link text, 8=md-link url, 9=bare url
-    // RST role syntax: :rolename:`content`  (colon after role name is required)
-    // RST substitution syntax: |name| where name contains word chars / hyphens only
-    const pattern = /\|([A-Za-z][A-Za-z0-9_]*)\||``([^`]+)``|:(?:func|class|meth|attr|mod|const|data|exc|obj|ref|doc):`([^`]+)`|\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|`([^`\n]+)`|\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s<>")\]]+)/g;
+    // Bounds cap regex work for untrusted hover text with missing delimiters.
+    const matchers = [
+        { kind: 'rst-substitution', pattern: /\|([A-Za-z][A-Za-z0-9_]{0,127})\|/g },
+        { kind: 'rst-code', pattern: /``([^`]{1,256})``/g },
+        {
+            kind: 'rst-role',
+            pattern:
+                /:(?:func|class|meth|attr|mod|const|data|exc|obj|ref|doc):`([^`]{1,256})`/g,
+        },
+        { kind: 'bold', pattern: /\*\*([^*\n]{1,256})\*\*/g },
+        { kind: 'italic', pattern: /\*([^*\n]{1,256})\*/g },
+        { kind: 'code', pattern: /`([^`\n]{1,256})`/g },
+        { kind: 'link', pattern: /\[([^\]]{1,256})\]\(([^)]{1,4096})\)/g },
+        { kind: 'url', pattern: /https?:\/\/[^\s<>")\]]{1,4096}/g },
+    ];
+    const candidates = matchers.map(({ pattern }) => pattern.exec(text));
 
     let lastIndex = 0;
-    let match;
 
-    while ((match = pattern.exec(text)) !== null) {
+    while (candidates.some(Boolean)) {
+        let selectedIndex = -1;
+        for (let i = 0; i < candidates.length; i++) {
+            const candidate = candidates[i];
+            if (
+                candidate &&
+                (selectedIndex === -1 || candidate.index < candidates[selectedIndex].index)
+            ) {
+                selectedIndex = i;
+            }
+        }
+
+        const match = candidates[selectedIndex];
+        const { kind } = matchers[selectedIndex];
         if (match.index > lastIndex) {
             fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
         }
 
-        if (match[1] !== undefined) {
+        if (kind === 'rst-substitution') {
             // RST substitution reference: |name|
             const name = match[1];
             const label = RST_SUBSTITUTIONS[name];
@@ -225,51 +246,57 @@ export function processInline(text) {
                 // Unknown substitution — render literally
                 fragment.appendChild(document.createTextNode(`|${name}|`));
             }
-        } else if (match[2] !== undefined) {
+        } else if (kind === 'rst-code') {
             // RST double-backtick inline code: ``code``
             const code = document.createElement('code');
-            code.textContent = match[2];
+            code.textContent = match[1];
             fragment.appendChild(code);
-        } else if (match[3] !== undefined) {
+        } else if (kind === 'rst-role') {
             // RST role :role:`text`
             const code = document.createElement('code');
             code.className = 'cm-hover-rst-ref';
-            code.textContent = match[3];
+            code.textContent = match[1];
             fragment.appendChild(code);
-        } else if (match[4] !== undefined) {
+        } else if (kind === 'bold') {
             // Bold **text**
             const strong = document.createElement('strong');
-            strong.textContent = match[4];
+            strong.textContent = match[1];
             fragment.appendChild(strong);
-        } else if (match[5] !== undefined) {
+        } else if (kind === 'italic') {
             // Italic *text*
             const em = document.createElement('em');
-            em.textContent = match[5];
+            em.textContent = match[1];
             fragment.appendChild(em);
-        } else if (match[6] !== undefined) {
+        } else if (kind === 'code') {
             // Inline code `text`
             const code = document.createElement('code');
-            code.textContent = match[6];
+            code.textContent = match[1];
             fragment.appendChild(code);
-        } else if (match[7] !== undefined) {
+        } else if (kind === 'link') {
             // Markdown link [label](url)
             const a = document.createElement('a');
-            a.href = match[8];
-            a.textContent = match[7];
+            a.href = match[2];
+            a.textContent = match[1];
             a.target = '_blank';
             a.rel = 'noopener noreferrer';
             fragment.appendChild(a);
-        } else if (match[9] !== undefined) {
+        } else if (kind === 'url') {
             // Bare URL
             const a = document.createElement('a');
-            a.href = match[9];
-            a.textContent = match[9];
+            a.href = match[0];
+            a.textContent = match[0];
             a.target = '_blank';
             a.rel = 'noopener noreferrer';
             fragment.appendChild(a);
         }
 
-        lastIndex = pattern.lastIndex;
+        lastIndex = match.index + match[0].length;
+        for (let i = 0; i < candidates.length; i++) {
+            if (candidates[i] && candidates[i].index < lastIndex) {
+                matchers[i].pattern.lastIndex = lastIndex;
+                candidates[i] = matchers[i].pattern.exec(text);
+            }
+        }
     }
 
     if (lastIndex < text.length) {

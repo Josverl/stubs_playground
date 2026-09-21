@@ -39,7 +39,7 @@ export async function decompressCode(encoded) {
 // ---- Project zip helpers (new sharing format) ----
 
 async function encodeProjectFiles(files) {
-    const { strToU8, zipSync } = await import('https://esm.sh/fflate@0.8.2');
+    const { strToU8, zipSync } = await import('https://esm.sh/fflate@0.8.3');
     const zipFiles = {};
     for (const [path, content] of Object.entries(files)) {
         if (!path) continue;
@@ -51,7 +51,7 @@ async function encodeProjectFiles(files) {
 }
 
 async function decodeProjectFiles(encoded) {
-    const { unzipSync, strFromU8 } = await import('https://esm.sh/fflate@0.8.2');
+    const { unzipSync, strFromU8 } = await import('https://esm.sh/fflate@0.8.3');
     const unzipped = unzipSync(base64urlToUint8Array(encoded));
     const files = {};
     for (const [path, data] of Object.entries(unzipped)) {
@@ -71,7 +71,7 @@ function warnLargeSharePayload(byteLength) {
 }
 
 export async function getCompressedProjectByteLength(files) {
-    const { strToU8, zipSync } = await import('https://esm.sh/fflate@0.8.2');
+    const { strToU8, zipSync } = await import('https://esm.sh/fflate@0.8.3');
     const zipFiles = {};
     for (const [path, content] of Object.entries(files)) {
         if (!path) continue;

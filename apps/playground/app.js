@@ -1995,7 +1995,7 @@ function initExportImport() {
 
 async function exportProjectAsZip() {
     // Use fflate loaded from CDN for zero-dependency zip
-    const { strToU8, zipSync } = await import('https://esm.sh/fflate@0.8.2');
+    const { strToU8, zipSync } = await import('https://esm.sh/fflate@0.8.3');
     const files = await OPFSProject.listFiles();
     const zipFiles = {};
     for (const entry of files) {
@@ -2014,7 +2014,7 @@ async function exportProjectAsZip() {
 }
 
 async function importZip(file) {
-    const { unzipSync, strFromU8 } = await import('https://esm.sh/fflate@0.8.2');
+    const { unzipSync, strFromU8 } = await import('https://esm.sh/fflate@0.8.3');
     const buf = await file.arrayBuffer();
     const unzipped = unzipSync(new Uint8Array(buf));
     for (const [path, data] of Object.entries(unzipped)) {

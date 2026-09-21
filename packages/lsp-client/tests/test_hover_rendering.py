@@ -164,6 +164,25 @@ def test_inline_link_opens_new_tab(render_page):
     assert any("noopener" in (r or "") for r in rels)
 
 
+def test_inline_malformed_markup_completes_in_bounded_time(render_page):
+    result = render_page.evaluate(
+        """async () => {
+            const { processInline } =
+                await import('/packages/lsp-client/src/markdown-renderer.js');
+            const input = '*'.repeat(50_000) + '['.repeat(50_000);
+            const started = performance.now();
+            const output = processInline(input);
+            return {
+                elapsed: performance.now() - started,
+                text: output.textContent,
+                input,
+            };
+        }"""
+    )
+    assert result["text"] == result["input"]
+    assert result["elapsed"] < 1_000
+
+
 # ---------------------------------------------------------------------------
 # Block-level: headers
 # ---------------------------------------------------------------------------
