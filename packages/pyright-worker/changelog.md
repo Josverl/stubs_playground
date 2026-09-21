@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.4.7 - 2026-09-21
+
+### Changed
+
+- Cached PyPI project metadata between stub catalog queries. The catalog ships
+  no release data, so each query asked PyPI for every matching project and a
+  single settings refresh repeated those requests for each of its progressively
+  narrower queries. Measured on a page load plus one port change: 174 PyPI
+  requests before, 58 after, for 28 distinct projects.
+
 ## 0.4.5 - 2026-09-02
 
 ### Changed
