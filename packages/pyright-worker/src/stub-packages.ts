@@ -1,4 +1,5 @@
 import { unzipSync } from "fflate";
+import { LRUCache } from "lru-cache";
 
 import bundledStubPackageCatalog from "../assets/stub-package-catalog.json";
 import type {
@@ -21,6 +22,10 @@ const MAX_STUB_FILES = 10_000;
 const MAX_CATALOG_PACKAGES = 1_000;
 const MAX_CATALOG_RUNTIME_VERSIONS = 100;
 const PYPI_REQUEST_TIMEOUT_MS = 15_000;
+// The catalog ships no release data, so one settings refresh asks PyPI for the same
+// projects several times. Short enough that a newly published release stays discoverable.
+const PYPI_INDEX_CACHE_TTL_MS = 5 * 60_000;
+const PYPI_INDEX_CACHE_MAX_ENTRIES = 256;
 const INSTALL_DEADLINE_MS = 55_000;
 const STDLIB_SUPPORT_FILES = new Set([
     "_mpy_shed/mp_implementation.py",
@@ -336,7 +341,34 @@ function releaseFrom(version: string, wheel: PyPIFile): StubPackageRelease {
     };
 }
 
+interface PyPIIndexRequest {
+    packageName: string;
+    version?: string;
+    deadlineAt: number;
+}
+
+// fetch() coalesces concurrent lookups and does not retain rejections.
+const pypiIndexCache = new LRUCache<string, PyPIIndex, PyPIIndexRequest>({
+    max: PYPI_INDEX_CACHE_MAX_ENTRIES,
+    ttl: PYPI_INDEX_CACHE_TTL_MS,
+    fetchMethod: (_key, _staleValue, { context }) =>
+        requestPyPIIndex(context.packageName, context.version, context.deadlineAt),
+});
+
 async function fetchPyPIIndex(
+    packageName: string,
+    version?: string,
+    deadlineAt = Date.now() + PYPI_REQUEST_TIMEOUT_MS,
+): Promise<PyPIIndex> {
+    const key = `${normalizePackageName(packageName)}${version ? `/${version}` : ""}`;
+    const index = await pypiIndexCache.fetch(key, {
+        context: { packageName, version, deadlineAt },
+    });
+    if (!index) throw new Error(`PyPI query returned no data for ${packageName}`);
+    return index;
+}
+
+async function requestPyPIIndex(
     packageName: string,
     version?: string,
     deadlineAt = Date.now() + PYPI_REQUEST_TIMEOUT_MS,
