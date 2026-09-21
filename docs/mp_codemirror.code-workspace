@@ -1,29 +1,28 @@
 {
 	"folders": [
-        {
-            "path": "..",
-            "name": "playground"
-        },
-
-        {
-            "path": "../../ViperIDE",
-            "name": "ViperIDE"
-        },
-        {
-            "path": "../../micropython-unicorn",
-            "name": "unicorn"
-        },        
-        {
-            "path": "../../micropython-stubs",
-            "name": "stubs"
-        },
-        {
-            "path": "../../micropython-stubber",
-            "name": "stubber"
-        }
-    ],
-    "settings": {
-        "workbench.colorCustomizations": {
+		{
+			"path": "..",
+			"name": "playground"
+		},
+		{
+			"path": "../../ViperIDE",
+			"name": "ViperIDE"
+		},
+		{
+			"path": "../../micropython-unicorn",
+			"name": "unicorn"
+		},
+		{
+			"path": "../../micropython-stubs",
+			"name": "stubs"
+		},
+		{
+			"path": "../../micropython-stubber",
+			"name": "stubber"
+		}
+	],
+	"settings": {
+		"workbench.colorCustomizations": {
             "activityBar.activeBackground": "#ffffff",
             "activityBar.background": "#ffffff",
             "activityBar.foreground": "#15202b",
@@ -50,10 +49,27 @@
             "titleBar.activeBackground": "#f0ffff",
             "titleBar.activeForeground": "#15202b",
             "titleBar.inactiveBackground": "#f0ffff99",
-            "titleBar.inactiveForeground": "#15202b99"
+            "titleBar.inactiveForeground": "#15202b99",
+            "activityBar.activeBorder": "#15202b",
+            "activityBarTop.activeBorder": "#15202b"
         },
-        "peacock.remoteColor": "azure",
-        "scm.defaultViewMode": "tree",
-        "beadsDashboard.showClosed": false
-    }
+		"peacock.remoteColor": "azure",
+		"scm.defaultViewMode": "tree",
+		"beadsDashboard.showClosed": false,
+		"mcp": {
+			"servers": {
+				"viper-mcp": {
+					"type": "stdio",
+					"command": "node",
+					"args": [
+						"/home/jos/ViperIDE/mcp/src/index.js"
+					],
+                    "env": {
+                        "VIPERIDE_BUILD_DIR": "/home/jos/ViperIDE/build"
+                    }
+				}
+			},
+			"inputs": []
+		}
+	}
 }
