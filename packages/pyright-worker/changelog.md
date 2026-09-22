@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.4.9 - 2026-09-22
+
+### Fixed
+
+- Kept the generated runtime manifest paired with its exact worker bundle in CI
+  browser jobs, preventing integrity verification from falling back to the
+  bundled worker.
+- Regenerated runtime metadata during worker version bumps and rejected release
+  requests when the committed manifest is stale.
+
 ## 0.4.8 - 2026-09-22
 
 ### Security

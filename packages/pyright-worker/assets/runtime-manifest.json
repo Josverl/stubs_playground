@@ -1,10 +1,10 @@
 {
   "$schema": "runtime-manifest.schema.json",
-  "runtimeId": "@mp-typing/pyright-worker@0.4.8+sha256.8bf7a6574ecdf53709de2d5f61dc09a6818facb8de17ccd4848d8e23d4d1bfea",
+  "runtimeId": "@mp-typing/pyright-worker@0.4.9+sha256.40fda9e169b74c86e9affdbc010cf1be3eff9f86ec48e83a59d0fd8253743d67",
   "schemaVersion": 1,
   "package": {
     "name": "@mp-typing/pyright-worker",
-    "version": "0.4.8"
+    "version": "0.4.9"
   },
   "worker": {
     "url": "../dist/pyright_worker.js",
