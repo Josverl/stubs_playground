@@ -1,15 +1,15 @@
 {
   "$schema": "runtime-manifest.schema.json",
-  "runtimeId": "@mp-typing/pyright-worker@0.4.7+sha256.c62de3770a8697cc81c9a98beb148807181d825d39170b3ee3c6cd4d4394fbb8",
+  "runtimeId": "@mp-typing/pyright-worker@0.4.8+sha256.8bf7a6574ecdf53709de2d5f61dc09a6818facb8de17ccd4848d8e23d4d1bfea",
   "schemaVersion": 1,
   "package": {
     "name": "@mp-typing/pyright-worker",
-    "version": "0.4.7"
+    "version": "0.4.8"
   },
   "worker": {
     "url": "../dist/pyright_worker.js",
-    "size": 5398472,
-    "sha256": "6d4b0c35b996bf78e6b8842767d65b6a17d14955603898194dd0dae7fffe6ce1"
+    "size": 5398650,
+    "sha256": "a7b9277eb425b046bd681af388d742f89da5251a7811887b1436accf2aa8cdf8"
   },
   "pyrightVersion": "1.1.412",
   "typeshed": {

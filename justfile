@@ -180,6 +180,11 @@ _bump-npm component package_name bump:
         ["npm", "run", "generate:component-config"],
         check=True,
     )
+    if component == "pyright-worker":
+        subprocess.run(
+            ["npm", "run", "generate:runtime-manifest"],
+            check=True,
+        )
     print(f"Bumped {package_name} to {version} and synchronized the playground config.")
 
 [private]
@@ -230,6 +235,12 @@ _release-npm component package_json:
         r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", version
     ):
         raise SystemExit(f"Invalid version {version!r} in {manifest}.")
+
+    if component == "pyright-worker":
+        subprocess.run(
+            ["npm", "run", "check:runtime-manifest"],
+            check=True,
+        )
 
     registry = subprocess.run(
         ["npm", "view", package_name, "versions", "--json"],

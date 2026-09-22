@@ -154,11 +154,13 @@ jobs:
             test -s "$path" || { echo "::error::$path missing or empty"; exit 1; }
           done
 
-      - name: Upload worker artifact
+      - name: Upload worker runtime artifact
         uses: actions/upload-artifact@v7
         with:
-          name: pyright-worker-dist
-          path: packages/pyright-worker/dist/pyright_worker.js
+          name: pyright-worker-runtime
+          path: |
+            packages/pyright-worker/dist/pyright_worker.js
+            packages/pyright-worker/assets/runtime-manifest.json
           if-no-files-found: error
 
   application-browser-tests:
@@ -177,11 +179,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Download worker artifact
+      - name: Download worker runtime artifact
         uses: actions/download-artifact@v8
         with:
-          name: pyright-worker-dist
-          path: packages/pyright-worker/dist
+          name: pyright-worker-runtime
+          path: packages/pyright-worker
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
@@ -214,11 +216,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Download worker artifact
+      - name: Download worker runtime artifact
         uses: actions/download-artifact@v8
         with:
-          name: pyright-worker-dist
-          path: packages/pyright-worker/dist
+          name: pyright-worker-runtime
+          path: packages/pyright-worker
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
