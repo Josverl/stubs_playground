@@ -185,6 +185,8 @@ export class WorkerTransport {
         this._generatedConfigRequests = new Map();
         /** @type {Map<string, {resolve: (value: any) => void, reject: (reason?: unknown) => void, timeout?: ReturnType<typeof setTimeout>}>} */
         this._stubPackageRequests = new Map();
+        /** @type {Map<string, Promise<InstalledStubPackage>>} */
+        this._stubPackageInstalls = new Map();
         this.pyrightVersion = ""; // set when serverInitialized is received
         /** @type {Array<{asset: string, error: string}>} */
         this.assetFallbacks = [];
@@ -636,6 +638,7 @@ export class WorkerTransport {
             pending.reject(new Error('Worker transport closed'));
         }
         this._stubPackageRequests.clear();
+        this._stubPackageInstalls.clear();
         if (this.worker) {
             this.worker.terminate();
             this.worker = null;
@@ -836,6 +839,7 @@ export class WorkerTransport {
      * @param {string} [versionSpecifier=''] - Exact or constrained PEP-440-like version.
      * The cache change becomes visible to Pyright only after the worker is
      * restarted. Higher-level integrations such as ViperIDE do this automatically.
+     * Concurrent equivalent requests share one worker installation.
      *
      * @returns {Promise<InstalledStubPackage>} Installed package metadata.
      * @throws {TypeError} If either argument is invalid.
@@ -849,12 +853,30 @@ export class WorkerTransport {
         if (typeof versionSpecifier !== 'string') {
             throw new TypeError('Stub package version specifier must be a string');
         }
-        const response = await this._requestStubPackage(
+        const normalizedName = packageName.trim().toLowerCase().replace(/[-_.]+/g, '-');
+        const normalizedSpecifier = versionSpecifier
+            .trim()
+            .replace(/\s*,\s*/g, ',')
+            .replace(/\s*(==|!=|~=|>=|<=|>|<)\s*/g, '$1');
+        const installKey = JSON.stringify([normalizedName, normalizedSpecifier]);
+        const pendingInstall = this._stubPackageInstalls.get(installKey);
+        if (pendingInstall) {
+            return pendingInstall;
+        }
+
+        const install = this._requestStubPackage(
             'installStubPackage',
             { packageName, versionSpecifier },
             60000,
-        );
-        return response.package;
+        ).then(response => response.package);
+        this._stubPackageInstalls.set(installKey, install);
+        try {
+            return await install;
+        } finally {
+            if (this._stubPackageInstalls.get(installKey) === install) {
+                this._stubPackageInstalls.delete(installKey);
+            }
+        }
     }
 
     /**

@@ -243,7 +243,7 @@ useful for workspace and package management:
 | `deleteWorkspaceFile(path)` | `void` | Removes one workspace file. |
 | `getStubPackageCatalog(filters?)` | catalog result | Returns matching packages plus available/default runtime version metadata. |
 | `listStubPackages(filters?)` | catalog array | Convenience wrapper returning only matching packages. |
-| `installStubPackage(name, specifier)` | installed package | Persists a validated universal wheel. Restart afterward. |
+| `installStubPackage(name, specifier)` | installed package | Persists a validated universal wheel and coalesces concurrent equivalent installs. Restart afterward. |
 | `listInstalledStubPackages()` | installed package array | Reads IndexedDB metadata. |
 | `clearStubPackages(name?, version?)` | removal result | Restart when `restartRequired` is true. |
 | `readGeneratedConfig()` | `Promise<string>` | Inspection/debug API. |

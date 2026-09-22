@@ -91,6 +91,8 @@ export class WorkerTransport {
         reject: (reason?: unknown) => void;
         timeout?: ReturnType<typeof setTimeout>;
     }>;
+    /** @type {Map<string, Promise<InstalledStubPackage>>} */
+    _stubPackageInstalls: Map<string, Promise<InstalledStubPackage>>;
     pyrightVersion: string;
     /** @type {Array<{asset: string, error: string}>} */
     assetFallbacks: Array<{
@@ -300,6 +302,7 @@ export class WorkerTransport {
      * @param {string} [versionSpecifier=''] - Exact or constrained PEP-440-like version.
      * The cache change becomes visible to Pyright only after the worker is
      * restarted. Higher-level integrations such as ViperIDE do this automatically.
+     * Concurrent equivalent requests share one worker installation.
      *
      * @returns {Promise<InstalledStubPackage>} Installed package metadata.
      * @throws {TypeError} If either argument is invalid.

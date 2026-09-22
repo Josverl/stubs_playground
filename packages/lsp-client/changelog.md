@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.3.7 - 2026-09-22
+
+### Fixed
+
+- Concurrent equivalent `installStubPackage()` calls now share one worker
+  request, preventing duplicate downloads before an integration restarts
+  Pyright for the newly cached package.
+
 ### Changed
 
 - `StubPackageRelease.filename`, `.size`, and `.uploadTime` are optional. The

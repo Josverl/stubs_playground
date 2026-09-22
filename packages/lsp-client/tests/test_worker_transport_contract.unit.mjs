@@ -486,6 +486,79 @@ test('stub package methods use correlated worker requests', async () => {
     assert.deepEqual(await clearPromise, { removed: 2, restartRequired: true });
 });
 
+test('concurrent equivalent stub installs share one worker request', async () => {
+    const { transport, messages } = connectedTransport();
+    const firstInstall = transport.installStubPackage(
+        'micropython-rp2-pimoroni-picolipo-stubs',
+        '==1.29.0.*',
+    );
+    const duplicateInstall = transport.installStubPackage(
+        'micropython_rp2_pimoroni_picolipo_stubs',
+        ' == 1.29.0.* ',
+    );
+
+    assert.equal(messages.length, 1);
+    const request = messages.shift();
+    transport._onSteadyStateMessage({
+        data: {
+            type: 'installStubPackageResult',
+            requestId: request.requestId,
+            ok: true,
+            package: {
+                packageName: 'micropython-rp2-pimoroni-picolipo-stubs',
+                version: '1.29.0.post1',
+            },
+            restartRequired: true,
+        },
+    });
+
+    const [firstResult, duplicateResult] = await Promise.all([
+        firstInstall,
+        duplicateInstall,
+    ]);
+    assert.deepEqual(duplicateResult, firstResult);
+});
+
+test('failed stub installs can be retried', async () => {
+    const { transport, messages } = connectedTransport();
+    const failedInstall = transport.installStubPackage(
+        'micropython-esp32-stubs',
+        '==1.29.0.*',
+    );
+    const failedRequest = messages.shift();
+    transport._onSteadyStateMessage({
+        data: {
+            type: 'installStubPackageResult',
+            requestId: failedRequest.requestId,
+            ok: false,
+            restartRequired: false,
+            error: 'temporary download failure',
+        },
+    });
+    await assert.rejects(failedInstall, /temporary download failure/);
+
+    const retryInstall = transport.installStubPackage(
+        'micropython-esp32-stubs',
+        '==1.29.0.*',
+    );
+    assert.equal(messages.length, 1);
+    const retryRequest = messages.shift();
+    assert.notEqual(retryRequest.requestId, failedRequest.requestId);
+    transport._onSteadyStateMessage({
+        data: {
+            type: 'installStubPackageResult',
+            requestId: retryRequest.requestId,
+            ok: true,
+            package: {
+                packageName: 'micropython-esp32-stubs',
+                version: '1.29.0.post1',
+            },
+            restartRequired: true,
+        },
+    });
+    assert.equal((await retryInstall).version, '1.29.0.post1');
+});
+
 test('stub package methods reject invalid input and worker errors', async () => {
     const { transport, messages } = connectedTransport();
     await assert.rejects(
